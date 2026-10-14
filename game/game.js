@@ -5,7 +5,7 @@ const WIDTH=2600,HEIGHT=1900, VIEWW=960,VIEWH=600, TAU=Math.PI*2, keys=new Set()
 // ADVENTURE MODE: escalating but fairer pug waves and Tolly’s banana barrage. No server or shared scores required.
 const petImages=Object.fromEntries(Array.from(document.querySelectorAll('#heroes .hero'),el=>[el.dataset.hero,el.querySelector('.portrait img')]));
 const roster={rosie:{name:'Rosie',emoji:'🐕‍🦺',color:'#222a36',hp:130,speed:220,range:225,rate:.56,damage:17,weapon:'dragon'},millie:{name:'Millie',emoji:'🐕',color:'#31323d',hp:145,speed:205,range:250,rate:.52,damage:16,weapon:'ball'},winnifred:{name:'Winnifred',emoji:'🐈',color:'#e4d4bc',hp:110,speed:235,range:110,rate:.38,damage:21,weapon:'sausage'},ellie:{name:'Ellie',emoji:'🐶',color:'#121823',hp:150,speed:250,range:175,rate:.86,damage:9,weapon:'kong',auraRadius:135,healPulse:2.7,selfRegen:1.4}};
-let selected=['rosie','winnifred'],players=[],foes=[],shots=[],drops=[],fx=[],hazards=[],boss=null,phase='idle',paused=false,score=0,kills=0,level=1,xp=0,goal=35,spawnClock=0,surgeClock=33,elapsed=0,clues=0,fridgeVisible=false,fridge={x:2180,y:1440},cam={x:0,y:0},lastTime=0,raf=0,messageClock=0,attackClock=0,heldTouch={},audioCtx=null,audioEnabled=true,musicTimer=null,musicStep=0,sloganClock=8,bossPhase=1,coneWarned=false;
+let selected=['rosie','winnifred'],players=[],foes=[],shots=[],drops=[],fx=[],hazards=[],boss=null,phase='idle',paused=false,score=0,kills=0,level=1,xp=0,goal=35,spawnClock=0,surgeClock=33,elapsed=0,clues=0,fridgeVisible=false,fridge={x:2180,y:1440},cam={x:0,y:0},lastTime=0,raf=0,messageClock=0,attackClock=0,heldTouch={},audioCtx=null,audioEnabled=true,musicTimer=null,musicStep=0,musicMode='idle',musicBar=0,musicNextBarAt=0,sloganClock=8,bossPhase=1,coneWarned=false;
 let cutsceneNext=null,sceneName=null,reviveSeconds=1.85,hudClock=0;
 let best=0;try{best=Number(localStorage.getItem('rosie-survivors-best'))||0}catch{};
 const rnd=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
@@ -43,23 +43,118 @@ function playSfx(kind){
   else if(kind==='defeat'){playTone(330,.08,'square',.04);playTone(262,.13,'sawtooth',.045,.09);playTone(196,.22,'triangle',.05,.18)}
   else if(kind==='wave'){playTone(262,.07,'square',.025);playTone(196,.09,'square',.025,.06)}
 }
-function currentMusic(){return phase==='boss'?'boss':phase==='explore'?'explore':'idle'}
-function tickMusic(){
-  if(!audioEnabled||paused||phase==='ended'||phase==='idle'||phase==='cutscene') return;
-  const mode=currentMusic();
-  // Original nostalgic garden melody, with a more urgent minor-mode variation for Tolly.
-  const exploration=[587,659,740,659,587,494,554,587,659,740,880,740,659,587,494,554];
-  const showdown=[440,523,587,523,466,392,440,349,440,523,622,587,523,466,392,349];
-  const seq=mode==='boss'?showdown:exploration;
-  const bass=mode==='boss'?[174,174,196,164]:[220,247,196,220];
-  const i=musicStep%seq.length, f=seq[i], b=bass[Math.floor(i/4)%4];
-  if(i%4===0)playTone(b,.54,'sine',mode==='boss'?.046:.035);
-  playTone(f,mode==='boss'?.15:.26,mode==='boss'?'triangle':'sine',mode==='boss'?.032:.027,.03);
-  if(i%2===1)playTone(f/2,.15,'triangle',.012,.09);
-  if(mode==='boss'&&i%4===2)playTone(110,.05,'square',.013,.04);
-  musicStep++;
+// An original 3/4 garden waltz, written for this game: not a transcription of any film score.
+// Notes are MIDI numbers. Each line is one bar of 3 beats; [beat, pitch, length].
+// This is deliberately data-driven so the theme can be rearranged for the cutscenes and boss.
+const gardenMelody=[
+ [[0,71,.72],[.75,74,.58],[1.5,76,.63],[2.25,74,.70]],
+ [[0,69,.58],[.75,71,.58],[1.5,74,.68],[2.25,78,.69]],
+ [[0,79,.90],[1,76,.65],[1.75,74,.43],[2.25,71,.65]],
+ [[0,76,.90],[1,74,.58],[1.75,72,.45],[2.25,71,.68]],
+ [[0,74,.58],[.75,71,.52],[1.5,67,.78],[2.25,69,.65]],
+ [[0,72,.95],[1,76,.65],[1.75,72,.47],[2.25,69,.68]],
+ [[0,66,.48],[.5,69,.55],[1.25,74,.76],[2.25,72,.70]],
+ [[0,71,.96],[1,69,.58],[1.75,67,.48],[2.25,67,.70]]
+];
+const bossMelody=[
+ [[0,71,.47],[.5,74,.45],[1,76,.65],[1.75,74,.4],[2.25,71,.59]],
+ [[0,69,.52],[.75,66,.55],[1.5,62,.45],[2,66,.74]],
+ [[0,67,.76],[1,71,.48],[1.5,74,.60],[2.25,72,.48]],
+ [[0,69,.5],[.5,72,.49],[1,74,.55],[1.75,76,.5],[2.25,74,.65]],
+ [[0,76,.65],[.75,74,.45],[1.25,71,.45],[2,67,.67]],
+ [[0,72,.61],[.75,69,.5],[1.5,67,.5],[2.25,64,.57]],
+ [[0,66,.62],[.75,69,.55],[1.5,74,.49],[2.25,72,.62]],
+ [[0,71,.45],[.5,69,.45],[1,67,.5],[1.75,66,.4],[2.25,64,.67]]
+];
+const gardenChords=[
+ {root:43,notes:[55,59,62]}, // G
+ {root:50,notes:[54,57,62]}, // D
+ {root:40,notes:[52,55,59]}, // Em
+ {root:48,notes:[55,60,64]}, // C
+ {root:47,notes:[55,59,62]}, // G/B
+ {root:45,notes:[57,60,64]}, // Am
+ {root:50,notes:[57,62,66]}, // D
+ {root:43,notes:[55,59,62]}  // G
+];
+const bossChords=[
+ {root:40,notes:[52,55,59]}, // Em
+ {root:47,notes:[54,59,62]}, // Bm
+ {root:48,notes:[55,60,64]}, // C
+ {root:50,notes:[57,62,66]}, // D
+ {root:40,notes:[52,55,59]},
+ {root:45,notes:[57,60,64]},
+ {root:47,notes:[54,59,62]},
+ {root:40,notes:[52,55,59]}
+];
+const noteHz=midi=>440*Math.pow(2,(midi-69)/12);
+// Tiny WebAudio instruments: a woodwind-like lead, plucked strings, bell and warm bass.
+// All synthesis is done locally; there are no third-party audio files or APIs.
+function musicVoice(pitch,at,length,kind='flute',loudness=.024){
+ const ctx=audioCtx;if(!ctx||!audioEnabled)return;
+ const freq=noteHz(pitch),dur=Math.max(.07,length),on=Math.max(at,ctx.currentTime+.003);
+ const end=on+dur,release=kind==='bell'?.17:kind==='bass'?.13:.085;
+ const env=ctx.createGain();
+ const attack=kind==='flute'?.055:kind==='bass'?.018:.008;
+ env.gain.setValueAtTime(.0001,on);
+ env.gain.linearRampToValueAtTime(loudness,on+attack);
+ env.gain.setValueAtTime(loudness,Math.max(on+attack,end-release));
+ env.gain.exponentialRampToValueAtTime(.0001,end);
+ env.connect(ctx.destination);
+ const osc=ctx.createOscillator();
+ osc.type=kind==='pluck'?'triangle':kind==='bass'?'sine':kind==='bell'?'sine':'triangle';
+ osc.frequency.setValueAtTime(freq,on);
+ osc.connect(env);osc.start(on);osc.stop(end+.02);
+ // A faint upper partial gives the lead/bell an airy, music-box quality.
+ if(kind==='flute'||kind==='bell'){
+   const upper=ctx.createOscillator(), upperEnv=ctx.createGain();
+   upper.type='sine';upper.frequency.setValueAtTime(freq*(kind==='bell'?2:1),on);
+   upperEnv.gain.setValueAtTime(.0001,on);
+   upperEnv.gain.linearRampToValueAtTime(loudness*(kind==='bell'?.29:.12),on+.018);
+   upperEnv.gain.exponentialRampToValueAtTime(.0001,end);
+   upper.connect(upperEnv).connect(ctx.destination);upper.start(on);upper.stop(end+.02);
+ }
 }
-function startMusicLoop(){ if(musicTimer) return; musicTimer=setInterval(tickMusic,270)}
+function currentMusic(){
+ if(phase==='boss')return'boss';
+ if(phase==='cutscene')return'story';
+ return phase==='explore'?'garden':'idle';
+}
+function scheduleMusicBar(mode,index,startAt){
+ const isBoss=mode==='boss',beat=60/(isBoss?153:mode==='story'?116:138);
+ const chord=(isBoss?bossChords:gardenChords)[index];
+ const melody=(isBoss?bossMelody:gardenMelody)[index];
+ const gentle=mode==='story';
+ musicVoice(chord.root,startAt,beat*(gentle?1.15:.79),'bass',isBoss?.033:gentle?.013:.023);
+ for(const beatIndex of [1,2]){
+   // Gentle oom-pah-pah accompaniment, the main source of the waltz feel.
+   for(const pitch of chord.notes){
+     musicVoice(pitch,startAt+beat*beatIndex,beat*(gentle?.56:.38),
+       'pluck',isBoss?.014:gentle?.007:.012);
+   }
+ }
+ for(const [pos,pitch,len] of melody){
+   musicVoice(pitch,startAt+beat*pos,beat*len,gentle?'bell':'flute',isBoss?.033:gentle?.018:.029);
+ }
+ // Little high-register sparkle at the end of phrases, like a village music box.
+ if(index===3||index===7){
+   musicVoice(isBoss?83:86,startAt+beat*2.45,beat*.46,'bell',gentle?.008:.012);
+ }
+ return beat*3;
+}
+function tickMusic(){
+ if(!audioEnabled||paused||phase==='ended'||phase==='idle'||!audioCtx||audioCtx.state!=='running')return;
+ const mode=currentMusic(),now=audioCtx.currentTime;
+ if(mode!==musicMode){
+   musicMode=mode;musicBar=0;musicNextBarAt=now+.06;
+ }
+ // Avoid a burst of catch-up notes on tab resume or after switching tabs.
+ if(musicNextBarAt<now-.18)musicNextBarAt=now+.05;
+ while(musicNextBarAt<now+.17){
+   const length=scheduleMusicBar(mode,musicBar,musicNextBarAt);
+   musicNextBarAt+=length;musicBar=(musicBar+1)%8;
+ }
+}
+function startMusicLoop(){if(musicTimer)return;tickMusic();musicTimer=setInterval(tickMusic,45)}
 function shout(pool,dur=2.4){ say(pick(pool),dur) }
 
 const heroLines={rosie:'🐉 Rosie heard the word banana and immediately accepted the mission.',millie:'🎾 Millie believes the answer to every question is BALL.',winnifred:'👑 Winnifred graciously grants the party permission to proceed.',ellie:'💚 Ellie is ready to lick everyone back to full health. And then zoomie.'};
@@ -107,7 +202,7 @@ function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+
 function start(){
  cancelAnimationFrame(raf);
  players=[player(selected[0],0)];if($('coop').checked)players.push(player(selected[1],1));
- foes=[];shots=[];drops=[];fx=[];hazards=[];phase='explore';paused=false;boss=null;cutsceneNext=null;sceneName=null;musicStep=0;
+ foes=[];shots=[];drops=[];fx=[];hazards=[];phase='explore';paused=false;boss=null;cutsceneNext=null;sceneName=null;musicStep=0;musicMode='idle';musicBar=0;musicNextBarAt=0;
  elapsed=0;score=0;kills=0;level=1;xp=0;goal=35;clues=0;fridgeVisible=false;
  spawnClock=.55;surgeClock=33;attackClock=0;hudClock=0;keys.clear();ensureAudio();
  $('share-result').classList.remove('show');$('share-status').textContent='';$('overlay').classList.remove('cinematic');$('overlay').classList.add('hidden');$('pause').disabled=false;$('pause').textContent='Ⅱ PAUSE';
@@ -453,7 +548,7 @@ $('share-result').addEventListener('click',async()=>{
  try{await navigator.clipboard.writeText(text);$('share-status').textContent='Copied! Paste it into our WhatsApp group.';}
  catch{$('share-status').textContent='Copy blocked by this browser. Take a screenshot of your score instead.';}
 });
-$('start').addEventListener('click',start);$('overlay-start').addEventListener('click',()=>{if(phase==='cutscene')continueScene();else start()});$('restart').addEventListener('click',start);$('pause').addEventListener('click',togglePause);$('mute').addEventListener('click',()=>{audioEnabled=!audioEnabled; if(audioCtx){audioEnabled?audioCtx.resume():audioCtx.suspend()} $('mute').textContent=audioEnabled?'🔊 SOUND ON':'🔇 SOUND OFF'; if(audioEnabled) ensureAudio();});
+$('start').addEventListener('click',start);$('overlay-start').addEventListener('click',()=>{if(phase==='cutscene')continueScene();else start()});$('restart').addEventListener('click',start);$('pause').addEventListener('click',togglePause);$('mute').addEventListener('click',()=>{audioEnabled=!audioEnabled; if(audioCtx){audioEnabled?audioCtx.resume():audioCtx.suspend()} $('mute').textContent=audioEnabled?'🔊 MUSIC + SFX':'🔇 SOUND OFF'; if(audioEnabled) ensureAudio();});
 window.addEventListener('keydown',e=>{let k=e.key.toLowerCase();if(['arrowup','arrowleft','arrowright','arrowdown',' '].includes(k))e.preventDefault();if(['shift','enter'].includes(k)&&phase!=='idle'&&!paused){const id=k==='shift'?0:1;if(players[id]&&players[id].alive&&players[id].dashCooldown<=0){players[id].dash=.18;players[id].dashCooldown=players[id].id==='ellie'?2.2:3.4;players[id].inv=Math.max(players[id].inv,.18);playSfx('dash')}}if(k==='escape')togglePause();keys.add(k)});window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));window.addEventListener('blur',()=>keys.clear());
 for(const b of document.querySelectorAll('[data-k]')){const k=b.dataset.k;b.addEventListener('pointerdown',e=>{e.preventDefault();keys.add(k);b.setPointerCapture(e.pointerId)});for(const ev of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,()=>keys.delete(k))}
 // idle garden behind the opening card
