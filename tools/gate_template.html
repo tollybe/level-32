@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+ <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+ <meta name="robots" content="noindex, nofollow, noarchive">
+ <meta name="theme-color" content="#101225">
+ <title>LEVEL 32 · Access Portal</title>
+ <style>
+ :root{color-scheme:dark}*{box-sizing:border-box}
+ body{min-height:100dvh;margin:0;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 50% 0%,#494177,#1b203d 45%,#0f1122 85%);font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#f7efff}
+ .wrap{width:min(100%,490px);padding:clamp(26px,6vw,45px);text-align:center;background:#1d2343;border:1px solid #696388;border-radius:24px;box-shadow:0 24px 85px #0007}
+ .eyebrow{text-transform:uppercase;letter-spacing:.24em;color:#88f7f0;font-weight:800;font-size:.74rem}
+ h1{font-size:clamp(3.5rem,12vw,5.7rem);line-height:1;margin:10px 0 0;color:#ffe182;text-shadow:4px 4px #49315e}
+ h2{margin:6px 0 12px;font-size:1.35rem}p{line-height:1.6;color:#ccd3e7}
+ form{display:grid;gap:12px;margin-top:26px;text-align:left}
+ label{font-size:.85rem;font-weight:800}
+ input{width:100%;padding:15px 16px;border:2px solid #666c95;border-radius:12px;background:#11172f;color:#fff;font:inherit}
+ input:focus-visible,button:focus-visible{outline:3px solid #7cf3e7;outline-offset:3px}
+ button{padding:16px;border:0;border-radius:12px;background:#ffe182;color:#161525;font:inherit;font-weight:900;cursor:pointer}
+ button:hover{background:#fff0b9}button:disabled{opacity:.65;cursor:wait}
+ #error{min-height:1.5em;color:#ffa5b1;font-size:.85rem;line-height:1.5}footer{font-size:.75rem;color:#aeb6d0;margin-top:18px}
+ </style>
+</head>
+<body>
+ <main class="wrap">
+  <div class="eyebrow">Classified birthday mission</div>
+  <h1>LEVEL 32</h1><h2>ROSIE SURVIVORS</h2>
+  <p>Access restricted to recruited party members.<br>Enter the party password to survive the pug horde.</p>
+  <form id="gate-form">
+   <label for="password">Secret party password</label>
+   <input id="password" type="password" autocomplete="off" required placeholder="Enter access code" aria-describedby="error">
+   <button id="enter" type="submit">UNLOCK THE MISSION →</button>
+   <div id="error" role="alert" aria-live="polite"></div>
+  </form>
+  <footer>Friday 13 November 2026 · Utrecht</footer>
+ </main>
+ <script>
+ const payload=__PAYLOAD__;
+ function decode(s){const b=atob(s);return Uint8Array.from(b,c=>c.charCodeAt(0))}
+ document.getElementById('gate-form').addEventListener('submit', async(e)=>{
+   e.preventDefault();const button=document.getElementById('enter');const error=document.getElementById('error');
+   error.textContent='';button.disabled=true;button.textContent='DECRYPTING…';
+   try{
+     if(!crypto?.subtle)throw new Error('This page requires HTTPS (or localhost).');
+     const pw=document.getElementById('password').value;
+     const baseKey=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveKey']);
+     const aesKey=await crypto.subtle.deriveKey({name:'PBKDF2',salt:decode(payload.salt),iterations:payload.iterations,hash:'SHA-256'},baseKey,{name:'AES-GCM',length:256},false,['decrypt']);
+     const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:decode(payload.iv)},aesKey,decode(payload.ciphertext));
+     const page=new TextDecoder().decode(plain);
+     document.open();document.write(page);document.close();
+   }catch(ex){error.textContent=ex.message.includes('HTTPS')?ex.message:'Incorrect password — try again, fighter.';
+     button.disabled=false;button.textContent='UNLOCK THE MISSION →';}
+ });
+ </script>
+</body>
+</html>
