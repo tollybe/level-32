@@ -14,11 +14,11 @@ A tiny, playable, co-op birthday game featuring **Rosie, Millie, Winnifred and E
 | Fight | Automatic | Automatic |
 | Revive | Stand on the fallen teammate for 1.85 seconds | Same |
 
-On touch devices, use the on-screen pads. Escape pauses the game. The sound button toggles original music and effects. Exploration plays a breezy **3/4 garden waltz** with woodwind-like lead, music-box accents and plucked-string accompaniment; the fridge cutscenes use a softer variation, and Tolly has a faster, dramatic companion theme. Everything is synthesized in JavaScript, without third-party recordings.
+On touch devices, use the on-screen pads. Escape pauses the game. The sound button toggles the original chiptune-style music and effects.
 
 ## Mission and heroes
 
-**Rosie** carries her stuffed dragon; **Millie** throws the bouncing dog ball; **Winnifred** wields the sausage sword; **Ellie** throws frozen Kong treats, slows pugs and heals teammates standing inside her green aura. Find three scrolls and follow the golden compass to Tolly's fridge. Enjoy the illustrated boss reveal and the Cone of Shame scene: enemies and damage freeze while the scenes are open.
+**Rosie** carries her stuffed dragon; **Millie** throws the bouncing dog ball; **Winnifred** wields the sausage sword; **Ellie** throws frozen Kong treats, slows pugs and heals teammates standing inside her green aura. Find three scrolls and follow the golden compass to Tolly's fridge. **Each scroll now opens its own illustrated storybook pause, with dialogue portraits sourced directly from the same Rosie, Millie, Winnifred and Ellie art used by character selection.** The fridge reveal and the Cone of Shame also use paused story scenes: enemies and damage freeze while the illustrations are open.
 
 ## How to run or export
 
