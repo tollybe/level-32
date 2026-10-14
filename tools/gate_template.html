@@ -25,7 +25,7 @@
  <main class="wrap">
   <div class="eyebrow">Classified birthday mission</div>
   <h1>LEVEL 32</h1><h2>ROSIE SURVIVORS</h2>
-  <p>Access restricted to recruited party members.<br>Enter the party password to survive the pug horde.</p>
+  <p>Access restricted to recruited party members.<br>Enter the party password to face the Bleepling Menace.</p>
   <form id="gate-form">
    <label for="password">Secret party password</label>
    <input id="password" type="password" autocomplete="off" required placeholder="Enter access code" aria-describedby="error">
@@ -47,6 +47,13 @@
      const aesKey=await crypto.subtle.deriveKey({name:'PBKDF2',salt:decode(payload.salt),iterations:payload.iterations,hash:'SHA-256'},baseKey,{name:'AES-GCM',length:256},false,['decrypt']);
      const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:decode(payload.iv)},aesKey,decode(payload.ciphertext));
      const page=new TextDecoder().decode(plain);
+     // Day 3's encrypted route token opens the current public game rather than
+     // shipping another stale copy of game assets inside the encrypted page.
+     // The standalone encrypted export remains supported by tools/build.py.
+     if(page==='LEVEL32_REDIRECT_TO_GAME'){
+       window.location.replace(new URL('game/',window.location.href).href);
+       return;
+     }
      document.open();document.write(page);document.close();
    }catch(ex){error.textContent=ex.message.includes('HTTPS')?ex.message:'Incorrect password — try again, fighter.';
      button.disabled=false;button.textContent='UNLOCK THE MISSION →';}

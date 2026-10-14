@@ -8,6 +8,7 @@ Usage:
 By design the source is public at /game/. The password only gates the homepage.
 """
 from __future__ import annotations
+import argparse
 import base64
 import getpass
 import json
@@ -61,11 +62,16 @@ def image_data_path(relative_path: str) -> str:
     return "data:" + mime + ";base64," + base64.b64encode(path.read_bytes()).decode("ascii")
 
 
-def build(password: str) -> Path:
+def build(password: str, redirect: bool = False) -> Path:
     if len(password) < 12:
         raise ValueError("Choose a password of at least 12 characters")
-    source = game_as_single_html().encode("utf-8")
-    assert b'<script>' in source and b'<style>' in source
+    if redirect:
+        # Password-gated entry to the always-current /game/ source.
+        # The exported standalone page remains available without --redirect.
+        source = b"LEVEL32_REDIRECT_TO_GAME"
+    else:
+        source = game_as_single_html().encode("utf-8")
+        assert b'<script>' in source and b'<style>' in source
     salt = secrets.token_bytes(16)
     iv = secrets.token_bytes(12)
     kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=ITERATIONS)
@@ -82,5 +88,8 @@ def build(password: str) -> Path:
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Build a password-gated Level 32 homepage")
+    parser.add_argument("--redirect", action="store_true", help="After password entry, open the latest public /game/ build")
+    args = parser.parse_args()
     password = os.environ.get("LEVEL32_PASSWORD") or getpass.getpass("Guest password: ")
-    build(password)
+    build(password, redirect=args.redirect)
