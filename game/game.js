@@ -9,11 +9,13 @@ const roster={rosie:{name:'Rosie',emoji:'🐕‍🦺',color:'#222a36',hp:130,spe
 let selected=['rosie','winnifred'],players=[],foes=[],shots=[],drops=[],fx=[],hazards=[],boss=null,phase='idle',paused=false,score=0,kills=0,level=1,xp=0,goal=35,spawnClock=0,surgeClock=33,elapsed=0,clues=0,fridgeVisible=false,fridge={x:2180,y:1440},cam={x:0,y:0},lastTime=0,raf=0,messageClock=0,attackClock=0,heldTouch={},audioCtx=null,audioEnabled=true,musicTimer=null,musicStep=0,musicMode='idle',musicBar=0,musicNextBarAt=0,sloganClock=8,bossPhase=1,coneWarned=false;
 let cutsceneNext=null,sceneName=null,reviveSeconds=1.85,hudClock=0;
 let duoActive=false,duoDefeated=false,laserUnlocked=false,beams=[],coneCooldown=6.8,coneWindup=0,coneAngle=0,bossPulseCooldown=4,bossPulseWindup=0;
+let gate=null,gateCleared=[false,false,false],difficulty='challenge';
+const GATE_WAVES={challenge:[[3,3,2],[3,3,3],[4,3,3]],story:[[2,2,2],[2,2,2],[2,2,3]]};
 const ENEMY_TYPES={
- bleepling:{hp:38,speed:105,damage:12,size:21,score:12,xp:7},
- boink:{hp:55,speed:100,damage:10,size:26,score:20,xp:9},
- bocht:{hp:32,speed:120,damage:8,size:23,score:22,xp:10},
- chunkling:{hp:105,speed:65,damage:18,size:36,score:36,xp:12}
+ bleepling:{hp:42,speed:117,damage:13,size:21,score:12,xp:7},
+ boink:{hp:60,speed:114,damage:12,size:26,score:20,xp:9},
+ bocht:{hp:37,speed:133,damage:9,size:23,score:22,xp:10},
+ chunkling:{hp:112,speed:78,damage:19,size:36,score:36,xp:12}
 };
 let best=0;try{best=Number(localStorage.getItem('rosie-survivors-best'))||0}catch{};
 const rnd=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
@@ -38,7 +40,15 @@ const CLUE_SCENES=[
 ];
 function renderSceneLines(kind){
  const host=$('scene-dialogues');host.replaceChildren();host.dataset.beat='0';
- const lines=SCENE_LINES[kind]||[];host.hidden=lines.length===0;
+ const lines=[...(SCENE_LINES[kind]||[])];
+ // Character-specific ending callbacks, always with the established portraits.
+ if(kind==='victory'||kind==='defeat'){
+  const lead=players[0],replies={rosie:'Can we discuss the banana situation on the way to the party?',
+   millie:'WAIT. THERE WILL BE BALLS AT THIS PARTY, YES?',
+   winnifred:'Attendance is obligatory for distinguished floofs.',
+   ellie:'I am bringing zoomies. And emotional support.'};
+  if(lead)lines.push([lead.id,replies[lead.id]]);
+ }host.hidden=lines.length===0;
  lines.forEach(([id,words],index)=>{
   const row=document.createElement('div');row.className='scene-line';row.hidden=index!==0;
   const avatar=document.createElement('div');avatar.className='scene-face';
@@ -239,6 +249,35 @@ function showScene(kind,title,dialogue){
  $('overlay-start').dataset.continueLabel='▶ '+(kind==='intro'?'FACE TOLLY':kind==='phase2'?'CONTINUE THE BATTLE':kind==='clue2'?'FACE BOINK & BOCHT':'CONTINUE EXPLORING');
  $('overlay-start').textContent=(SCENE_LINES[kind]||[]).length>1?'▶ NEXT LINE':$('overlay-start').dataset.continueLabel;
  $('scene-skip').hidden=false;
+}
+// Quest wards require three short, visible guardian waves at every scroll.
+function spawnGuardianWave(){
+ const counts=GATE_WAVES[difficulty][gate.index];
+ const count=counts[gate.wave],origin=clueSpots[gate.index];
+ for(let i=0;i<count;i++){
+  const kind=(i===0&&gate.wave===2)?'chunkling':(i%3===0?'boink':i%3===1?'bleepling':'bocht');
+  const c=ENEMY_TYPES[kind],a=TAU*(i+.3+gate.wave*.27)/count,radius=190+(i%2)*38;
+  const hp=Math.round(c.hp*(difficulty==='story'?.84:1.2));
+  foes.push({x:clamp(origin.x+Math.cos(a)*radius,30,WIDTH-30),y:clamp(origin.y+Math.sin(a)*radius,30,HEIGHT-30),
+   hp,maxHp:hp,speed:c.speed*(difficulty==='story'?.9:1.04),
+   damage:Math.round(c.damage*(difficulty==='story'?.7:1)),size:c.size,attack:.85,
+   kind,guardian:true,age:0,telegraph:0,charge:-1,trailTimer:0,slow:0});
+ }
+ gate.remainingDelay=3.3;
+ say('⚠ SCROLL '+(gate.index+1)+': DEFENCE WAVE '+(gate.wave+1)+' / 3! Defeat its guardians!',3.5);
+ playSfx('wave');
+}
+function beginGuardian(index){gate={index,wave:0,remainingDelay:0};spawnGuardianWave();}
+function updateGuardian(dt){
+ if(!gate||phase!=='explore')return;
+ gate.remainingDelay=Math.max(0,gate.remainingDelay-dt);
+ if(foes.some(e=>e.guardian&&e.hp>0))return;
+ if(gate.remainingDelay>0)return;
+ if(gate.wave<2){gate.wave++;spawnGuardianWave();return;}
+ const index=gate.index;gate=null;gateCleared[index]=true;
+ players.filter(p=>p.alive).forEach(p=>p.hp=Math.min(p.maxHp,p.hp+12));
+ say('✨ THE SCROLL IS UNSEALED! Return to reveal the next chapter!',4);
+ playSfx('clue');
 }
 function spawnDuo(){
  duoActive=true;duoDefeated=false;
