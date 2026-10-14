@@ -129,3 +129,7 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:3px solid #9cf
 .mobile-keys .touch-dash{display:block;width:100%;min-height:45px;margin-top:10px;border:2px solid #efd6a3;border-radius:8px;background:#394b62;color:#fff2d6;font-size:.88rem;font-weight:900;touch-action:manipulation;cursor:pointer}
 .mobile-keys .touch-dash:active{background:#d5b4ed;color:#1f2332}
 @media(max-width:620px){.mobile-keys .touch-dash{min-height:51px}}
+
+/* Result invitation belongs above the artwork, so it is never buried below long dialogue. */
+.ending-invite{display:flex;width:min(100%,470px);margin:10px auto 14px;min-height:48px;background:#baf2d6;color:#1a3c30;border:2px solid #65947b;font-size:1rem}
+.ending-invite[hidden]{display:none!important}
