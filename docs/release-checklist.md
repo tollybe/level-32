@@ -30,3 +30,16 @@
 **Standalone encrypted export mode**: `python tools/build.py` (the original default). This embeds the complete game and its canonical image assets inside a password-encrypted single file. It will be a snapshot at the time of the build.
 
 **Note:** The public `/game/` source is accessible directly by design. The guest code is a playful gate, not authentication for private information.
+
+## Day 4 regression scenarios
+
+- [x] Script-based simulation confirms a new scroll does not immediately grant a clue.
+- [x] Script-based simulation confirms all three guardian waves must clear before each cutscene.
+- [x] Script-based simulation confirms moving straight to the second scroll does not bypass the first.
+- [x] Script-based simulation confirms placing a player directly inside Tolly moves them outside her collision radius; remaining motionless incurs damage.
+- [x] JavaScript parsing and DOM id consistency verified; original character files unchanged.
+- [ ] Run updated Playwright suite across desktop Adventure, mobile Adventure and mobile Story.
+- [ ] Confirm no stationary boss win with **all four heroes** at low, medium and high levels.
+- [ ] Verify guardian wave times in solo and co-op; intended Adventure difficulty ≈6–7/10.
+- [ ] Confirm browser window links and `birthday.ics` import in common mobile calendar apps.
+- [ ] Ensure mobile dash and reduced-motion preferences work on a real touch device.
