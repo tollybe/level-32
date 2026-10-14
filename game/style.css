@@ -77,3 +77,9 @@
 }
 
 .overlay.cinematic .soundtip{display:none}
+
+/* Day Two: tangible real-world unlock as the game's narrative reward. */
+.mission-unlock{display:none;flex-direction:column;gap:5px;background:#3a304f;color:#fff4db;border:2px solid #e9bb72;border-radius:11px;padding:11px;margin:10px 0;font-size:.83rem}
+.mission-unlock.show{display:flex}.mission-unlock strong{color:#ffe198;font-size:.98rem}.mission-unlock .mission-cta{margin:8px 0 2px;background:#b6f0d0;border-color:#7ed4b7;font-size:.83rem}
+.birthday-bridge{background:#304356;border-left:4px solid #eecb88;padding:13px;border-radius:6px;color:#eaf0e7}
+@media(max-width:520px){.overlay.cinematic .overlay-art{max-height:29dvh}.overlay.cinematic .overlay-inner{padding:10px}.overlay.cinematic .overlay-inner h3{font-size:1.22rem}.mission-unlock{font-size:.74rem;padding:7px}.mission-unlock strong{font-size:.83rem}}

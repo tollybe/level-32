@@ -1,74 +1,89 @@
-# Rosie Survivors · LEVEL 32 🐾
+# Rosie Survivors: The Great Snack Rift · LEVEL 32
 
-A tiny, playable, co-op birthday game featuring **Rosie, Millie, Winnifred and Ellie**. Explore the sakura gardens, bonk a horde of pugs, follow the golden clue compass and locate Tolly guarding the fridge.
+A tiny, original, shareable birthday adventure featuring four real furry friends: **Rosie, Millie, Winnifred and Ellie**. Find three story clues, escape the ridiculously cute Bleepling Menace, survive Boink & Bocht, then face **Tolly, Guardian of the Fridge** and unlock the real second mission: **laser tag**.
 
-**Play:** `https://tollybe.github.io/level-32/` (guest password).  
-**Public export:** `https://tollybe.github.io/level-32/game/` (no password; it is the readable game source). 
+**Birthday invitation (password-themed landing page):** https://tollybe.github.io/level-32/  
+**Public game / exportable source:** https://tollybe.github.io/level-32/game/
 
-## Controls
+The homepage has a playful encrypted password gate; the `/game/` version is public and doesn't require a password, because the owner explicitly chose to share the source.
 
-| | Player 1 | Player 2 |
+## Play
+
+| Action | Player 1 | Player 2 |
 |---|---|---|
-| Move | W A S D | Arrow keys |
+| Move | WASD | Arrow keys |
 | Dash | Shift | Enter |
-| Fight | Automatic | Automatic |
-| Revive | Stand on the fallen teammate for 1.85 seconds | Same |
+| Attack | Automatic | Automatic |
+| Revive a friend | Stand over them for 1.85 seconds | Same |
+| Pause | Escape | Escape |
 
-On touch devices, use the on-screen pads. Escape pauses the game. The sound button toggles the original chiptune-style music and effects.
+Mobile has touch controls. Off-screen arrows point toward separated teammates. Toggle original Web Audio music and sound effects with the sound button.
 
-## Mission and heroes
+### Meet the heroes
 
-**Rosie** carries her stuffed dragon; **Millie** throws the bouncing dog ball; **Winnifred** wields the sausage sword; **Ellie** throws frozen Kong treats, slows pugs and heals teammates standing inside her green aura. Find three scrolls and follow the golden compass to Tolly's fridge. **Each scroll now opens its own illustrated storybook pause, with dialogue portraits sourced directly from the same Rosie, Millie, Winnifred and Ellie art used by character selection.** The fridge reveal and the Cone of Shame also use paused story scenes: enemies and damage freeze while the illustrations are open.
+- **Rosie, the Shadow Scout:** stuffed dragon toy, quick movement, and an unshakeable interest in banana.
+- **Millie, the Ball Berserker:** ricocheting dog ball, sturdy and exuberant.
+- **Winnifred, the Floof Duelist:** sausage sword, regal judgement, rapid close-range attacks.
+- **Ellie, the Zoomie Medic:** frozen Kong projectiles that slow enemies, passive self-healing, and a green AoE healing circle that restores the health of *all allies standing inside it*.
 
-## How to run or export
+### Day 2 gameplay
 
-This is a vanilla HTML/CSS/JavaScript game: no npm, servers or API calls are required to run the code. For local testing, run from the repository root:
+- Four visually distinct **Bleepling Menace** enemies: standard Bleeplings, bouncing/knockback **Boink**, weaving/slowing **Bocht**, and hefty **Chunklings**.
+- **Three illustrated, paused clue cutscenes**. Their character dialogue uses the **exact same portrait assets as character selection**, not newly imagined pet faces.
+- After clue two, **Boink & Bocht** appear as a small paired encounter and must be defeated before the last scroll unlocks.
+- After clue three, the party receives a **Legendary Laser Pointer** that fires a satisfying occasional beam—foreshadowing the actual laser-tag birthday activity.
+- **Tolly** remains the human fridge boss, not a cat. Phase two adds an actively dodgeable **Cone of Shame** with a visible warning arc.
+- Pause/cutscenes freeze enemy AI, hazards, HP damage and the in-game timer. Co-op revives remain enabled.
+- Winning **or losing** reveals **Mission Two: Laser Tag — The Human Edition** and a direct link to real birthday plans.
+- A gentle original 3/4 storybook waltz rearranges into more dramatic boss music. The audio is synthesized locally and is not taken from any film score.
 
-```sh
+## Birthday missions
+
+**Friday, 13 November 2026 · Utrecht**
+
+**Mission One (18:30–20:30):** Broodnodig, Paardenveld 5, 3511 RD Utrecht — chocolate balls, crafts, photos and food. **Dogs are welcome for this first half**, then may relax at the host's home during laser tag; arrange **earlier drop-off** in the WhatsApp group because the transfer is tight. Keep chocolate out of reach of dogs.
+
+**Mission Two (20:40):** Lasergames Utrecht, Biltstraat 4, 3572 BA Utrecht — two rounds at €28.50 per person; action-character outfits encouraged. RSVPs and other logistics stay in the existing WhatsApp group.
+
+## Run and export your own copy
+
+This is vanilla HTML, CSS and JavaScript with WebP illustrations. It has no NPM, backend, telemetry, dependencies, hosted services or third-party audio.
+
+```bash
+# From the repository root
 python -m http.server 8000
+# Then visit http://localhost:8000/game/
 ```
 
-Then visit `http://localhost:8000/game/`. To keep your own standalone copy, download the `game/` folder with its `assets/`, `style.css` and `game.js` files.
+To export a standalone public version, simply copy `game/` including its `assets/` folder. To rebuild the password-protected single-file `index.html`:
 
-To rebuild the single-file encrypted homepage:
-
-```sh
+```bash
 python -m pip install cryptography
-LEVEL32_PASSWORD='choose-your-guest-code' python tools/build.py
+LEVEL32_PASSWORD='your-secret-guest-code' python tools/build.py
 ```
 
 On Windows PowerShell:
 
 ```powershell
-$env:LEVEL32_PASSWORD = 'choose-your-guest-code'
+$env:LEVEL32_PASSWORD = 'your-secret-guest-code'
 python tools/build.py
 ```
 
-Commit the new root `index.html` to publish the password gate. **Do not commit the guest password** into source or CI configuration.
+The build inlines the images, CSS and JS and encrypts the resulting HTML with PBKDF2-SHA256 and AES-256-GCM. **Don't commit the password** to any tracked file. Note that the password is a playful entry screen only: the source lives openly in `/game/` and cannot be treated as private access control.
 
-### Project layout
+### Repository layout
 
 ```text
-index.html              encrypted homepage (generated)
-game/index.html         public playable game
-game/style.css          responsive styling
-game/game.js            game logic, combat, revives and scenes
-game/assets/            pet portraits and illustrated story panels
-tools/build.py          build the encrypted single-file homepage
+index.html                generated encrypted landing page
+game/index.html           public playable game and birthday invitation
+game/style.css            responsive storybook styling
+game/game.js              player, enemy, mini-boss and scene logic
+game/assets/             canonical portraits + illustrated cutscenes
+tools/build.py            encrypt an all-in-one homepage
 tools/gate_template.html  guest password UI
+tests/smoke.py            optional automated solo/co-op scene smoke test
 ```
 
-## Security and licensing notes
+### Design intent
 
-This GitHub repository is **public**. The guest password on the homepage is a playful invitation gate, **not access control**: anyone can inspect the source or visit `/game/` directly. Don't place secrets or anything you need hidden in this project. Artwork and character likenesses are original assets for this party game; do not assume they are freely licensed for resale or reuse.
-
-## Game-jam design goals
-
-- **Instantly recognisable heroes** — four real furry friends, their own abilities and jokes.
-- **Low-friction discovery** — only the *next* clue appears; a golden compass and quest bar point players toward it.
-- **Local co-op fun** — shared camera, off-screen teammate arrows, revives and Ellie healing.
-- **Story rewards** — illustrated fridge and Cone of Shame cutscenes pause all gameplay.
-- **Replayability** — local best score and a copy-to-WhatsApp result after a run.
-- **A real invitation** — the same website includes the evening's venues, times, and dog-friendly plan.
-
-Birthday: **Friday 13 November 2026**. Dogs are welcome for the first half at Broodnodig and can stay at the host's place for the laser-tag portion; coordinate drop-off in the WhatsApp group.
+This is an affectionate game about specific animals, created for one birthday party. Keep the animal portraits consistent across every menu and cutscene. Keep the comedy gentle and the scenes skippable/paused; nobody needs to defeat the boss to find the party details. Minecraft-adjacent cuteness is an inspiration, but the mob designs here are original and not official Minecraft assets. This project includes original party-specific artwork and real pet likenesses; don't assume they are freely licensed for commercial reuse.
