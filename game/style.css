@@ -83,3 +83,21 @@
 .mission-unlock.show{display:flex}.mission-unlock strong{color:#ffe198;font-size:.98rem}.mission-unlock .mission-cta{margin:8px 0 2px;background:#b6f0d0;border-color:#7ed4b7;font-size:.83rem}
 .birthday-bridge{background:#304356;border-left:4px solid #eecb88;padding:13px;border-radius:6px;color:#eaf0e7}
 @media(max-width:520px){.overlay.cinematic .overlay-art{max-height:29dvh}.overlay.cinematic .overlay-inner{padding:10px}.overlay.cinematic .overlay-inner h3{font-size:1.22rem}.mission-unlock{font-size:.74rem;padding:7px}.mission-unlock strong{font-size:.83rem}}
+/* Day 3: crisp turn-based dialogue with the original, untouched character portraits. */
+.scene-line[hidden]{display:none!important}
+.scene-dialogues{display:block;max-width:640px;margin:10px auto 4px}
+.scene-line{min-height:92px;background:#201f38;color:#fff6df;border:3px solid #fff1c7;border-radius:4px;box-shadow:6px 6px 0 #110f20;text-align:left;padding:12px 16px}
+.scene-face{width:74px;height:74px;border:2px solid #efdcb3;background:#eee1d2;flex-shrink:0}
+.scene-face img{height:100%;object-fit:contain;object-position:center}
+.scene-speech{color:#fff6df;line-height:1.4;gap:5px}
+.scene-speech strong{color:#f4cc8d;font-size:.8rem}
+.scene-speech span{color:#fff6df;font-size:clamp(.93rem,2.1vw,1.17rem);font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-weight:600}
+.scene-counter{min-height:1rem;color:#6a4c5a;font-size:.76rem;font-weight:800;letter-spacing:.08em}
+.scene-skip{display:inline-block;border:0;background:transparent;color:#614856;cursor:pointer;font-weight:800;text-decoration:underline;margin:8px}
+.scene-skip[hidden]{display:none}
+.overlay.cinematic[data-scene="clue3"] .overlay-art{width:auto;max-width:100%;height:auto;object-fit:contain;image-rendering:auto}
+.invitation-link{text-decoration:none;display:inline-flex;align-items:center;justify-content:center;text-align:center;line-height:1.25}
+.footer-invite{background:#b6f0d0;border-color:#7ed4b7;color:#24423a;font-size:.85rem}
+.game-actions{align-items:stretch}
+.game-actions>div{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+@media(max-width:620px){.scene-face{width:62px;height:62px}.scene-line{min-height:84px;padding:9px}.game-actions>div{width:100%}.footer-invite{width:100%}}
