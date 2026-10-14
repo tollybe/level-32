@@ -14,7 +14,7 @@ A tiny, playable, co-op birthday game featuring **Rosie, Millie, Winnifred and E
 | Fight | Automatic | Automatic |
 | Revive | Stand on the fallen teammate for 1.85 seconds | Same |
 
-On touch devices, use the on-screen pads. Escape pauses the game. The sound button toggles the original chiptune-style music and effects.
+On touch devices, use the on-screen pads. Escape pauses the game. The sound button toggles original music and effects. Exploration plays a breezy **3/4 garden waltz** with woodwind-like lead, music-box accents and plucked-string accompaniment; the fridge cutscenes use a softer variation, and Tolly has a faster, dramatic companion theme. Everything is synthesized in JavaScript, without third-party recordings.
 
 ## Mission and heroes
 
