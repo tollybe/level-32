@@ -1,6 +1,6 @@
 # Hackathon Day 4 · From playable game to memorable birthday invitation
 
-**Status:** Day 4 implemented in the gameplay branch; automated browser and human difficulty validation pending. **Target:** Friday 13 November 2026 in Utrecht.
+**Status:** Day 4 merged into `main` on 15 October 2026. Scripted progression checks passed; full Playwright browser testing and human difficulty validation remain pending. **Target:** Friday 13 November 2026 in Utrecht.
 
 ## North star
 
