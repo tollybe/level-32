@@ -1,6 +1,6 @@
 # Hackathon Day 4 · From playable game to memorable birthday invitation
 
-**Status:** Proposed; not yet implemented. **Target:** Friday 13 November 2026 in Utrecht.
+**Status:** Day 4 implemented in the gameplay branch; automated browser and human difficulty validation pending. **Target:** Friday 13 November 2026 in Utrecht.
 
 ## North star
 
@@ -92,3 +92,20 @@ A guest opens the URL, chooses to play or skip, understands why Rosie and friend
 ## Not in Day 4
 
 A hosted leaderboard, online multiplayer, login/accounts, payment collection, automated RSVPs, redesigned pet assets, or copyrighted game/film music.
+
+## Day 4 implementation notes · 15 October 2026
+
+The focus changed after playtesting revealed that combat felt **4/10** and guests could race through all clues in under 30 seconds.
+
+| Priority | Implementation | Remaining validation |
+| --- | --- | --- |
+| Guest-first invitation | First-screen and character-select CTA; persistent game and win/loss CTA; separate invitation | Check mobile browser/window behavior |
+| Calendar | `game/birthday.ics` contains both missions; no fabricated end time for laser tag | Import into calendar apps |
+| Clue pacing | Three waves at every scroll, player must return for the scene; Boink and Bocht still required | Timing and difficulty with actual players |
+| Combat rebalance | Increased enemy mobility/spawn intensity; mode choice: Adventure or Story | Measure solo and 2-player completion rates |
+| Tolly | Boss collider, chase, faster telegraphed knockback, orange banana warning, cone phase | Check safe dodges and no stationary-win exploit |
+| Dialogue | Hero-dependent ending quip with canonical portraits | Content/proofreading |
+| Mobile/accessibility | Two mobile dash buttons, keyboard focus and reduced-motion CSS | Real touch-device testing |
+| Tests | Expanded Playwright smoke suite and script-level simulation | Run Chromium automation on desktop/mobile |
+
+**Difficulty numbers are targets, not measured ratings.** If the challenge becomes punishing for first-time guests, adjust wave health and spawn rate before touching base character art. The invitation always remains accessible without completion.

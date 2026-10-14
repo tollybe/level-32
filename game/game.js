@@ -8,12 +8,14 @@ const petImages=Object.fromEntries(Array.from(document.querySelectorAll('#heroes
 const roster={rosie:{name:'Rosie',emoji:'🐕‍🦺',color:'#222a36',hp:130,speed:220,range:225,rate:.56,damage:17,weapon:'dragon'},millie:{name:'Millie',emoji:'🐕',color:'#31323d',hp:135,speed:205,range:220,rate:.62,damage:14,weapon:'ball'},winnifred:{name:'Winnifred',emoji:'🐈',color:'#e4d4bc',hp:128,speed:240,range:153,rate:.41,damage:25,weapon:'sausage'},ellie:{name:'Ellie',emoji:'🐶',color:'#121823',hp:150,speed:250,range:175,rate:.86,damage:9,weapon:'kong',auraRadius:135,healPulse:2.7,selfRegen:1.4}};
 let selected=['rosie','winnifred'],players=[],foes=[],shots=[],drops=[],fx=[],hazards=[],boss=null,phase='idle',paused=false,score=0,kills=0,level=1,xp=0,goal=35,spawnClock=0,surgeClock=33,elapsed=0,clues=0,fridgeVisible=false,fridge={x:2180,y:1440},cam={x:0,y:0},lastTime=0,raf=0,messageClock=0,attackClock=0,heldTouch={},audioCtx=null,audioEnabled=true,musicTimer=null,musicStep=0,musicMode='idle',musicBar=0,musicNextBarAt=0,sloganClock=8,bossPhase=1,coneWarned=false;
 let cutsceneNext=null,sceneName=null,reviveSeconds=1.85,hudClock=0;
-let duoActive=false,duoDefeated=false,laserUnlocked=false,beams=[],coneCooldown=6.8,coneWindup=0,coneAngle=0,bossPulseCooldown=4,bossPulseWindup=0;
+let duoActive=false,duoDefeated=false,laserUnlocked=false,beams=[],coneCooldown=6.8,coneWindup=0,coneAngle=0,bossPulseCooldown=4,bossPulseWindup=0,bananaWindup=0;
+let gate=null,gateCleared=[false,false,false],difficulty='challenge';
+const GATE_WAVES={challenge:[[3,3,2],[3,3,3],[4,3,3]],story:[[2,2,2],[2,2,2],[2,2,3]]};
 const ENEMY_TYPES={
- bleepling:{hp:38,speed:105,damage:12,size:21,score:12,xp:7},
- boink:{hp:55,speed:100,damage:10,size:26,score:20,xp:9},
- bocht:{hp:32,speed:120,damage:8,size:23,score:22,xp:10},
- chunkling:{hp:105,speed:65,damage:18,size:36,score:36,xp:12}
+ bleepling:{hp:42,speed:117,damage:13,size:21,score:12,xp:7},
+ boink:{hp:60,speed:114,damage:12,size:26,score:20,xp:9},
+ bocht:{hp:37,speed:133,damage:9,size:23,score:22,xp:10},
+ chunkling:{hp:112,speed:78,damage:19,size:36,score:36,xp:12}
 };
 let best=0;try{best=Number(localStorage.getItem('rosie-survivors-best'))||0}catch{};
 const rnd=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
@@ -38,7 +40,15 @@ const CLUE_SCENES=[
 ];
 function renderSceneLines(kind){
  const host=$('scene-dialogues');host.replaceChildren();host.dataset.beat='0';
- const lines=SCENE_LINES[kind]||[];host.hidden=lines.length===0;
+ const lines=[...(SCENE_LINES[kind]||[])];
+ // Character-specific ending callbacks, always with the established portraits.
+ if(kind==='victory'||kind==='defeat'){
+  const lead=players[0],replies={rosie:'Can we discuss the banana situation on the way to the party?',
+   millie:'WAIT. THERE WILL BE BALLS AT THIS PARTY, YES?',
+   winnifred:'Attendance is obligatory for distinguished floofs.',
+   ellie:'I am bringing zoomies. And emotional support.'};
+  if(lead)lines.push([lead.id,replies[lead.id]]);
+ }host.hidden=lines.length===0;
  lines.forEach(([id,words],index)=>{
   const row=document.createElement('div');row.className='scene-line';row.hidden=index!==0;
   const avatar=document.createElement('div');avatar.className='scene-face';
@@ -223,7 +233,7 @@ document.querySelectorAll('.hero').forEach(el=>el.addEventListener('click',()=>{
 document.querySelectorAll('[data-slot]').forEach(b=>b.addEventListener('click',()=>{if(b.disabled)return;$('assign').value=b.dataset.slot;updatePlayerTabs()}));
 $('coop').addEventListener('change',()=>{if(!$('coop').checked)$('assign').value='0';setSelection()});setSelection();
 function showScene(kind,title,dialogue){
- sceneName=kind;cutsceneNext=kind;phase='cutscene';keys.clear();
+ $('ending-invite').hidden=true;sceneName=kind;cutsceneNext=kind;phase='cutscene';keys.clear();
  $('pause').disabled=true;
  $('overlay').classList.add('cinematic');$('overlay').classList.remove('hidden');$('overlay').dataset.scene=kind;
  $('overlay-kicker').textContent=kind.startsWith('clue')?'DISCOVERY · CLUE '+kind.slice(-1)+'/3':kind==='intro'?'THE FRIDGE HAS BEEN FOUND':'PHASE TWO · CONE OF SHAME';
@@ -239,6 +249,35 @@ function showScene(kind,title,dialogue){
  $('overlay-start').dataset.continueLabel='▶ '+(kind==='intro'?'FACE TOLLY':kind==='phase2'?'CONTINUE THE BATTLE':kind==='clue2'?'FACE BOINK & BOCHT':'CONTINUE EXPLORING');
  $('overlay-start').textContent=(SCENE_LINES[kind]||[]).length>1?'▶ NEXT LINE':$('overlay-start').dataset.continueLabel;
  $('scene-skip').hidden=false;
+}
+// Quest wards require three short, visible guardian waves at every scroll.
+function spawnGuardianWave(){
+ const counts=GATE_WAVES[difficulty][gate.index];
+ const count=counts[gate.wave],origin=clueSpots[gate.index];
+ for(let i=0;i<count;i++){
+  const kind=(i===0&&gate.wave===2)?'chunkling':(i%3===0?'boink':i%3===1?'bleepling':'bocht');
+  const c=ENEMY_TYPES[kind],a=TAU*(i+.3+gate.wave*.27)/count,radius=190+(i%2)*38;
+  const hp=Math.round(c.hp*(difficulty==='story'?.84:1.2));
+  foes.push({x:clamp(origin.x+Math.cos(a)*radius,30,WIDTH-30),y:clamp(origin.y+Math.sin(a)*radius,30,HEIGHT-30),
+   hp,maxHp:hp,speed:c.speed*(difficulty==='story'?.9:1.04),
+   damage:Math.round(c.damage*(difficulty==='story'?.7:1)),size:c.size,attack:.85,
+   kind,guardian:true,age:0,telegraph:0,charge:-1,trailTimer:0,slow:0});
+ }
+ gate.remainingDelay=3.3;
+ say('⚠ SCROLL '+(gate.index+1)+': DEFENCE WAVE '+(gate.wave+1)+' / 3! Defeat its guardians!',3.5);
+ playSfx('wave');
+}
+function beginGuardian(index){gate={index,wave:0,remainingDelay:0};spawnGuardianWave();}
+function updateGuardian(dt){
+ if(!gate||phase!=='explore')return;
+ gate.remainingDelay=Math.max(0,gate.remainingDelay-dt);
+ if(foes.some(e=>e.guardian&&e.hp>0))return;
+ if(gate.remainingDelay>0)return;
+ if(gate.wave<2){gate.wave++;spawnGuardianWave();return;}
+ const index=gate.index;gate=null;gateCleared[index]=true;
+ players.filter(p=>p.alive).forEach(p=>p.hp=Math.min(p.maxHp,p.hp+12));
+ say('✨ THE SCROLL IS UNSEALED! Return to reveal the next chapter!',4);
+ playSfx('clue');
 }
 function spawnDuo(){
  duoActive=true;duoDefeated=false;
@@ -260,15 +299,15 @@ function continueScene(){
  $('scene-dialogues').hidden=true;
  $('pause').disabled=false;$('pause').textContent='Ⅱ PAUSE';
  if(kind==='intro'){
-   const hp=players.length===2?940:745;
-   boss={x:fridge.x+45,y:fridge.y-80,hp,maxHp:hp,size:49,speed:76,attack:1.75};
-   hazards=[];foes=foes.slice(-5);bossPhase=1;coneWarned=false;coneCooldown=6.6;coneWindup=0;bossPulseCooldown=3.5;bossPulseWindup=0;
+   const hp=(players.length===2?1070:845)*(difficulty==='story'?.77:1);
+   boss={x:fridge.x+45,y:fridge.y-80,hp,maxHp:hp,size:49,speed:difficulty==='story'?96:137,attack:1.1};
+   hazards=[];foes=foes.slice(-5);bossPhase=1;coneWarned=false;coneCooldown=6.6;coneWindup=0;bossPulseCooldown=1.65;bossPulseWindup=0;bananaWindup=0;
    $('bossbar').classList.add('show');$('boss-card').classList.add('show');
    say('⚔ TOLLY: No Rosie, you’re on a diet — no more banana!',5);playSfx('boss');score+=200;
  }else if(kind==='phase2'){
    say('⚠ CONE OF SHAME PROTOCOL ACTIVATED! Watch the warning arc!',4);playSfx('phase');
    players.filter(p=>p.alive).forEach(p=>p.inv=Math.max(p.inv,1.3));
-   coneCooldown=2.5;bossPulseCooldown=2.2;
+   coneCooldown=2.5;bossPulseCooldown=1.4;
  }else if(kind==='clue2'){
    players.filter(p=>p.alive).forEach(p=>p.inv=Math.max(p.inv,1.2));
    spawnDuo();
@@ -285,9 +324,9 @@ function continueScene(){
 function say(t,duration=3){$('game-message').textContent=t;messageClock=duration}
 function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5}}
 function start(){
- cancelAnimationFrame(raf);
+ $('ending-invite').hidden=true;cancelAnimationFrame(raf);
  players=[player(selected[0],0)];if($('coop').checked)players.push(player(selected[1],1));
- foes=[];shots=[];drops=[];fx=[];hazards=[];beams=[];duoActive=false;duoDefeated=false;laserUnlocked=false;coneCooldown=6.8;coneWindup=0;bossPulseCooldown=4;bossPulseWindup=0;phase='explore';paused=false;boss=null;cutsceneNext=null;sceneName=null;musicStep=0;musicMode='idle';musicBar=0;musicNextBarAt=0;
+ foes=[];shots=[];drops=[];fx=[];hazards=[];beams=[];difficulty=$('difficulty').value;gate=null;gateCleared=[false,false,false];duoActive=false;duoDefeated=false;laserUnlocked=false;coneCooldown=6.8;coneWindup=0;bossPulseCooldown=4;bossPulseWindup=0;bananaWindup=0;phase='explore';paused=false;boss=null;cutsceneNext=null;sceneName=null;musicStep=0;musicMode='idle';musicBar=0;musicNextBarAt=0;
  elapsed=0;score=0;kills=0;level=1;xp=0;goal=35;clues=0;fridgeVisible=false;
  spawnClock=.55;surgeClock=33;attackClock=0;hudClock=0;keys.clear();ensureAudio();
  $('scene-skip').hidden=true;$('share-result').classList.remove('show');$('mission-unlock').classList.remove('show');$('scene-dialogues').hidden=true;$('share-status').textContent='';$('overlay').classList.remove('cinematic');$('overlay').classList.add('hidden');$('pause').disabled=false;$('pause').textContent='Ⅱ PAUSE';
@@ -296,19 +335,21 @@ function start(){
  syncHud();lastTime=performance.now();raf=requestAnimationFrame(loop);
  $('game-section').scrollIntoView({behavior:'smooth',block:'start'});
 }
-function scoreText(win){const squad=players.map(p=>p.name).join(' & ');const duration=Math.floor(elapsed/60)+':'+String(Math.floor(elapsed%60)).padStart(2,'0');return '🐾 LEVEL 32 — ROSIE SURVIVORS\n'+squad+' '+(win?'LIBERATED THE FRIDGE!':'WERE DEFEATED BY TOLLY!')+'\nScore: '+score+' | Snacklings boinked: '+kills+' | Time: '+duration+'\nCan you beat our run? 🎮';}
-function resetEnd(win){phase='ended';paused=true;$('pause').disabled=true;let title=win?'🎉 TREATS LIBERATED!':'💀 THE FRIDGE PREVAILS';let detail=win?'Okay, you deserve the banana and cheese tax.':'Mwahahaha! You are a chonk and are of no match to the mighty Tolly!';if(score>best){best=score;try{localStorage.setItem('rosie-survivors-best',String(best))}catch{}detail+=' NEW PERSONAL BEST!'}$('overlay-kicker').textContent=win?'CUTSCENE · REWARD SCREEN':'GAME OVER · FRIDGE SEALED';$('overlay').classList.add('cinematic');$('overlay').querySelector('h3').textContent=title;$('boss-card').classList.remove('show');$('overlay').dataset.scene=win?'victory':'defeat';$('scene-skip').hidden=true;$('overlay-art').style.maxWidth='';$('overlay-art').src=win?SCENE_ART.victory:SCENE_ART.defeat;$('overlay-art').classList.add('show');renderSceneLines(win?'victory':'defeat');$('scene-dialogues').querySelectorAll('.scene-line').forEach(row=>row.hidden=false);$('mission-unlock').classList.add('show');$('overlay').querySelector('p').textContent=detail+' Score: '+score+' · Snacklings boinked: '+kills+'.';$('overlay-start').textContent='↻ PLAY AGAIN';$('scene-counter').textContent='';$('share-result').classList.add('show');$('share-status').textContent='';$('overlay').classList.remove('hidden'); if(win){playSfx('victory'); say(pick(slogans.victory),3)} else {playSfx('defeat')} syncHud()}
+function scoreText(win){const squad=players.map(p=>p.name).join(' & ');const duration=Math.floor(elapsed/60)+':'+String(Math.floor(elapsed%60)).padStart(2,'0');return '🐾 LEVEL 32 — ROSIE SURVIVORS\n'+squad+' '+(win?'LIBERATED THE FRIDGE!':'WERE DEFEATED BY TOLLY!')+'\nScore: '+score+' | Snacklings boinked: '+kills+' | Time: '+duration+'\nCan you beat our run? 🎮\nBirthday invitation: '+new URL(inviteHref,location.href).href;}
+function resetEnd(win){$('ending-invite').hidden=false;phase='ended';paused=true;$('pause').disabled=true;let title=win?'🎉 TREATS LIBERATED!':'💀 THE FRIDGE PREVAILS';let detail=win?'Okay, you deserve the banana and cheese tax.':'Mwahahaha! You are a chonk and are of no match to the mighty Tolly!';if(score>best){best=score;try{localStorage.setItem('rosie-survivors-best',String(best))}catch{}detail+=' NEW PERSONAL BEST!'}$('overlay-kicker').textContent=win?'CUTSCENE · REWARD SCREEN':'GAME OVER · FRIDGE SEALED';$('overlay').classList.add('cinematic');$('overlay').querySelector('h3').textContent=title;$('boss-card').classList.remove('show');$('overlay').dataset.scene=win?'victory':'defeat';$('scene-skip').hidden=true;$('overlay-art').style.maxWidth='';$('overlay-art').src=win?SCENE_ART.victory:SCENE_ART.defeat;$('overlay-art').classList.add('show');renderSceneLines(win?'victory':'defeat');$('scene-dialogues').querySelectorAll('.scene-line').forEach(row=>row.hidden=false);$('mission-unlock').classList.add('show');$('overlay').querySelector('p').textContent=detail+' Score: '+score+' · Snacklings boinked: '+kills+'.';$('overlay-start').textContent='↻ PLAY AGAIN';$('scene-counter').textContent='';$('share-result').classList.add('show');$('share-status').textContent='';$('overlay').classList.remove('hidden'); if(win){playSfx('victory'); say(pick(slogans.victory),3)} else {playSfx('defeat')} syncHud()}
 function spawnBleepling(){
+ // Bound unrelated mobs so the required guardian fights remain challenging but fair.
+ if(foes.length>=(gate?24:phase==='boss'?48:65))return;
  const live=players.filter(p=>p.alive);if(!live.length)return;
  const focus=live[Math.floor(Math.random()*live.length)];
  const angle=rnd(0,TAU),radius=rnd(390,550),tier=Math.floor(elapsed/35);
  const eliteChance=Math.min(.27,.07+elapsed*.0018)+(phase==='boss'?.05:0);
  const roll=Math.random();
- const kind=roll<eliteChance?(Math.random()<.54?'boink':'bocht'):(Math.random()<.12?'chunkling':'bleepling');
+ const kind=roll<eliteChance?(Math.random()<.54?'boink':'bocht'):(Math.random()<.16?'chunkling':'bleepling');
  const c=ENEMY_TYPES[kind],hp=Math.round(c.hp+tier*(kind==='chunkling'?11:6));
  foes.push({x:clamp(focus.x+Math.cos(angle)*radius,35,WIDTH-35),
   y:clamp(focus.y+Math.sin(angle)*radius,35,HEIGHT-35),hp,maxHp:hp,
-  speed:c.speed+Math.min(24,elapsed*.1),attack:rnd(.3,.8),size:c.size,kind,damage:c.damage+Math.floor(tier*.65),age:0,telegraph:0,charge:-1,trailTimer:0,slow:0});
+  speed:c.speed+Math.min(31,elapsed*.14),attack:rnd(.3,.8),size:c.size,kind,damage:Math.ceil((c.damage+Math.floor(tier*.75))*(difficulty==='story'?.7:1)),age:0,telegraph:0,charge:-1,trailTimer:0,slow:0});
 }
 function emit(text,x,y,col='#ffe1aa'){fx.push({text,x,y,col,t:1.1})}
 function nearest(origin,arr,r=Infinity){let item=null,bd=r;for(const o of arr){if(o.hp<=0||o.alive===false)continue;const d=dist(origin,o);if(d<bd){bd=d;item=o}}return item}
@@ -345,6 +386,15 @@ function movePlayers(dt){
   p.slowTime=Math.max(0,(p.slowTime||0)-dt);const footing=p.slowTime>0?.63:1;
   p.x=clamp(p.x+dx/l*p.speed*footing*dt*(p.dash>0?2.3:1),24,WIDTH-24);
   p.y=clamp(p.y+dy/l*p.speed*footing*dt*(p.dash>0?2.3:1),24,HEIGHT-24);
+  // Player and Tolly cannot occupy the same collision space.
+  if(phase==='boss'&&boss&&boss.hp>0){
+   const d=dist(p,boss),minimum=boss.size+44;
+   if(d<minimum){
+    const a=d>.001?Math.atan2(p.y-boss.y,p.x-boss.x):(p.num===0?0:Math.PI);
+    p.x=clamp(boss.x+Math.cos(a)*minimum,24,WIDTH-24);
+    p.y=clamp(boss.y+Math.sin(a)*minimum,24,HEIGHT-24);
+   }
+  }
   p.inv=Math.max(0,p.inv-dt);p.dash=Math.max(0,p.dash-dt);
   p.dashCooldown=Math.max(0,p.dashCooldown-dt);
   p.cool-=dt;if(p.cool<=0){fire(p);p.cool=p.rate}
@@ -422,15 +472,15 @@ function update(dt){
  updateRevives(dt);
  updateEllieAuras(dt);
  spawnClock-=dt;
- if(spawnClock<=0&&foes.length<(duoActive?20:88)){
-   const n=duoActive?1:phase==='boss'?2:elapsed>70?2:elapsed>30?2:1;
-   for(let j=0;j<n&&foes.length<90;j++)spawnBleepling();
-   spawnClock=Math.max(.36,1.02-elapsed*.0042)*(phase==='boss'?.95:1);
+ if(spawnClock<=0&&foes.length<(gate?23:duoActive?20:phase==='boss'?48:62)){
+   const n=gate?1:duoActive?1:phase==='boss'?(difficulty==='story'?1:2):elapsed>75?3:elapsed>18?2:1;
+   for(let j=0;j<n&&foes.length<65;j++)spawnBleepling();
+   spawnClock=Math.max(.42,.93-elapsed*.0035)*(difficulty==='story'?1.65:1)*(gate?1.5:1)*(phase==='boss'?.9:1);
  }
  surgeClock-=dt;
- if(surgeClock<=0&&!duoActive&&foes.length<82){
+ if(surgeClock<=0&&!duoActive&&!gate&&foes.length<60){
     let n=phase==='boss'?7:5;
-    for(let j=0;j<n&&foes.length<90;j++)spawnBleepling();
+    for(let j=0;j<n&&foes.length<65;j++)spawnBleepling();
     say('🫧 BLEEPLING STAMPEDE! '+n+' extra bleps!',3.5); playSfx('wave');
     surgeClock=Math.max(23,34-elapsed*.022);
  }
@@ -484,16 +534,21 @@ function update(dt){
     }
  }
  if(players.every(p=>!p.alive)){resetEnd(false);return}
+ updateGuardian(dt);
  if(phase==='explore'){
    const i=clues;
    if(i<3&&!duoActive&&(i!==2||duoDefeated)){
-     const s=clueSpots[i];
-     if(players.some(p=>p.alive&&dist(p,s)<55)){
-       clues++;score+=100;playSfx('clue');
-       const scene=CLUE_SCENES[clues-1];
-       showScene(scene.kind,scene.title,scene.dialogue);
-       return; // All actors, projectiles, hazards and the clock freeze during discoveries.
+    const spot=clueSpots[i];
+    if(players.some(p=>p.alive&&dist(p,spot)<68)){
+     if(!gateCleared[i]){
+      if(!gate)beginGuardian(i);
+      return;
      }
+     clues++;score+=100;playSfx('clue');gate=null;
+     const scene=CLUE_SCENES[clues-1];
+     showScene(scene.kind,scene.title,scene.dialogue);
+     return;
+    }
    }
    if(clues>=3){
       fridgeVisible=true;
@@ -512,7 +567,7 @@ function update(dt){
         for(const q of players.filter(p=>p.alive&&dist(p,boss)<150)){
           const a=Math.atan2(q.y-boss.y,q.x-boss.x);
           q.x=clamp(q.x+Math.cos(a)*110,24,WIDTH-24);q.y=clamp(q.y+Math.sin(a)*110,24,HEIGHT-24);
-          if(q.inv<=0){const amount=q.id==='winnifred'?14:bossPhase===2?23:18;
+          if(q.inv<=0){const amount=Math.round((q.id==='winnifred'?18:bossPhase===2?29:23)*(difficulty==='story'?.7:1));
             q.hp=Math.max(0,q.hp-amount);q.inv=.95;if(q.hp===0)q.alive=false;
             emit('FRIDGE REJECTION -'+amount,q.x,q.y-36,'#fff2ad');}
           else emit('SHOO!',q.x,q.y-34,'#fff2ad');
@@ -520,7 +575,7 @@ function update(dt){
         playSfx('cone');
       }
     }else if(bossPulseCooldown<=0&&players.some(p=>p.alive&&dist(p,boss)<175)){
-      bossPulseWindup=.95;bossPulseCooldown=bossPhase===2?3.2:4.5;
+      bossPulseWindup=1.05;bossPulseCooldown=bossPhase===2?2.65:3.35;
       say('⚠ TOLLY: NO CAMPING ON THE FRIDGE! MOVE OUT OF THE GOLD RING!',2.2);
     }
     boss.attack-=dt;
@@ -544,22 +599,25 @@ function update(dt){
        }
      }
      const a=Math.atan2(p.y-boss.y,p.x-boss.x),d=dist(p,boss);
-     if(d>145){boss.x+=Math.cos(a)*boss.speed*dt;boss.y+=Math.sin(a)*boss.speed*dt}
+     if(d>108){boss.x+=Math.cos(a)*boss.speed*dt;boss.y+=Math.sin(a)*boss.speed*dt}
      // The illustrated cone cutscene triggers precisely when HP crosses 50% (in damage()).
-     if(boss.attack<=0){
-       boss.attack=boss.hp<boss.maxHp*.5?1.48:1.88;
+     if(bananaWindup>0){
+      bananaWindup-=dt;
+      if(bananaWindup<=0){
+       bananaWindup=0;
+       boss.attack=boss.hp<boss.maxHp*.5?1.22:1.53;
        const frenzy=boss.hp<boss.maxHp*.5;
        // Tolly sends warning-colored banana projectiles out from the fridge shrine.
-       const count=frenzy?8:6,base=Math.atan2(p.y-boss.y,p.x-boss.x);
+       const count=frenzy?10:7,base=Math.atan2(p.y-boss.y,p.x-boss.x);
        for(let j=0;j<count;j++){
          const dir=base+(j-(count-1)/2)*(.20);
          const speed=frenzy?198:176;
          hazards.push({x:boss.x+Math.cos(dir)*30,y:boss.y+Math.sin(dir)*30,
-            vx:Math.cos(dir)*speed,vy:Math.sin(dir)*speed,ttl:3.3,damage:frenzy?18:15});
+            vx:Math.cos(dir)*speed,vy:Math.sin(dir)*speed,ttl:3.3,damage:Math.ceil((frenzy?20:17)*(difficulty==='story'?.72:1))});
        }
        for(const q of players){
          if(q.alive&&dist(q,boss)<110&&q.inv<=0){
-           q.hp=Math.max(0,q.hp-(frenzy?21:17));q.inv=.56;
+           q.hp=Math.max(0,q.hp-Math.ceil((frenzy?25:19)*(difficulty==='story'?.7:1)));q.inv=.56;
            emit('BANANA BLAST',q.x,q.y-18,'#ffe8a0');
            if(q.hp===0)q.alive=false; else playSfx('special');
          }
@@ -567,6 +625,10 @@ function update(dt){
        for(let j=0;j<(frenzy?3:2);j++)spawnBleepling();
        playSfx('special');
        if(frenzy&&Math.random()<.55)emit('🍌 NO MORE BANANA!',boss.x,boss.y-86,'#ffe6ae');
+      }
+     }else if(boss.attack<=0){
+      bananaWindup=.72;
+      say('⚠ TOLLY IS CHARGING A BANANA BURST! STEP BACK!',1.25);
      }
    }
    $('bossfill').style.width=100*clamp(boss.hp/boss.maxHp,0,1)+'%';
@@ -594,7 +656,11 @@ function update(dt){
 function currentObjective(){
  if(phase!=='explore')return null;
  if(duoActive){const d=foes.find(f=>f.elite&&f.hp>0);return d?{x:d.x,y:d.y,name:'BOINK & BOCHT',hint:'Defeat the terrible twosome to unlock the final scroll!'}:null;}
- if(clues<3)return {...clueSpots[clues],name:'CLUE '+(clues+1)+' / 3',hint:['Follow the mysterious glowing pawprints','Find the great sausage incident','Find Tolly’s forbidden-snacks note'][clues]};
+ if(gate){const remaining=foes.filter(e=>e.guardian&&e.hp>0).length;
+  return {...clueSpots[gate.index],name:'SCROLL '+(gate.index+1)+' · WAVE '+(gate.wave+1)+'/3',
+   hint:remaining?'Defeat '+remaining+' scroll guardian'+(remaining===1?'':'s')+'!':'Next wave incoming — stay alert!'};
+ }
+ if(clues<3)return {...clueSpots[clues],name:'CLUE '+(clues+1)+' / 3',hint:gateCleared[clues]?'The ward is broken! Return and read the scroll.':['Reach the first guarded scroll','Find the defended sausage clue','Face the final scroll guardians'][clues]};
  return {...fridge,name:'FRIDGE SHRINE',hint:'The fridge is waiting — find Tolly!'};
 }
 function updateObjective(){
@@ -623,7 +689,8 @@ function drawObjectiveMarker(){
  circle(0,0,28,'#382c39ee');cx.fillStyle='#ffe190';cx.beginPath();cx.moveTo(22,0);cx.lineTo(-12,-15);cx.lineTo(-12,15);cx.closePath();cx.fill();cx.restore();
  txt(duoActive?'🫧':clues<3?'📜':'❄',x,y+37,19,'center','#ffe9b4');
 }
-function syncHud(){updateObjective();let h='';for(const p of players){h+='<p><strong>P'+(p.num+1)+' '+p.name+'</strong> · '+Math.ceil(p.hp)+' / '+p.maxHp+' HP'+(p.id==='ellie'?' · 💚 Lick Aura':'')+'</p><div class="meter"><span style="width:'+100*clamp(p.hp/p.maxHp,0,1)+'%"></span></div>'}$('playerhud').innerHTML=h||'Choose your heroes!';$('missions').innerHTML='<div class="missionline '+(clues>=1?'done':'')+'">'+(clues>=1?'✓':'○')+' Find the first scroll</div><div class="missionline '+(clues>=2?'done':'')+'">'+(clues>=2?'✓':'○')+' Discover the sausage clue</div><div class="missionline '+(clues>=3?'done':'')+'">'+(clues>=3?'✓':'○')+' Reveal the fridge shrine</div><div class="missionline '+(phase==='boss'||phase==='ended'?'done':'')+'">'+(phase==='boss'||phase==='ended'?'✓':'○')+' Find Tolly</div><div class="missionline '+(phase==='ended'&&boss&&boss.hp<=0?'done':'')+'">'+(phase==='ended'&&boss&&boss.hp<=0?'✓':'○')+' Free the tasty treats & reveal Mission Two</div>';$('scoreline').textContent='Score: '+score+' · Level: '+level;$('timerline').textContent='Time: '+Math.floor(elapsed/60)+':'+String(Math.floor(elapsed%60)).padStart(2,'0')+' · Snacklings boinked: '+kills;$('bestline').textContent='Personal best: '+(best||'—')}
+function syncHud(){updateObjective();let h='';for(const p of players){h+='<p><strong>P'+(p.num+1)+' '+p.name+'</strong> · '+Math.ceil(p.hp)+' / '+p.maxHp+' HP'+(p.id==='ellie'?' · 💚 Lick Aura':'')+'</p><div class="meter"><span style="width:'+100*clamp(p.hp/p.maxHp,0,1)+'%"></span></div>'}$('playerhud').innerHTML=h||'Choose your heroes!';const wardProgress=gate?'<div class="missionline">⚔ SCROLL '+(gate.index+1)+' · WAVE '+(gate.wave+1)+'/3 · '+foes.filter(e=>e.guardian&&e.hp>0).length+' guardians remain</div>':'';
+ $('missions').innerHTML=wardProgress+'<div class="missionline '+(clues>=1?'done':'')+'">'+(clues>=1?'✓':'○')+' Find the first scroll</div><div class="missionline '+(clues>=2?'done':'')+'">'+(clues>=2?'✓':'○')+' Discover the sausage clue</div><div class="missionline '+(clues>=3?'done':'')+'">'+(clues>=3?'✓':'○')+' Reveal the fridge shrine</div><div class="missionline '+(phase==='boss'||phase==='ended'?'done':'')+'">'+(phase==='boss'||phase==='ended'?'✓':'○')+' Find Tolly</div><div class="missionline '+(phase==='ended'&&boss&&boss.hp<=0?'done':'')+'">'+(phase==='ended'&&boss&&boss.hp<=0?'✓':'○')+' Free the tasty treats & reveal Mission Two</div>';$('scoreline').textContent='Score: '+score+' · Level: '+level;$('timerline').textContent='Time: '+Math.floor(elapsed/60)+':'+String(Math.floor(elapsed%60)).padStart(2,'0')+' · Snacklings boinked: '+kills;$('bestline').textContent='Personal best: '+(best||'—')}
 function rect(x,y,w,h,col){cx.fillStyle=col;cx.fillRect(x,y,w,h)}function circle(x,y,r,col){cx.fillStyle=col;cx.beginPath();cx.arc(x,y,r,0,TAU);cx.fill()}function line(x1,y1,x2,y2,col,width=2){cx.strokeStyle=col;cx.lineWidth=width;cx.beginPath();cx.moveTo(x1,y1);cx.lineTo(x2,y2);cx.stroke()}
 function world(){rect(0,0,VIEWW,VIEWH,'#69816d');cx.save();cx.translate(-cam.x,-cam.y);
 // tiled moss and Japanese garden paths
@@ -681,6 +748,11 @@ if(boss&&boss.hp>0){
  }else txt('🧑',boss.x,boss.y+21,52,'center');
  cx.save();cx.strokeStyle=bossPhase===2?'#ff959c':'#f8dea4';cx.lineWidth=5;cx.beginPath();cx.arc(boss.x,boss.y,49,0,TAU);cx.stroke();cx.restore();
  txt('👑',boss.x,boss.y-41,34,'center');txt('TOLLY · NO MORE BANANA',boss.x,boss.y-70,15,'center','#fff5ca');
+ if(bananaWindup>0){
+  cx.save();cx.strokeStyle='#ffa94f';cx.fillStyle='#ffb45122';cx.lineWidth=4;
+  cx.beginPath();cx.arc(boss.x,boss.y,115,0,TAU);cx.fill();cx.stroke();cx.restore();
+  txt('⚠ BANANA BURST!',boss.x,boss.y+135,19,'center','#fff1bd');
+ }
  if(bossPulseWindup>0){
   cx.save();cx.setLineDash([14,9]);cx.lineWidth=6;cx.strokeStyle='#ffe9a0';cx.fillStyle='#ffc67344';
   cx.beginPath();cx.arc(boss.x,boss.y,150,0,TAU);cx.fill();cx.stroke();cx.restore();
@@ -745,7 +817,7 @@ function drawOffscreenArrows(){
   txt((p.alive?'P':'✚ P')+(p.num+1),x,y+35,15,'center',color);
  }
 }
-function render(){let live=players.filter(p=>p.alive);let center=live.length?{x:live.reduce((a,p)=>a+p.x,0)/live.length,y:live.reduce((a,p)=>a+p.y,0)/live.length}:{x:400,y:400};cam.x=clamp(center.x-VIEWW/2,0,WIDTH-VIEWW);cam.y=clamp(center.y-VIEWH/2,0,HEIGHT-VIEWH);world();drawObjectiveMarker();drawOffscreenArrows();rect(0,0,VIEWW,42,'#1a273ac9');txt('🌸 SAKURA GARDEN · '+(phase==='boss'?'FRIDGE DEFENCE':'THE GREAT SNACK RIFT'),15,28,18);txt('🐾 '+kills+'  ✨ LV '+level+'  🧾 '+clues+'/3  ⚔ ADVENTURE',VIEWW-17,28,17,'right');let dx=fridge.x-center.x,dy=fridge.y-center.y;if(clues>=3&&phase==='explore')txt('🧭 FRIDGE '+Math.round(Math.hypot(dx,dy))+'m',VIEWW/2,28,17,'center','#ffe6a4')}
+function render(){let live=players.filter(p=>p.alive);let center=live.length?{x:live.reduce((a,p)=>a+p.x,0)/live.length,y:live.reduce((a,p)=>a+p.y,0)/live.length}:{x:400,y:400};cam.x=clamp(center.x-VIEWW/2,0,WIDTH-VIEWW);cam.y=clamp(center.y-VIEWH/2,0,HEIGHT-VIEWH);world();drawObjectiveMarker();drawOffscreenArrows();rect(0,0,VIEWW,42,'#1a273ac9');txt('🌸 SAKURA GARDEN · '+(phase==='boss'?'FRIDGE DEFENCE':'THE GREAT SNACK RIFT'),15,28,18);txt('🐾 '+kills+'  ✨ LV '+level+'  🧾 '+clues+'/3  '+(difficulty==='story'?'🌼 STORY':'⚔ ADVENTURE'),VIEWW-17,28,17,'right');let dx=fridge.x-center.x,dy=fridge.y-center.y;if(clues>=3&&phase==='explore')txt('🧭 FRIDGE '+Math.round(Math.hypot(dx,dy))+'m',VIEWW/2,28,17,'center','#ffe6a4')}
 function loop(now){let dt=Math.min(.045,(now-lastTime)/1000||.016);lastTime=now;if(!paused&&phase!=='ended'&&phase!=='cutscene')update(dt);render();if(phase!=='ended')raf=requestAnimationFrame(loop)}
 function togglePause(){if(phase==='idle'||phase==='ended'||phase==='cutscene')return;paused=!paused;$('pause').textContent=paused?'▶ RESUME':'Ⅱ PAUSE';if(!paused){lastTime=performance.now();raf=requestAnimationFrame(loop)}else cancelAnimationFrame(raf);$('game-message').textContent=paused?'PAUSED':'QUEST RESUMED'}
 const inviteHref=location.pathname.includes('/game/')?'invitation.html':'game/invitation.html';
@@ -762,8 +834,18 @@ $('share-result').addEventListener('click',async()=>{
  catch{$('share-status').textContent='Copy blocked by this browser. Take a screenshot of your score instead.';}
 });
 $('start').addEventListener('click',start);$('overlay-start').addEventListener('click',()=>{if(phase==='cutscene')continueScene();else start()});$('restart').addEventListener('click',start);$('pause').addEventListener('click',togglePause);$('mute').addEventListener('click',()=>{audioEnabled=!audioEnabled; if(audioCtx){audioEnabled?audioCtx.resume():audioCtx.suspend()} $('mute').textContent=audioEnabled?'🔊 MUSIC + SFX':'🔇 SOUND OFF'; if(audioEnabled) ensureAudio();});
-window.addEventListener('keydown',e=>{let k=e.key.toLowerCase();if(['arrowup','arrowleft','arrowright','arrowdown',' '].includes(k))e.preventDefault();if(['shift','enter'].includes(k)&&phase!=='idle'&&!paused){const id=k==='shift'?0:1;if(players[id]&&players[id].alive&&players[id].dashCooldown<=0){players[id].dash=.18;players[id].dashCooldown=players[id].id==='ellie'?2.2:3.4;players[id].inv=Math.max(players[id].inv,.18);playSfx('dash')}}if(k==='escape')togglePause();keys.add(k)});window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));window.addEventListener('blur',()=>keys.clear());
-for(const b of document.querySelectorAll('[data-k]')){const k=b.dataset.k;b.addEventListener('pointerdown',e=>{e.preventDefault();keys.add(k);b.setPointerCapture(e.pointerId)});for(const ev of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,()=>keys.delete(k))}
+function tryDash(id){
+ if(!['boss','explore'].includes(phase)||paused)return;
+ const p=players[id];if(!p||!p.alive||p.dashCooldown>0)return;
+ p.dash=.18;p.dashCooldown=p.id==='ellie'?2.2:3.4;p.inv=Math.max(p.inv,.18);playSfx('dash');
+}
+window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();
+ if(['arrowup','arrowleft','arrowright','arrowdown',' '].includes(k))e.preventDefault();
+ if(k==='shift'||k==='enter')tryDash(k==='shift'?0:1);
+ if(k==='escape')togglePause();keys.add(k);
+});window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));window.addEventListener('blur',()=>keys.clear());
+for(const b of document.querySelectorAll('[data-dash]'))b.addEventListener('pointerdown',e=>{e.preventDefault();tryDash(Number(b.dataset.dash));});
+ for(const b of document.querySelectorAll('[data-k]')){const k=b.dataset.k;b.addEventListener('pointerdown',e=>{e.preventDefault();keys.add(k);b.setPointerCapture(e.pointerId)});for(const ev of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,()=>keys.delete(k))}
 // idle garden behind the opening card
 players=[player('rosie',0),player('winnifred',1)];render();syncHud();
 })();

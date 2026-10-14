@@ -1,0 +1,42 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Level 32 Birthday//Invitation//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:Level 32 Birthday · Utrecht
+BEGIN:VTIMEZONE
+TZID:Europe/Amsterdam
+X-LIC-LOCATION:Europe/Amsterdam
+BEGIN:DAYLIGHT
+DTSTART:19700329T020000
+TZOFFSETFROM:+0100
+TZOFFSETTO:+0200
+RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU
+TZNAME:CEST
+END:DAYLIGHT
+BEGIN:STANDARD
+DTSTART:19701025T030000
+TZOFFSETFROM:+0200
+TZOFFSETTO:+0100
+RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU
+TZNAME:CET
+END:STANDARD
+END:VTIMEZONE
+BEGIN:VEVENT
+UID:level32-mission-one-20261113@birthday-invite
+DTSTAMP:20261015T000000Z
+DTSTART;TZID=Europe/Amsterdam:20261113T183000
+DTEND;TZID=Europe/Amsterdam:20261113T203000
+SUMMARY:Level 32 · Mission One — Chocolate and Crafts
+LOCATION:Broodnodig\, Paardenveld 5\, 3511 RD Utrecht
+DESCRIPTION:Swedish chocolate balls\, crafts and photos. Dogs welcome during this first activity. Please coordinate food and dog drop-off in the WhatsApp group.
+END:VEVENT
+BEGIN:VEVENT
+UID:level32-mission-two-20261113@birthday-invite
+DTSTAMP:20261015T000000Z
+DTSTART;TZID=Europe/Amsterdam:20261113T204000
+SUMMARY:Level 32 · Mission Two — Laser Tag
+LOCATION:Lasergames Utrecht\, Biltstraat 4\, 3572 BA Utrecht
+DESCRIPTION:Two games at EUR 28.50 per person. Laser tag end time has not yet been confirmed. Coordinate transport and RSVP in the WhatsApp group. Action-character costumes encouraged.
+END:VEVENT
+END:VCALENDAR
