@@ -820,8 +820,18 @@ $('share-result').addEventListener('click',async()=>{
  catch{$('share-status').textContent='Copy blocked by this browser. Take a screenshot of your score instead.';}
 });
 $('start').addEventListener('click',start);$('overlay-start').addEventListener('click',()=>{if(phase==='cutscene')continueScene();else start()});$('restart').addEventListener('click',start);$('pause').addEventListener('click',togglePause);$('mute').addEventListener('click',()=>{audioEnabled=!audioEnabled; if(audioCtx){audioEnabled?audioCtx.resume():audioCtx.suspend()} $('mute').textContent=audioEnabled?'🔊 MUSIC + SFX':'🔇 SOUND OFF'; if(audioEnabled) ensureAudio();});
-window.addEventListener('keydown',e=>{let k=e.key.toLowerCase();if(['arrowup','arrowleft','arrowright','arrowdown',' '].includes(k))e.preventDefault();if(['shift','enter'].includes(k)&&phase!=='idle'&&!paused){const id=k==='shift'?0:1;if(players[id]&&players[id].alive&&players[id].dashCooldown<=0){players[id].dash=.18;players[id].dashCooldown=players[id].id==='ellie'?2.2:3.4;players[id].inv=Math.max(players[id].inv,.18);playSfx('dash')}}if(k==='escape')togglePause();keys.add(k)});window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));window.addEventListener('blur',()=>keys.clear());
-for(const b of document.querySelectorAll('[data-k]')){const k=b.dataset.k;b.addEventListener('pointerdown',e=>{e.preventDefault();keys.add(k);b.setPointerCapture(e.pointerId)});for(const ev of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,()=>keys.delete(k))}
+function tryDash(id){
+ if(!['boss','explore'].includes(phase)||paused)return;
+ const p=players[id];if(!p||!p.alive||p.dashCooldown>0)return;
+ p.dash=.18;p.dashCooldown=p.id==='ellie'?2.2:3.4;p.inv=Math.max(p.inv,.18);playSfx('dash');
+}
+window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();
+ if(['arrowup','arrowleft','arrowright','arrowdown',' '].includes(k))e.preventDefault();
+ if(k==='shift'||k==='enter')tryDash(k==='shift'?0:1);
+ if(k==='escape')togglePause();keys.add(k);
+});window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));window.addEventListener('blur',()=>keys.clear());
+for(const b of document.querySelectorAll('[data-dash]'))b.addEventListener('pointerdown',e=>{e.preventDefault();tryDash(Number(b.dataset.dash));});
+ for(const b of document.querySelectorAll('[data-k]')){const k=b.dataset.k;b.addEventListener('pointerdown',e=>{e.preventDefault();keys.add(k);b.setPointerCapture(e.pointerId)});for(const ev of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,()=>keys.delete(k))}
 // idle garden behind the opening card
 players=[player('rosie',0),player('winnifred',1)];render();syncHud();
 })();
