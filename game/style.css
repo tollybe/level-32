@@ -57,3 +57,23 @@
 .objective-meter{width:94px;height:10px;background:#11182b;border:1px solid #9b817c;flex:none;border-radius:99px;overflow:hidden}
 .objective-meter span{display:block;width:0;height:100%;background:linear-gradient(90deg,#8de2b8,#f9dd8c);transition:width .25s}
 @media(max-width:520px){.objective-strip{padding:9px 11px;gap:8px}.objective-main strong{font-size:.78rem}.objective-main span{font-size:.68rem}.objective-meter{width:44px}}
+
+/* Illustrated clue cutscenes: the speakers deliberately reuse the exact hero-select portraits. */
+.scene-dialogues{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:10px 0 12px;text-align:left}
+.scene-dialogues[hidden]{display:none}
+.scene-line{display:flex;align-items:center;gap:10px;min-width:0;padding:8px;border:2px solid #ac7d76;border-radius:12px;background:#fff7e6;box-shadow:0 3px #60434b33}
+.scene-face{flex:none;width:64px;height:64px;overflow:hidden;border-radius:9px;border:2px solid #cfaaa4;background:#dac9cc}
+.scene-face img{display:block;width:100%;height:136%;object-fit:cover;object-position:center top}
+.scene-speech{display:flex;flex-direction:column;gap:3px;min-width:0;color:#473342;line-height:1.25}
+.scene-speech strong{font-size:.73rem;letter-spacing:.09em;color:#9a4e5c}
+.scene-speech span{font-size:.88rem;font-weight:650}
+.overlay.cinematic:has(.scene-dialogues:not([hidden])) .overlay-art{max-height:36dvh}
+@media(max-width:620px){
+ .scene-dialogues{grid-template-columns:1fr;gap:7px}
+ .scene-line{padding:6px}
+ .scene-face{width:54px;height:54px}
+ .scene-speech span{font-size:.79rem}
+ .overlay.cinematic:has(.scene-dialogues:not([hidden])) .overlay-art{max-height:32dvh}
+}
+
+.overlay.cinematic .soundtip{display:none}
