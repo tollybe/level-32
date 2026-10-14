@@ -11,7 +11,40 @@ let best=0;try{best=Number(localStorage.getItem('rosie-survivors-best'))||0}catc
 const rnd=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const clueSpots=[{x:730,y:660},{x:1240,y:1060},{x:1690,y:1420}];
 const scenery=(()=>{let seed=9145;const r=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};return Array.from({length:450},()=>({x:r()*WIDTH,y:r()*HEIGHT,t:r(),s:10+r()*24}))})();
-const SCENE_ART={"intro":"assets/scene-intro.webp","phase2":"assets/scene-phase2.webp","victory":"assets/scene-victory.webp","defeat":"assets/scene-defeat.webp"};
+const SCENE_ART={"clue1":"assets/scene-clue1.webp","clue2":"assets/scene-clue2.webp","clue3":"assets/scene-clue3.webp","intro":"assets/scene-intro.webp","phase2":"assets/scene-phase2.webp","victory":"assets/scene-victory.webp","defeat":"assets/scene-defeat.webp"};
+// Never generate alternate faces for the pets: scene portraits reuse the actual
+// character-select images (and Tolly's existing portrait) for a consistent cast.
+const SCENE_LINES={
+ clue1:[['rosie','I recognise that smell. Banana.'],['winnifred','Your investigative methods lack sophistication.']],
+ clue2:[['millie','BALL?'],['ellie','I think they want to play!']],
+ clue3:[['winnifred','A decree from Tolly. The fridge must be nearby.'],['rosie','I knew the bananas were being guarded!']],
+ intro:[['tolly','No Rosie, you’re on a diet — no more banana.'],['rosie','But I searched VERY politely.']],
+ phase2:[['tolly',"ARG. DON'T MAKE ME GET THE CONE OF SHAME OUT!!!"],['ellie','No cone! Zoomies, everyone!']]
+};
+const CLUE_SCENES=[
+ {kind:'clue1',title:'CLUE 1 · THE MYSTERIOUS PAWPRINTS',dialogue:'Golden pawprints lead deeper into the sakura gardens. Something delicious is very close.'},
+ {kind:'clue2',title:'CLUE 2 · THE GREAT SAUSAGE INCIDENT',dialogue:'An empty sausage wrapper! But who left these tiny, suspicious footprints?'},
+ {kind:'clue3',title:'CLUE 3 · THE FRIDGE PROPHECY',dialogue:'Tolly’s warning has been discovered. A strange red light flickers beside the fridge shrine.'}
+];
+function renderSceneLines(kind){
+ const host=$('scene-dialogues');host.replaceChildren();
+ const lines=SCENE_LINES[kind];host.hidden=!lines;
+ if(!lines)return;
+ for(const [id,words] of lines){
+   const row=document.createElement('div');row.className='scene-line';
+   const avatar=document.createElement('div');avatar.className='scene-face';
+   const image=document.createElement('img');
+   // Canonical portraits always come from the already-mounted selection UI.
+   image.src=id==='tolly'?$('boss-card').querySelector('img').src:petImages[id].src;
+   image.alt=(id==='tolly'?'Tolly':roster[id].name)+' character illustration';
+   avatar.append(image);
+   const info=document.createElement('div');info.className='scene-speech';
+   const who=document.createElement('strong');who.textContent=id==='tolly'?'TOLLY':roster[id].name.toUpperCase();
+   const speech=document.createElement('span');speech.textContent='“'+words+'”';
+   info.append(who,speech);row.append(avatar,info);host.append(row);
+ }
+}
+
 const slogans={explore:['SUCHT TOLLY!','PUG HORDE INCOMING!','FOR BANANA AND CHEESE!','FOLLOW THE PAWPRINTS!'],boss:['NO BANANA SHALL PASS!','FRIDGE GUARDIAN APPROACHES!','DODGE THE SNACK DEFENCES!','SAVE THE TASTY TREATS!'],danger:['THIS LOOKS RUFF!','RETREAT, REGROUP, RESNACK!','TOO MANY PUGS!'],clues:['A SNACK SCENT APPEARS!','PAWPRINT TRAIL FOUND!','TOLLY IS NEAR…'],victory:['TREATS LIBERATED!','BANANA AND CHEESE TAX ACQUIRED!','SNACK JUSTICE PREVAILS!']};
 function pick(a){return a[Math.floor(Math.random()*a.length)]}
 function ensureAudio(){
@@ -173,18 +206,30 @@ function showScene(kind,title,dialogue){
  sceneName=kind;cutsceneNext=kind;phase='cutscene';keys.clear();
  $('pause').disabled=true;
  $('overlay').classList.add('cinematic');$('overlay').classList.remove('hidden');
- $('overlay-kicker').textContent=kind==='intro'?'THE FRIDGE HAS BEEN FOUND':'PHASE TWO · CONE OF SHAME';
+ $('overlay-kicker').textContent=kind.startsWith('clue')?'STORY DISCOVERY · '+kind.slice(-1)+' / 3':kind==='intro'?'THE FRIDGE HAS BEEN FOUND':'PHASE TWO · CONE OF SHAME';
  $('overlay').querySelector('h3').textContent=title;
  $('overlay').querySelector('p').textContent=dialogue;
  $('overlay-art').src=SCENE_ART[kind];$('overlay-art').classList.add('show');
- $('overlay-start').textContent='▶ '+(kind==='intro'?'FACE TOLLY':'CONTINUE THE BATTLE');
+ renderSceneLines(kind);
+ $('share-result').classList.remove('show');
+ $('overlay-start').textContent='▶ '+(kind.startsWith('clue')?'CONTINUE THE SEARCH':kind==='intro'?'FACE TOLLY':'CONTINUE THE BATTLE');
+ syncHud();
 }
 function continueScene(){
  if(phase!=='cutscene')return;
  const kind=cutsceneNext;
- cutsceneNext=null;phase='boss';keys.clear();
+ cutsceneNext=null;keys.clear();
  $('overlay').classList.remove('cinematic','show');$('overlay').classList.add('hidden');
  $('pause').disabled=false;$('pause').textContent='Ⅱ PAUSE';
+ $('scene-dialogues').hidden=true;
+ if(kind.startsWith('clue')){
+   phase='explore';
+   // Prevent an instant hit when returning from the storybook pause.
+   players.filter(p=>p.alive).forEach(p=>p.inv=Math.max(p.inv,1.15));
+   say(kind==='clue3'?'🧭 Three clues found! Follow the golden pointer to the fridge!':'📜 Mystery deepens! The golden pointer leads to the next clue.',3.5);
+   syncHud();lastTime=performance.now();return;
+ }
+ phase='boss';
  if(kind==='intro'){
    const hp=players.length===2?940:745;
    boss={x:fridge.x+45,y:fridge.y-80,hp,maxHp:hp,size:49,speed:76,attack:1.75};
@@ -195,7 +240,7 @@ function continueScene(){
    say("⚠ CONE OF SHAME PROTOCOL ACTIVATED!",4);playSfx('phase');
    players.filter(p=>p.alive).forEach(p=>p.inv=Math.max(p.inv,1.3));
  }
- lastTime=performance.now();
+ syncHud();lastTime=performance.now();
 }
 function say(t,duration=3){$('game-message').textContent=t;messageClock=duration}
 function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,healClock:1.7,healFlash:0,alive:true,reviveProgress:0}}
@@ -206,7 +251,7 @@ function start(){
  elapsed=0;score=0;kills=0;level=1;xp=0;goal=35;clues=0;fridgeVisible=false;
  spawnClock=.55;surgeClock=33;attackClock=0;hudClock=0;keys.clear();ensureAudio();
  $('share-result').classList.remove('show');$('share-status').textContent='';$('overlay').classList.remove('cinematic');$('overlay').classList.add('hidden');$('pause').disabled=false;$('pause').textContent='Ⅱ PAUSE';
- $('bossbar').classList.remove('show');$('boss-card').classList.remove('show');$('overlay-art').classList.remove('show');$('overlay-kicker').textContent='ARCADE MODE';
+ $('bossbar').classList.remove('show');$('boss-card').classList.remove('show');$('overlay-art').classList.remove('show');$('scene-dialogues').hidden=true;$('overlay-kicker').textContent='ARCADE MODE';
  say('Okay '+players.map(p=>p.name).join(' & ')+'… '+(players.length===1?'SUCH TOLLY!':'SUCHT TOLLY!')+' ADVENTURE MODE!',5);
  syncHud();lastTime=performance.now();raf=requestAnimationFrame(loop);
  $('game-section').scrollIntoView({behavior:'smooth',block:'start'});
@@ -356,7 +401,9 @@ function update(dt){
    let i=clues;
    if(i<3){const s=clueSpots[i];if(players.some(p=>p.alive&&dist(p,s)<55)){
       clues++;score+=100;
-      say('📜 CLUE '+clues+'/3 FOUND! '+['A trail of pawprints...','A suspicious sausage wrapper...','The fridge shrine is to the east!'][clues-1]+' '+pick(slogans.clues),4); playSfx('clue');
+      const scene=CLUE_SCENES[clues-1];
+      playSfx('clue');showScene(scene.kind,scene.title,scene.dialogue);
+      return; // Freeze the full combat simulation until the player chooses Continue.
    }}
    if(clues>=3){
       fridgeVisible=true;
