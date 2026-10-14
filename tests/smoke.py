@@ -37,13 +37,19 @@ def browser_run(browser,screen=(1280,900),mobile=False):
     s=page.evaluate('window.__rosieTest.place(0)')
     assert s['phase']=='cutscene' and s['clues']==1, s
     assert s['sceneName']=='clue1' and s['imgSrc'].startswith('data:image/webp'),s
-    assert len(s['dialogueImages'])==2,s
+    assert len(s['dialogueImages'])==3,s
     frozen=page.evaluate('window.__rosieTest.state()')
     page.wait_for_timeout(450)
     s=page.evaluate('window.__rosieTest.state()')
     assert s['elapsed']==frozen['elapsed'] and s['hp']==frozen['hp']
     print('clue1 cutscene and canonical portraits: PASS')
-    s=page.evaluate('window.__rosieTest.continue()')
+    assert page.locator('#scene-dialogues .scene-line:not([hidden])').count()==1
+    assert page.locator('#scene-counter').inner_text()=='1 / 3'
+    page.locator('#overlay-start').click()
+    assert page.locator('#scene-counter').inner_text()=='2 / 3'
+    assert page.locator('#scene-dialogues .scene-line:not([hidden])').count()==1
+    page.locator('#scene-skip').click()
+    s=page.evaluate('window.__rosieTest.state()')
     assert s['phase']=='explore'
     s=page.evaluate('window.__rosieTest.place(1)')
     assert s['phase']=='cutscene' and s['clues']==2
@@ -75,6 +81,8 @@ def browser_run(browser,screen=(1280,900),mobile=False):
     assert page.locator('#party-details').get_attribute('href').endswith('invitation.html')
     assert page.locator('.footer-invite').get_attribute('href').endswith('invitation.html')
     assert page.locator('#mission-unlock').is_visible()
+    # Direct invitation is available outside the ending overlay.
+    assert page.locator('.footer-invite').count()==1
     # Fresh defeat ensures we show invitation even if nobody wins.
     s=page.evaluate('window.__rosieTest.start()')
     s=page.evaluate('window.__rosieTest.lose()')
