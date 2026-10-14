@@ -338,6 +338,8 @@ function start(){
 function scoreText(win){const squad=players.map(p=>p.name).join(' & ');const duration=Math.floor(elapsed/60)+':'+String(Math.floor(elapsed%60)).padStart(2,'0');return '🐾 LEVEL 32 — ROSIE SURVIVORS\n'+squad+' '+(win?'LIBERATED THE FRIDGE!':'WERE DEFEATED BY TOLLY!')+'\nScore: '+score+' | Snacklings boinked: '+kills+' | Time: '+duration+'\nCan you beat our run? 🎮\nBirthday invitation: '+new URL(inviteHref,location.href).href;}
 function resetEnd(win){phase='ended';paused=true;$('pause').disabled=true;let title=win?'🎉 TREATS LIBERATED!':'💀 THE FRIDGE PREVAILS';let detail=win?'Okay, you deserve the banana and cheese tax.':'Mwahahaha! You are a chonk and are of no match to the mighty Tolly!';if(score>best){best=score;try{localStorage.setItem('rosie-survivors-best',String(best))}catch{}detail+=' NEW PERSONAL BEST!'}$('overlay-kicker').textContent=win?'CUTSCENE · REWARD SCREEN':'GAME OVER · FRIDGE SEALED';$('overlay').classList.add('cinematic');$('overlay').querySelector('h3').textContent=title;$('boss-card').classList.remove('show');$('overlay').dataset.scene=win?'victory':'defeat';$('scene-skip').hidden=true;$('overlay-art').style.maxWidth='';$('overlay-art').src=win?SCENE_ART.victory:SCENE_ART.defeat;$('overlay-art').classList.add('show');renderSceneLines(win?'victory':'defeat');$('scene-dialogues').querySelectorAll('.scene-line').forEach(row=>row.hidden=false);$('mission-unlock').classList.add('show');$('overlay').querySelector('p').textContent=detail+' Score: '+score+' · Snacklings boinked: '+kills+'.';$('overlay-start').textContent='↻ PLAY AGAIN';$('scene-counter').textContent='';$('share-result').classList.add('show');$('share-status').textContent='';$('overlay').classList.remove('hidden'); if(win){playSfx('victory'); say(pick(slogans.victory),3)} else {playSfx('defeat')} syncHud()}
 function spawnBleepling(){
+ // Bound unrelated mobs so the required guardian fights remain challenging but fair.
+ if(foes.length>=(gate?24:phase==='boss'?48:65))return;
  const live=players.filter(p=>p.alive);if(!live.length)return;
  const focus=live[Math.floor(Math.random()*live.length)];
  const angle=rnd(0,TAU),radius=rnd(390,550),tier=Math.floor(elapsed/35);
@@ -470,15 +472,15 @@ function update(dt){
  updateRevives(dt);
  updateEllieAuras(dt);
  spawnClock-=dt;
- if(spawnClock<=0&&foes.length<(duoActive?20:88)){
-   const n=duoActive?1:phase==='boss'?(difficulty==='story'?1:2):elapsed>75?3:elapsed>18?2:1;
-   for(let j=0;j<n&&foes.length<90;j++)spawnBleepling();
-   spawnClock=Math.max(.42,.93-elapsed*.0035)*(difficulty==='story'?1.65:1)*(phase==='boss'?.9:1);
+ if(spawnClock<=0&&foes.length<(gate?23:duoActive?20:phase==='boss'?48:62)){
+   const n=gate?1:duoActive?1:phase==='boss'?(difficulty==='story'?1:2):elapsed>75?3:elapsed>18?2:1;
+   for(let j=0;j<n&&foes.length<65;j++)spawnBleepling();
+   spawnClock=Math.max(.42,.93-elapsed*.0035)*(difficulty==='story'?1.65:1)*(gate?1.5:1)*(phase==='boss'?.9:1);
  }
  surgeClock-=dt;
- if(surgeClock<=0&&!duoActive&&foes.length<82){
+ if(surgeClock<=0&&!duoActive&&!gate&&foes.length<60){
     let n=phase==='boss'?7:5;
-    for(let j=0;j<n&&foes.length<90;j++)spawnBleepling();
+    for(let j=0;j<n&&foes.length<65;j++)spawnBleepling();
     say('🫧 BLEEPLING STAMPEDE! '+n+' extra bleps!',3.5); playSfx('wave');
     surgeClock=Math.max(23,34-elapsed*.022);
  }
