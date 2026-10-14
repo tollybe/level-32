@@ -51,6 +51,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge'):
     assert page.locator('[data-dash]').count()==2
     assert page.locator('.select-invite').get_attribute('target')=='_blank'
     assert page.locator('.hero-invite-line a').get_attribute('target')=='_blank'
+    assert page.locator('#ending-invite').is_hidden()
     s=page.evaluate('window.__rosieTest.start()')
     assert s['phase']=='explore' and s['mode']==mode
     s=page.evaluate('window.__rosieTest.place(0)')
@@ -113,6 +114,8 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge'):
     assert page.locator('#party-details').get_attribute('href').endswith('invitation.html')
     assert page.locator('.footer-invite').get_attribute('href').endswith('invitation.html')
     assert page.locator('#mission-unlock').is_visible()
+    assert page.locator('#ending-invite').is_visible()
+    assert page.locator('#ending-invite').get_attribute('target')=='_blank'
     # Direct invitation is available outside the ending overlay.
     assert page.locator('.footer-invite').count()==1
     # Fresh defeat ensures we show invitation even if nobody wins.
@@ -120,6 +123,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge'):
     s=page.evaluate('window.__rosieTest.lose()')
     assert s['phase']=='ended' and s['missionUnlock'],s
     assert page.locator('#party-details').is_visible()
+    assert page.locator('#ending-invite').is_visible()
     assert not errors,errors
     print('defeat/missions/syntax:', 'PASS')
     page.close()
