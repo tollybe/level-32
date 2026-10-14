@@ -9,7 +9,7 @@ hook='''window.__rosieTest={
  start(){start();cancelAnimationFrame(raf);players.forEach(p=>p.inv=9999);return this.state()},
  place(i){players[0].x=clueSpots[i].x;players[0].y=clueSpots[i].y;update(.016);return this.state()},
  step(){update(.016);return this.state()},
- continue(){continueScene();return this.state()},
+ continue(){for(let i=0;i<12&&phase==='cutscene';i++)continueScene();return this.state()},
  killsDuo(){for(const e of foes.filter(f=>f.elite&&f.hp>0))damage(e,e.hp+1,players[0]);return this.state()},
  nearFridge(){players[0].x=fridge.x;players[0].y=fridge.y;update(.016);return this.state()},
  hitBoss(){if(!boss)throw Error('no boss');damage(boss,Math.ceil(boss.maxHp*.52),players[0]);return this.state()},
@@ -68,16 +68,18 @@ def browser_run(browser,screen=(1280,900),mobile=False):
     assert s['phase']=='boss'
     s=page.evaluate('window.__rosieTest.killBoss()')
     assert s['phase']=='ended' and s['missionUnlock'] and s['overlay']
-    assert len(s['dialogueImages'])==1 and s['dialogueImages'][0].startswith('data:image/webp')
+    assert len(s['dialogueImages'])>=2 and all(im.startswith('data:image/webp') for im in s['dialogueImages'])
     print('victory and invitation: PASS')
     # Screenshot optional; uncomment if visual debugging is useful.
-    page.locator('#party-details').click()
-    assert page.locator('#birthday-mission').is_visible()
-    assert page.locator('#overlay').get_attribute('class').find('hidden')>=0
+    assert page.locator('#party-details').get_attribute('target')=='_blank'
+    assert page.locator('#party-details').get_attribute('href').endswith('invitation.html')
+    assert page.locator('.footer-invite').get_attribute('href').endswith('invitation.html')
+    assert page.locator('#mission-unlock').is_visible()
     # Fresh defeat ensures we show invitation even if nobody wins.
     s=page.evaluate('window.__rosieTest.start()')
     s=page.evaluate('window.__rosieTest.lose()')
     assert s['phase']=='ended' and s['missionUnlock'],s
+    assert page.locator('#party-details').is_visible()
     assert not errors,errors
     print('defeat/missions/syntax:', 'PASS')
     page.close()
