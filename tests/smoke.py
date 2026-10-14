@@ -38,7 +38,7 @@ assert pos>0
 html=html[:pos]+hook+'\n'+html[pos:]
 assert 'window.__rosieTest' in html
 
-def browser_run(browser,screen=(1280,900),mobile=False):
+def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge'):
     page=browser.new_page(viewport={'width':screen[0],'height':screen[1]},device_scale_factor=1, is_mobile=mobile,has_touch=mobile)
     errors=[]
     page.on('pageerror',lambda e:errors.append(str(e)))
@@ -47,12 +47,14 @@ def browser_run(browser,screen=(1280,900),mobile=False):
     s=page.evaluate('window.__rosieTest.state()')
     print('idle',s['phase'])
     page.locator('#mute').click()
+    page.locator('#difficulty').select_option(mode)
+    assert page.locator('[data-dash]').count()==2
     assert page.locator('.select-invite').get_attribute('target')=='_blank'
     assert page.locator('.hero-invite-line a').get_attribute('target')=='_blank'
     s=page.evaluate('window.__rosieTest.start()')
-    assert s['phase']=='explore'
+    assert s['phase']=='explore' and s['mode']==mode
     s=page.evaluate('window.__rosieTest.place(0)')
-    assert s['phase']=='explore' and s['clues']==0 and s['guardWave']==0 and s['guardians']>0, s
+    assert s['phase']=='explore' and s['clues']==0 and s['guardWave']==0 and s['guardians']==(2 if mode=='story' else 3), s
     # Running to a later scroll cannot bypass the current ward.
     skipped=page.evaluate('window.__rosieTest.place(1)')
     assert skipped['clues']==0 and skipped['guardWave']==0
@@ -126,4 +128,5 @@ with sync_playwright() as p:
     browser=p.chromium.launch(headless=True,executable_path=shutil.which('chromium') or shutil.which('google-chrome'),args=['--no-sandbox','--disable-gpu'])
     browser_run(browser)
     browser_run(browser,screen=(390,844),mobile=True)
+    browser_run(browser,screen=(390,844),mobile=True,mode='story')
     browser.close()
