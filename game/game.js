@@ -299,15 +299,15 @@ function continueScene(){
  $('scene-dialogues').hidden=true;
  $('pause').disabled=false;$('pause').textContent='Ⅱ PAUSE';
  if(kind==='intro'){
-   const hp=players.length===2?940:745;
-   boss={x:fridge.x+45,y:fridge.y-80,hp,maxHp:hp,size:49,speed:76,attack:1.75};
-   hazards=[];foes=foes.slice(-5);bossPhase=1;coneWarned=false;coneCooldown=6.6;coneWindup=0;bossPulseCooldown=3.5;bossPulseWindup=0;
+   const hp=(players.length===2?1070:845)*(difficulty==='story'?.77:1);
+   boss={x:fridge.x+45,y:fridge.y-80,hp,maxHp:hp,size:49,speed:difficulty==='story'?96:137,attack:1.1};
+   hazards=[];foes=foes.slice(-5);bossPhase=1;coneWarned=false;coneCooldown=6.6;coneWindup=0;bossPulseCooldown=1.65;bossPulseWindup=0;
    $('bossbar').classList.add('show');$('boss-card').classList.add('show');
    say('⚔ TOLLY: No Rosie, you’re on a diet — no more banana!',5);playSfx('boss');score+=200;
  }else if(kind==='phase2'){
    say('⚠ CONE OF SHAME PROTOCOL ACTIVATED! Watch the warning arc!',4);playSfx('phase');
    players.filter(p=>p.alive).forEach(p=>p.inv=Math.max(p.inv,1.3));
-   coneCooldown=2.5;bossPulseCooldown=2.2;
+   coneCooldown=2.5;bossPulseCooldown=1.4;
  }else if(kind==='clue2'){
    players.filter(p=>p.alive).forEach(p=>p.inv=Math.max(p.inv,1.2));
    spawnDuo();
@@ -326,7 +326,7 @@ function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+
 function start(){
  cancelAnimationFrame(raf);
  players=[player(selected[0],0)];if($('coop').checked)players.push(player(selected[1],1));
- foes=[];shots=[];drops=[];fx=[];hazards=[];beams=[];duoActive=false;duoDefeated=false;laserUnlocked=false;coneCooldown=6.8;coneWindup=0;bossPulseCooldown=4;bossPulseWindup=0;phase='explore';paused=false;boss=null;cutsceneNext=null;sceneName=null;musicStep=0;musicMode='idle';musicBar=0;musicNextBarAt=0;
+ foes=[];shots=[];drops=[];fx=[];hazards=[];beams=[];difficulty=$('difficulty').value;gate=null;gateCleared=[false,false,false];duoActive=false;duoDefeated=false;laserUnlocked=false;coneCooldown=6.8;coneWindup=0;bossPulseCooldown=4;bossPulseWindup=0;phase='explore';paused=false;boss=null;cutsceneNext=null;sceneName=null;musicStep=0;musicMode='idle';musicBar=0;musicNextBarAt=0;
  elapsed=0;score=0;kills=0;level=1;xp=0;goal=35;clues=0;fridgeVisible=false;
  spawnClock=.55;surgeClock=33;attackClock=0;hudClock=0;keys.clear();ensureAudio();
  $('scene-skip').hidden=true;$('share-result').classList.remove('show');$('mission-unlock').classList.remove('show');$('scene-dialogues').hidden=true;$('share-status').textContent='';$('overlay').classList.remove('cinematic');$('overlay').classList.add('hidden');$('pause').disabled=false;$('pause').textContent='Ⅱ PAUSE';
@@ -343,11 +343,11 @@ function spawnBleepling(){
  const angle=rnd(0,TAU),radius=rnd(390,550),tier=Math.floor(elapsed/35);
  const eliteChance=Math.min(.27,.07+elapsed*.0018)+(phase==='boss'?.05:0);
  const roll=Math.random();
- const kind=roll<eliteChance?(Math.random()<.54?'boink':'bocht'):(Math.random()<.12?'chunkling':'bleepling');
+ const kind=roll<eliteChance?(Math.random()<.54?'boink':'bocht'):(Math.random()<.16?'chunkling':'bleepling');
  const c=ENEMY_TYPES[kind],hp=Math.round(c.hp+tier*(kind==='chunkling'?11:6));
  foes.push({x:clamp(focus.x+Math.cos(angle)*radius,35,WIDTH-35),
   y:clamp(focus.y+Math.sin(angle)*radius,35,HEIGHT-35),hp,maxHp:hp,
-  speed:c.speed+Math.min(24,elapsed*.1),attack:rnd(.3,.8),size:c.size,kind,damage:c.damage+Math.floor(tier*.65),age:0,telegraph:0,charge:-1,trailTimer:0,slow:0});
+  speed:c.speed+Math.min(31,elapsed*.14),attack:rnd(.3,.8),size:c.size,kind,damage:Math.ceil((c.damage+Math.floor(tier*.75))*(difficulty==='story'?.7:1)),age:0,telegraph:0,charge:-1,trailTimer:0,slow:0});
 }
 function emit(text,x,y,col='#ffe1aa'){fx.push({text,x,y,col,t:1.1})}
 function nearest(origin,arr,r=Infinity){let item=null,bd=r;for(const o of arr){if(o.hp<=0||o.alive===false)continue;const d=dist(origin,o);if(d<bd){bd=d;item=o}}return item}
@@ -384,6 +384,15 @@ function movePlayers(dt){
   p.slowTime=Math.max(0,(p.slowTime||0)-dt);const footing=p.slowTime>0?.63:1;
   p.x=clamp(p.x+dx/l*p.speed*footing*dt*(p.dash>0?2.3:1),24,WIDTH-24);
   p.y=clamp(p.y+dy/l*p.speed*footing*dt*(p.dash>0?2.3:1),24,HEIGHT-24);
+  // Player and Tolly cannot occupy the same collision space.
+  if(phase==='boss'&&boss&&boss.hp>0){
+   const d=dist(p,boss),minimum=boss.size+44;
+   if(d<minimum){
+    const a=d>.001?Math.atan2(p.y-boss.y,p.x-boss.x):(p.num===0?0:Math.PI);
+    p.x=clamp(boss.x+Math.cos(a)*minimum,24,WIDTH-24);
+    p.y=clamp(boss.y+Math.sin(a)*minimum,24,HEIGHT-24);
+   }
+  }
   p.inv=Math.max(0,p.inv-dt);p.dash=Math.max(0,p.dash-dt);
   p.dashCooldown=Math.max(0,p.dashCooldown-dt);
   p.cool-=dt;if(p.cool<=0){fire(p);p.cool=p.rate}
@@ -462,9 +471,9 @@ function update(dt){
  updateEllieAuras(dt);
  spawnClock-=dt;
  if(spawnClock<=0&&foes.length<(duoActive?20:88)){
-   const n=duoActive?1:phase==='boss'?2:elapsed>70?2:elapsed>30?2:1;
+   const n=duoActive?1:phase==='boss'?(difficulty==='story'?1:2):elapsed>75?3:elapsed>18?2:1;
    for(let j=0;j<n&&foes.length<90;j++)spawnBleepling();
-   spawnClock=Math.max(.36,1.02-elapsed*.0042)*(phase==='boss'?.95:1);
+   spawnClock=Math.max(.42,.93-elapsed*.0035)*(difficulty==='story'?1.65:1)*(phase==='boss'?.9:1);
  }
  surgeClock-=dt;
  if(surgeClock<=0&&!duoActive&&foes.length<82){
@@ -523,6 +532,7 @@ function update(dt){
     }
  }
  if(players.every(p=>!p.alive)){resetEnd(false);return}
+ updateGuardian(dt);
  if(phase==='explore'){
    const i=clues;
    if(i<3&&!duoActive&&(i!==2||duoDefeated)){
@@ -551,7 +561,7 @@ function update(dt){
         for(const q of players.filter(p=>p.alive&&dist(p,boss)<150)){
           const a=Math.atan2(q.y-boss.y,q.x-boss.x);
           q.x=clamp(q.x+Math.cos(a)*110,24,WIDTH-24);q.y=clamp(q.y+Math.sin(a)*110,24,HEIGHT-24);
-          if(q.inv<=0){const amount=q.id==='winnifred'?14:bossPhase===2?23:18;
+          if(q.inv<=0){const amount=Math.round((q.id==='winnifred'?18:bossPhase===2?29:23)*(difficulty==='story'?.7:1));
             q.hp=Math.max(0,q.hp-amount);q.inv=.95;if(q.hp===0)q.alive=false;
             emit('FRIDGE REJECTION -'+amount,q.x,q.y-36,'#fff2ad');}
           else emit('SHOO!',q.x,q.y-34,'#fff2ad');
@@ -559,7 +569,7 @@ function update(dt){
         playSfx('cone');
       }
     }else if(bossPulseCooldown<=0&&players.some(p=>p.alive&&dist(p,boss)<175)){
-      bossPulseWindup=.95;bossPulseCooldown=bossPhase===2?3.2:4.5;
+      bossPulseWindup=1.05;bossPulseCooldown=bossPhase===2?2.65:3.35;
       say('⚠ TOLLY: NO CAMPING ON THE FRIDGE! MOVE OUT OF THE GOLD RING!',2.2);
     }
     boss.attack-=dt;
@@ -583,22 +593,22 @@ function update(dt){
        }
      }
      const a=Math.atan2(p.y-boss.y,p.x-boss.x),d=dist(p,boss);
-     if(d>145){boss.x+=Math.cos(a)*boss.speed*dt;boss.y+=Math.sin(a)*boss.speed*dt}
+     if(d>108){boss.x+=Math.cos(a)*boss.speed*dt;boss.y+=Math.sin(a)*boss.speed*dt}
      // The illustrated cone cutscene triggers precisely when HP crosses 50% (in damage()).
      if(boss.attack<=0){
-       boss.attack=boss.hp<boss.maxHp*.5?1.48:1.88;
+       boss.attack=boss.hp<boss.maxHp*.5?1.22:1.53;
        const frenzy=boss.hp<boss.maxHp*.5;
        // Tolly sends warning-colored banana projectiles out from the fridge shrine.
-       const count=frenzy?8:6,base=Math.atan2(p.y-boss.y,p.x-boss.x);
+       const count=frenzy?10:7,base=Math.atan2(p.y-boss.y,p.x-boss.x);
        for(let j=0;j<count;j++){
          const dir=base+(j-(count-1)/2)*(.20);
          const speed=frenzy?198:176;
          hazards.push({x:boss.x+Math.cos(dir)*30,y:boss.y+Math.sin(dir)*30,
-            vx:Math.cos(dir)*speed,vy:Math.sin(dir)*speed,ttl:3.3,damage:frenzy?18:15});
+            vx:Math.cos(dir)*speed,vy:Math.sin(dir)*speed,ttl:3.3,damage:Math.ceil((frenzy?20:17)*(difficulty==='story'?.72:1))});
        }
        for(const q of players){
          if(q.alive&&dist(q,boss)<110&&q.inv<=0){
-           q.hp=Math.max(0,q.hp-(frenzy?21:17));q.inv=.56;
+           q.hp=Math.max(0,q.hp-Math.ceil((frenzy?25:19)*(difficulty==='story'?.7:1)));q.inv=.56;
            emit('BANANA BLAST',q.x,q.y-18,'#ffe8a0');
            if(q.hp===0)q.alive=false; else playSfx('special');
          }
