@@ -101,6 +101,19 @@ This is an affectionate game about specific animals, created for one birthday pa
 - The result screen, game controls, and the game footer point to `game/invitation.html` in a separate tab. The invitation is accessible without winning the game.
 - **Publishing:** the root `index.html` now holds a small encrypted route marker; after the correct password it redirects to current `/game/`. The guest password is never committed, and `/game/` remains public and independently exportable.
 
-### Day 4 (proposed, not implemented)
+### Day 4: implemented gameplay and guest experience
 
-See [Iteration 4 plan](docs/iteration-4.md) for a guest-first roadmap: persistent invitation access, more readable Tolly combat, story callbacks, accessible mobile play and test coverage. The [release checklist](docs/release-checklist.md) records validation steps before inviting guests.
+Day 4 applies the [Iteration 4 roadmap](docs/iteration-4.md), motivated by playtest reports that the combat felt about 4/10 and the game could be rushed in under 30 seconds:
+
+- **Three stages of scroll guardians** at each of the three clues. Reaching the coordinates only starts a battle; players must finish all three waves and return to the scroll before the cutscene unlocks. Boink & Bocht still block the final clue after the second cutscene.
+- **Two selectable difficulties:** **Adventure** (default, aiming for 6–7/10) with more enemies, fast waves, stronger bosses; and **Story** (roughly the previous 4/10) with fewer guardians, reduced damage, and fewer wild spawns. Both grant the same birthday invitation.
+- **No standing inside Tolly:** an explicit collision radius moves overlapping players outside her sprite. Tolly now pursues players more closely, uses a shorter-cooldown knockback ring, telegraphs her orange banana burst and retains the phase-two Cone of Shame. Melee characters still attack from just outside her collision ring.
+- **Better character-led finale:** the selected player hero adds personalized ending dialogue using the unchanged canonical portrait art.
+- **One-click guest journey:** the invitation is linked above the fold, next to character selection, below the game and at the result screen—regardless of victory, defeat or whether the game was played at all.
+- **Phone-friendly challenge:** each player has an on-screen DASH action with large tap targets; reduced-motion preference and keyboard focus indicators are supported.
+- **Calendar:** [add both birthday missions](game/birthday.ics). Mission Two's end time is deliberately unspecified until confirmed.
+- **Sharing:** the copied score includes the birthday invitation URL.
+
+**Verification:** the JavaScript parses; scripted gameplay simulation covered all three guardian gates, an attempted quest skip and Tolly's stationary-player exploit. Browser smoke coverage exists in `tests/smoke.py` but still needs execution in Chromium and hands-on playtesting before claiming a measured 7/10. See the [release checklist](docs/release-checklist.md).
+
+**Artist constraint:** no existing files in `game/assets/` were changed.
