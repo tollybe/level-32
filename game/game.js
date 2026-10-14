@@ -8,7 +8,7 @@ const petImages=Object.fromEntries(Array.from(document.querySelectorAll('#heroes
 const roster={rosie:{name:'Rosie',emoji:'🐕‍🦺',color:'#222a36',hp:130,speed:220,range:225,rate:.56,damage:17,weapon:'dragon'},millie:{name:'Millie',emoji:'🐕',color:'#31323d',hp:135,speed:205,range:220,rate:.62,damage:14,weapon:'ball'},winnifred:{name:'Winnifred',emoji:'🐈',color:'#e4d4bc',hp:128,speed:240,range:153,rate:.41,damage:25,weapon:'sausage'},ellie:{name:'Ellie',emoji:'🐶',color:'#121823',hp:150,speed:250,range:175,rate:.86,damage:9,weapon:'kong',auraRadius:135,healPulse:2.7,selfRegen:1.4}};
 let selected=['rosie','winnifred'],players=[],foes=[],shots=[],drops=[],fx=[],hazards=[],boss=null,phase='idle',paused=false,score=0,kills=0,level=1,xp=0,goal=35,spawnClock=0,surgeClock=33,elapsed=0,clues=0,fridgeVisible=false,fridge={x:2180,y:1440},cam={x:0,y:0},lastTime=0,raf=0,messageClock=0,attackClock=0,heldTouch={},audioCtx=null,audioEnabled=true,musicTimer=null,musicStep=0,musicMode='idle',musicBar=0,musicNextBarAt=0,sloganClock=8,bossPhase=1,coneWarned=false;
 let cutsceneNext=null,sceneName=null,reviveSeconds=1.85,hudClock=0;
-let duoActive=false,duoDefeated=false,laserUnlocked=false,beams=[],coneCooldown=6.8,coneWindup=0,coneAngle=0;
+let duoActive=false,duoDefeated=false,laserUnlocked=false,beams=[],coneCooldown=6.8,coneWindup=0,coneAngle=0,bossPulseCooldown=4,bossPulseWindup=0;
 const ENEMY_TYPES={
  bleepling:{hp:38,speed:105,damage:12,size:21,score:12,xp:7},
  boink:{hp:55,speed:100,damage:10,size:26,score:20,xp:9},
@@ -262,13 +262,13 @@ function continueScene(){
  if(kind==='intro'){
    const hp=players.length===2?940:745;
    boss={x:fridge.x+45,y:fridge.y-80,hp,maxHp:hp,size:49,speed:76,attack:1.75};
-   hazards=[];foes=foes.slice(-5);bossPhase=1;coneWarned=false;coneCooldown=6.6;coneWindup=0;
+   hazards=[];foes=foes.slice(-5);bossPhase=1;coneWarned=false;coneCooldown=6.6;coneWindup=0;bossPulseCooldown=3.5;bossPulseWindup=0;
    $('bossbar').classList.add('show');$('boss-card').classList.add('show');
    say('⚔ TOLLY: No Rosie, you’re on a diet — no more banana!',5);playSfx('boss');score+=200;
  }else if(kind==='phase2'){
    say('⚠ CONE OF SHAME PROTOCOL ACTIVATED! Watch the warning arc!',4);playSfx('phase');
    players.filter(p=>p.alive).forEach(p=>p.inv=Math.max(p.inv,1.3));
-   coneCooldown=2.5;
+   coneCooldown=2.5;bossPulseCooldown=2.2;
  }else if(kind==='clue2'){
    players.filter(p=>p.alive).forEach(p=>p.inv=Math.max(p.inv,1.2));
    spawnDuo();
@@ -287,7 +287,7 @@ function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+
 function start(){
  cancelAnimationFrame(raf);
  players=[player(selected[0],0)];if($('coop').checked)players.push(player(selected[1],1));
- foes=[];shots=[];drops=[];fx=[];hazards=[];beams=[];duoActive=false;duoDefeated=false;laserUnlocked=false;coneCooldown=6.8;coneWindup=0;phase='explore';paused=false;boss=null;cutsceneNext=null;sceneName=null;musicStep=0;musicMode='idle';musicBar=0;musicNextBarAt=0;
+ foes=[];shots=[];drops=[];fx=[];hazards=[];beams=[];duoActive=false;duoDefeated=false;laserUnlocked=false;coneCooldown=6.8;coneWindup=0;bossPulseCooldown=4;bossPulseWindup=0;phase='explore';paused=false;boss=null;cutsceneNext=null;sceneName=null;musicStep=0;musicMode='idle';musicBar=0;musicNextBarAt=0;
  elapsed=0;score=0;kills=0;level=1;xp=0;goal=35;clues=0;fridgeVisible=false;
  spawnClock=.55;surgeClock=33;attackClock=0;hudClock=0;keys.clear();ensureAudio();
  $('scene-skip').hidden=true;$('share-result').classList.remove('show');$('mission-unlock').classList.remove('show');$('scene-dialogues').hidden=true;$('share-status').textContent='';$('overlay').classList.remove('cinematic');$('overlay').classList.add('hidden');$('pause').disabled=false;$('pause').textContent='Ⅱ PAUSE';
@@ -312,7 +312,7 @@ function spawnBleepling(){
 }
 function emit(text,x,y,col='#ffe1aa'){fx.push({text,x,y,col,t:1.1})}
 function nearest(origin,arr,r=Infinity){let item=null,bd=r;for(const o of arr){if(o.hp<=0||o.alive===false)continue;const d=dist(origin,o);if(d<bd){bd=d;item=o}}return item}
-function fire(p){const target=nearest(p,[...foes,...(boss?[boss]:[])],p.range);if(!target)return;if(p.weapon==='sausage'){for(const e of [...foes,...(boss?[boss]:[])])if(e.hp>0&&dist(p,e)<p.range){damage(e,p.damage+level*2,p);emit('⚔',e.x,e.y,'#fff0a7')}return}const angle=Math.atan2(target.y-p.y,target.x-p.x);shots.push({x:p.x,y:p.y,vx:Math.cos(angle)*410,vy:Math.sin(angle)*410,damage:p.damage+level*2,ttl:1.1,owner:p.num,kind:p.weapon,pierce:p.weapon==='dragon'?1:0})}
+function fire(p){const target=nearest(p,[...foes,...(boss?[boss]:[])],p.range);if(!target)return;if(p.weapon==='sausage'){for(const e of [...foes,...(boss?[boss]:[])])if(e.hp>0&&dist(p,e)<p.range){damage(e,p.damage+level*2,p);emit('⚔',e.x,e.y,'#fff0a7')}return}const angle=Math.atan2(target.y-p.y,target.x-p.x);shots.push({x:p.x,y:p.y,vx:Math.cos(angle)*410,vy:Math.sin(angle)*410,damage:p.damage+level*2,ttl:1.1,owner:p.num,kind:p.weapon,pierce:p.weapon==='dragon'?1:0,hitTargets:new Set()})}
 function damage(enemy,amount,p){
  if(phase==='ended'||phase==='cutscene'||enemy.hp<=0)return;
  enemy.hp-=amount;
@@ -438,11 +438,13 @@ function update(dt){
    let s=shots[i];s.x+=s.vx*dt;s.y+=s.vy*dt;s.ttl-=dt;
    if(s.ttl<=0){shots.splice(i,1);continue}
    for(const target of [...foes,...(boss?[boss]:[])]){
-     if(target.hp>0&&dist(s,target)<(target.size||41)+9){
-       damage(target,s.damage,players[s.owner]);
-       if(s.kind==='kong'){target.slow=Math.max(target.slow||0,2.0);emit('❄ SLOW',target.x,target.y-30,'#a9ecff')} if(s.kind==='ball'){s.damage*=.7;s.pierce=1}
-       if(s.pierce>0){s.pierce--;s.x+=s.vx*.05;s.y+=s.vy*.05}
+     if(target.hp>0&&!s.hitTargets.has(target)&&dist(s,target)<(target.size||41)+9){
+       s.hitTargets.add(target);damage(target,s.damage,players[s.owner]);
+       if(s.kind==='kong'){target.slow=Math.max(target.slow||0,2.0);emit('❄ SLOW',target.x,target.y-30,'#a9ecff')}
+       if(s.kind==='ball'&&s.hitTargets.size===1){s.damage*=.65;s.x+=s.vx*.06;s.y+=s.vy*.06}
+       else if(s.pierce>0){s.pierce--;s.x+=s.vx*.05;s.y+=s.vy*.05}
        else {shots.splice(i,1);break}
+       if(phase==='cutscene'||phase==='ended')break;
      }
    }
  }
@@ -472,7 +474,7 @@ function update(dt){
     }
     e.attack=Math.max(0,e.attack-dt);
     if(d<e.size+24&&(e.attack<=0||(e.kind==='boink'&&e.charge>0))&&p.inv<=0){
-       p.hp=Math.max(0,p.hp-e.damage);p.inv=.6;e.attack=e.kind==='boink'?2.4:1.0; if(e.kind==='boink')e.charge=-1;
+       p.hp=Math.max(0,p.hp-(p.id==='winnifred'?Math.ceil(e.damage*.78):e.damage));p.inv=.6;e.attack=e.kind==='boink'?2.4:1.0; if(e.kind==='boink')e.charge=-1;
        if(e.kind==='boink'){
          const pushX=Math.cos(baseAngle)*65,pushY=Math.sin(baseAngle)*65;
          p.x=clamp(p.x+pushX,24,WIDTH-24);p.y=clamp(p.y+pushY,24,HEIGHT-24);
@@ -503,7 +505,25 @@ function update(dt){
    }
  }
  if(phase==='boss'&&boss&&boss.hp>0){
-   boss.attack-=dt;
+   bossPulseCooldown-=dt;
+    if(bossPulseWindup>0){
+      bossPulseWindup-=dt;
+      if(bossPulseWindup<=0){
+        for(const q of players.filter(p=>p.alive&&dist(p,boss)<150)){
+          const a=Math.atan2(q.y-boss.y,q.x-boss.x);
+          q.x=clamp(q.x+Math.cos(a)*110,24,WIDTH-24);q.y=clamp(q.y+Math.sin(a)*110,24,HEIGHT-24);
+          if(q.inv<=0){const amount=q.id==='winnifred'?14:bossPhase===2?23:18;
+            q.hp=Math.max(0,q.hp-amount);q.inv=.95;if(q.hp===0)q.alive=false;
+            emit('FRIDGE REJECTION -'+amount,q.x,q.y-36,'#fff2ad');}
+          else emit('SHOO!',q.x,q.y-34,'#fff2ad');
+        }
+        playSfx('cone');
+      }
+    }else if(bossPulseCooldown<=0&&players.some(p=>p.alive&&dist(p,boss)<175)){
+      bossPulseWindup=.95;bossPulseCooldown=bossPhase===2?3.2:4.5;
+      say('⚠ TOLLY: NO CAMPING ON THE FRIDGE! MOVE OUT OF THE GOLD RING!',2.2);
+    }
+    boss.attack-=dt;
    const p=nearest(boss,players);
    if(p){
      if(coneWarned){
@@ -651,7 +671,22 @@ for(const e of foes){
  cx.restore();
 }
 // birthday boss
-if(boss&&boss.hp>0){circle(boss.x,boss.y+20,52,'#402f3a99');circle(boss.x,boss.y,46,'#e4b9bd');txt('👑',boss.x,boss.y-36,43,'center');txt('🧑',boss.x,boss.y+21,52,'center');txt('TOLLY · NO MORE BANANA',boss.x,boss.y-63,15,'center','#fff5ca')}
+if(boss&&boss.hp>0){
+ circle(boss.x,boss.y+23,57,'#402f3a99');circle(boss.x,boss.y,52,'#e4b9bd');
+ const portrait=$('boss-card').querySelector('img');
+ if(portrait.complete&&portrait.naturalWidth){
+   const crop=Math.min(portrait.naturalWidth,portrait.naturalHeight);
+   cx.save();cx.beginPath();cx.arc(boss.x,boss.y,46,0,TAU);cx.clip();
+   cx.drawImage(portrait,(portrait.naturalWidth-crop)/2,(portrait.naturalHeight-crop)/2,crop,crop,boss.x-48,boss.y-48,96,96);cx.restore();
+ }else txt('🧑',boss.x,boss.y+21,52,'center');
+ cx.save();cx.strokeStyle=bossPhase===2?'#ff959c':'#f8dea4';cx.lineWidth=5;cx.beginPath();cx.arc(boss.x,boss.y,49,0,TAU);cx.stroke();cx.restore();
+ txt('👑',boss.x,boss.y-41,34,'center');txt('TOLLY · NO MORE BANANA',boss.x,boss.y-70,15,'center','#fff5ca');
+ if(bossPulseWindup>0){
+  cx.save();cx.setLineDash([14,9]);cx.lineWidth=6;cx.strokeStyle='#ffe9a0';cx.fillStyle='#ffc67344';
+  cx.beginPath();cx.arc(boss.x,boss.y,150,0,TAU);cx.fill();cx.stroke();cx.restore();
+  txt('⚠ MOVE AWAY!',boss.x,boss.y-164,21,'center','#fff8c8');
+ }
+}
 // A readable AoE circle, not just a hidden buff. Allies must be inside the ring to heal.
 for(const p of players){
  if(!p.alive||p.id!=='ellie')continue;
@@ -713,7 +748,13 @@ function drawOffscreenArrows(){
 function render(){let live=players.filter(p=>p.alive);let center=live.length?{x:live.reduce((a,p)=>a+p.x,0)/live.length,y:live.reduce((a,p)=>a+p.y,0)/live.length}:{x:400,y:400};cam.x=clamp(center.x-VIEWW/2,0,WIDTH-VIEWW);cam.y=clamp(center.y-VIEWH/2,0,HEIGHT-VIEWH);world();drawObjectiveMarker();drawOffscreenArrows();rect(0,0,VIEWW,42,'#1a273ac9');txt('🌸 SAKURA GARDEN · '+(phase==='boss'?'FRIDGE DEFENCE':'THE GREAT SNACK RIFT'),15,28,18);txt('🐾 '+kills+'  ✨ LV '+level+'  🧾 '+clues+'/3  ⚔ ADVENTURE',VIEWW-17,28,17,'right');let dx=fridge.x-center.x,dy=fridge.y-center.y;if(clues>=3&&phase==='explore')txt('🧭 FRIDGE '+Math.round(Math.hypot(dx,dy))+'m',VIEWW/2,28,17,'center','#ffe6a4')}
 function loop(now){let dt=Math.min(.045,(now-lastTime)/1000||.016);lastTime=now;if(!paused&&phase!=='ended'&&phase!=='cutscene')update(dt);render();if(phase!=='ended')raf=requestAnimationFrame(loop)}
 function togglePause(){if(phase==='idle'||phase==='ended'||phase==='cutscene')return;paused=!paused;$('pause').textContent=paused?'▶ RESUME':'Ⅱ PAUSE';if(!paused){lastTime=performance.now();raf=requestAnimationFrame(loop)}else cancelAnimationFrame(raf);$('game-message').textContent=paused?'PAUSED':'QUEST RESUMED'}
-$('party-details').addEventListener('click',()=>{$('overlay').classList.add('hidden');$('birthday-mission').scrollIntoView({behavior:'smooth',block:'start'})});
+const inviteHref=location.pathname.includes('/game/')?'invitation.html':'game/invitation.html';
+document.querySelectorAll('[data-invitation-link]').forEach(link=>link.setAttribute('href',inviteHref));
+$('scene-skip').addEventListener('click',()=>{
+ if(phase!=='cutscene')return;
+ $('scene-dialogues').dataset.beat=String($('scene-dialogues').querySelectorAll('.scene-line').length-1);
+ continueScene();
+});
 $('share-result').addEventListener('click',async()=>{
  if(phase!=='ended')return;
  const text=scoreText(Boolean(boss&&boss.hp<=0));
