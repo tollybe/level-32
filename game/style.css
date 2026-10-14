@@ -101,3 +101,26 @@
 .game-actions{align-items:stretch}
 .game-actions>div{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 @media(max-width:620px){.scene-face{width:62px;height:62px}.scene-line{min-height:84px;padding:9px}.game-actions>div{width:100%}.footer-invite{width:100%}}
+
+/* Iteration 4: guests can always choose the invitation, even without playing. */
+.hero-invite-line{margin:22px auto 4px;display:flex;justify-content:center}
+.hero-invite-line .btn{background:#baf2d6;color:#243d38;border-color:#e1f9e6;box-shadow:0 4px #538273}
+.select-invite{background:#baf2d6;color:#243d38;border-color:#e1f9e6;box-shadow:0 4px #538273}
+.difficulty-choice{display:flex;flex-direction:column;gap:5px;color:#fdebc8;font-size:.76rem;font-weight:900;letter-spacing:.09em;min-width:148px}
+.difficulty-choice select{background:#182a3d;color:#fff6dc;border:1px solid #e2bc83;border-radius:7px;padding:12px 8px;font-weight:700;font:inherit;cursor:pointer}
+#character-select .select-controls{gap:12px}
+.overlay[data-scene="victory"] #overlay-start,.overlay[data-scene="defeat"] #overlay-start{background:#e1d7ca;color:#41313c;border:1px solid #aa9184;box-shadow:0 3px #7e6868}
+.overlay[data-scene="victory"] .mission-cta,.overlay[data-scene="defeat"] .mission-cta{background:#baf2d6;color:#1a3c30;border:2px solid #65947b;font-size:1.03rem;padding:15px}
+.overlay[data-scene="victory"] .mission-unlock,.overlay[data-scene="defeat"] .mission-unlock{order:-1}
+a:focus-visible,button:focus-visible,select:focus-visible{outline:3px solid #9cfaee!important;outline-offset:4px}
+@media(max-width:700px){
+ .difficulty-choice{width:100%}
+ .difficulty-choice select{width:100%;min-height:48px}
+ .select-invite{width:100%;min-height:48px}
+ .hero-invite-line .btn{width:100%;min-height:48px}
+ .overlay[data-scene="victory"] .mission-cta,.overlay[data-scene="defeat"] .mission-cta{min-height:52px}
+}
+@media(prefers-reduced-motion:reduce){
+ *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}
+ .overlay.cinematic{backdrop-filter:none}
+}
