@@ -34,7 +34,7 @@ Mobile has touch controls. Off-screen arrows point toward separated teammates. T
 - After clue three, the party receives a **Legendary Laser Pointer** that fires a satisfying occasional beam—foreshadowing the actual laser-tag birthday activity.
 - **Tolly** remains the human fridge boss, not a cat. Phase two adds an actively dodgeable **Cone of Shame** with a visible warning arc.
 - Pause/cutscenes freeze enemy AI, hazards, HP damage and the in-game timer. Co-op revives remain enabled.
-- Winning **or losing** reveals **Mission Two: Laser Tag — The Human Edition** and a direct link to real birthday plans.
+- Winning **or losing** reveals **Mission Two: Laser Tag — The Human Edition** and a direct link to a standalone birthday invitation.
 - A gentle original 3/4 storybook waltz rearranges into more dramatic boss music. The audio is synthesized locally and is not taken from any film score.
 
 ## Birthday missions
@@ -75,7 +75,8 @@ The build inlines the images, CSS and JS and encrypts the resulting HTML with PB
 
 ```text
 index.html                generated encrypted landing page
-game/index.html           public playable game and birthday invitation
+game/index.html           public playable game with invitation links
+game/invitation.html      standalone birthday invitation, opens in a new tab
 game/style.css            responsive storybook styling
 game/game.js              player, enemy, mini-boss and scene logic
 game/assets/             canonical portraits + illustrated cutscenes
@@ -87,3 +88,11 @@ tests/smoke.py            optional automated solo/co-op scene smoke test
 ### Design intent
 
 This is an affectionate game about specific animals, created for one birthday party. Keep the animal portraits consistent across every menu and cutscene. Keep the comedy gentle and the scenes skippable/paused; nobody needs to defeat the boss to find the party details. Minecraft-adjacent cuteness is an inspiration, but the mob designs here are original and not official Minecraft assets. This project includes original party-specific artwork and real pet likenesses; don't assume they are freely licensed for commercial reuse.
+### Day 3: invitation experience, dialogue and difficulty
+
+- Cutscenes now have character-by-character, asterisk-prefixed banter with an explicit skip control and original matching character portraits.
+- Clue 3's original art is prevented from upscaling above natural width; the underlying file is not changed.
+- Millie's ricochet can only hit a target once per ball and is balanced with lower damage and range. Winnifred gets longer sword reach, more HP and reduced close-range contact damage.
+- Tolly's in-game avatar uses the canonical Tolly image, and a telegraphed fridge-rejection shockwave punishes standing directly on her without creating unavoidable attacks.
+- The result screen, game controls, and the game footer point to `game/invitation.html` in a separate tab. The invitation is accessible without winning the game.
+- **Publishing note:** the password-gated root `index.html` is generated. Rebuild it after merging to publish these new changes to the encrypted homepage. The guest password must never be added to tracked source files. The public `/game/` build works independently of the gate.
