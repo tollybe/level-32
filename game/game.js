@@ -10,7 +10,7 @@ let selected=['rosie','winnifred'],players=[],foes=[],shots=[],drops=[],fx=[],ha
 let cutsceneNext=null,sceneName=null,reviveSeconds=1.85,hudClock=0,sceneOpenedAt=0;
 let liteFx=typeof matchMedia==='function'&&matchMedia('(pointer:coarse)').matches;
 let duoActive=false,duoDefeated=false,laserUnlocked=false,beams=[],coneCooldown=6.8,coneWindup=0,coneAngle=0,bossPulseCooldown=4,bossPulseWindup=0,bananaWindup=0;
-let gate=null,gateCleared=[false,false,false],difficulty='challenge',daanActive=false,daanPulse=0;
+let gate=null,gateCleared=[false,false,false],difficulty='challenge',daanActive=false,daanPulse=0,daanActionTimer=0;
 const GATE_WAVES={challenge:[[3,3,2],[3,3,3],[4,3,3]],story:[[2,2,2],[2,2,2],[2,2,3]],extreme:[[5,5,5],[6,5,6],[6,7,7]]};
 const daanPortrait=new Image();daanPortrait.src='assets/daan.svg';
 // Day 4 uses a distinct static art asset, never a chibi sprite. The graphic is a
@@ -329,14 +329,14 @@ function continueScene(){
  if(kind==='intro'){
    const hp=(players.length===2?1430:990)*(difficulty==='story'?.67:difficulty==='extreme'?EXTREME.bossHp:1);
    boss={x:fridge.x+45,y:fridge.y-80,hp,maxHp:hp,size:49,speed:difficulty==='story'?96:difficulty==='extreme'?137*EXTREME.bossSpeed:145,attack:1.1,hitFlash:0,rage:false};
-   hazards=[];foes=foes.slice(-5);bossPhase=1;coneWarned=false;coneCooldown=6.6;coneWindup=0;bossPulseCooldown=1.65;bossPulseWindup=0;bananaWindup=0;daanActive=false;daanPulse=4;
+   hazards=[];foes=foes.slice(-5);bossPhase=1;coneWarned=false;coneCooldown=6.6;coneWindup=0;bossPulseCooldown=1.65;bossPulseWindup=0;bananaWindup=0;daanActive=false;daanPulse=4;daanActionTimer=0;
    $('bossbar').classList.add('show');$('boss-card').classList.add('show');
    say('⚔ TOLLY: No Rosie, you’re on a diet — no more banana!',5);playSfx('boss');score+=200;
  }else if(kind==='phase2'){
    say('⚠ CONE OF SHAME PROTOCOL ACTIVATED! Watch the warning arc!',4);playSfx('phase');
    players.filter(p=>p.alive).forEach(p=>p.inv=Math.max(p.inv,1.3));
    coneCooldown=2.5;bossPulseCooldown=1.4;
-   if(difficulty==='extreme'){daanActive=true;daanPulse=3; say('⚠ TOLLY: DAAN! I REQUIRE REINFORCEMENTS! · MILLIE: AAAAAH!',4)}
+   if(difficulty==='extreme'){daanActive=true;daanPulse=3;daanActionTimer=.7; say('⚠ TOLLY: DAAN! I REQUIRE REINFORCEMENTS! · MILLIE: AAAAAH!',4)}
  }else if(kind==='clue2'){
    players.filter(p=>p.alive).forEach(p=>p.inv=Math.max(p.inv,1.2));
    spawnDuo();
@@ -364,7 +364,7 @@ function start(){
  $('scene-control-help').hidden=true;$('ending-invite').hidden=true;cancelAnimationFrame(raf);
  joystickAxes.forEach(a=>{a.x=0;a.y=0});document.querySelectorAll('.joystick-knob').forEach(k=>k.style.transform='translate(0px,0px)');
  players=[player(selected[0],0)];if($('coop').checked)players.push(player(selected[1],1));
- foes=[];shots=[];drops=[];fx=[];hazards=[];beams=[];difficulty=$('difficulty').value;gate=null;gateCleared=[false,false,false];scentStep=0;duoActive=false;duoDefeated=false;laserUnlocked=false;coneCooldown=6.8;coneWindup=0;bossPulseCooldown=4;bossPulseWindup=0;bananaWindup=0;daanActive=false;daanPulse=0;laserChallenge={index:0,timer:0,zapCooldown:0};phase='explore';paused=false;boss=null;cutsceneNext=null;sceneName=null;musicStep=0;musicMode='idle';musicBar=0;musicNextBarAt=0;
+ foes=[];shots=[];drops=[];fx=[];hazards=[];beams=[];difficulty=$('difficulty').value;gate=null;gateCleared=[false,false,false];scentStep=0;duoActive=false;duoDefeated=false;laserUnlocked=false;coneCooldown=6.8;coneWindup=0;bossPulseCooldown=4;bossPulseWindup=0;bananaWindup=0;daanActive=false;daanPulse=0;daanActionTimer=0;laserChallenge={index:0,timer:0,zapCooldown:0};phase='explore';paused=false;boss=null;cutsceneNext=null;sceneName=null;musicStep=0;musicMode='idle';musicBar=0;musicNextBarAt=0;
  elapsed=0;score=0;kills=0;level=1;xp=0;goal=35;clues=0;fridgeVisible=false;
  spawnClock=.55;surgeClock=33;attackClock=0;hudClock=0;keys.clear();ensureAudio();
  $('scene-skip').hidden=true;$('share-result').classList.remove('show');$('mission-unlock').classList.remove('show');$('scene-dialogues').hidden=true;$('share-status').textContent='';$('overlay').classList.remove('cinematic');$('overlay').classList.add('hidden');$('pause').disabled=false;$('pause').textContent='Ⅱ PAWS';
@@ -669,11 +669,12 @@ function update(dt){
    // In 10/10 mode, Daan joins only during the second half of the finale.
    // His distinctive warning is an additional dodgable challenge, never an invitation gate.
    if(daanActive){
+     daanActionTimer=Math.max(0,daanActionTimer-dt);
      daanPulse-=dt;
      if(daanPulse<=0){
        const focus=nearest(boss,players);
        if(focus){hazards.push({x:focus.x,y:focus.y,vx:0,vy:0,ttl:1.2,damage:0,kind:'daan-warning',size:78,triggered:false});
-         say('⚠ DAAN: MOVE, HEROES! A SECOND DEFENDER HAS ARRIVED!',2);}
+         daanActionTimer=.9;say('⚠ DAAN SPITE: BOULDER SLAM! MOVE AWAY!',2);}
        daanPulse=5.3;
      }
    }
@@ -939,26 +940,35 @@ for(const e of foes){
 // birthday boss
 if(boss&&boss.hp>0){
  if(daanActive){
-  // Temporary full-body support character; NOT Daan's actual likeness.
-  const dx=boss.x+140,dy=boss.y+30+Math.sin(elapsed*3.4)*4;
-  circle(dx,dy+30,29,'#1c2d3d88');
-  line(dx-18,dy+8,dx-28,dy+29,'#9fd5d6',12);line(dx+18,dy+8,dx+28,dy+29,'#9fd5d6',12);
-  line(dx-9,dy+34,dx-15,dy+55,'#4b4e78',13);line(dx+9,dy+34,dx+15,dy+55,'#4b4e78',13);
-  circle(dx,dy+10,27,'#526997');
-  if(daanPortrait.complete&&daanPortrait.naturalWidth)cx.drawImage(daanPortrait,dx-26,dy-56,52,52);
-  else circle(dx,dy-36,24,'#d4ae87');
-  if(daanPulse<1.1){cx.save();cx.setLineDash([6,5]);cx.strokeStyle='#ffe6a6';cx.lineWidth=4;
-   cx.beginPath();cx.arc(dx,dy,42+(1.1-daanPulse)*12,0,TAU);cx.stroke();cx.restore();}
-  txt('DAAN · SUPPORT',dx,dy-70,15,'center','#ffe3a0');
+  // Symbolic animated emblem-faced Daan; NOT an approved personal likeness.
+  // SPITE executes the existing delayed warning-zone slam, no damage changes.
+  const dx=boss.x+140,dy=boss.y+30+Math.sin(elapsed*3.4)*3;
+  const winding=daanPulse<.95,slamming=daanActionTimer>.05;
+  circle(dx,dy+30,27,'#1c2d3d88');
+  const spriteDaan=window.Level32Sprites?.draw(cx,'daan',
+   {state:slamming?'special':winding?'attack':'idle',direction:'down'},dx,dy-13,116,elapsed)||false;
+  if(!spriteDaan){
+   line(dx-18,dy+8,dx-28,dy+29,'#9fd5d6',12);line(dx+18,dy+8,dx+28,dy+29,'#9fd5d6',12);
+   line(dx-9,dy+34,dx-15,dy+55,'#4b4e78',13);line(dx+9,dy+34,dx+15,dy+55,'#4b4e78',13);
+   circle(dx,dy+10,27,'#526997');
+   if(daanPortrait.complete&&daanPortrait.naturalWidth)cx.drawImage(daanPortrait,dx-26,dy-56,52,52);
+   else circle(dx,dy-36,24,'#d4ae87');
+  }
+  if(winding||slamming){cx.save();cx.setLineDash([6,5]);cx.strokeStyle='#ffe6a6';cx.lineWidth=4;
+   cx.beginPath();cx.arc(dx,dy,43+(slamming?14*(1-daanActionTimer):0),0,TAU);cx.stroke();cx.restore();}
+  txt(slamming?'DAAN · SPITE: SLAM!':winding?'DAAN · WINDING UP':'DAAN · SUPPORT',dx,dy-91,15,'center','#ffe3a0');
  }
  const wobble=Math.sin(elapsed*(boss.rage?9:4))*3;
- circle(boss.x,boss.y+23,57,'#402f3a99');
- circle(boss.x,boss.y+wobble,52,boss.hitFlash>0?'#fff0d1':'#e4b9bd');
  const portrait=$('boss-card').querySelector('img');
+ const focus=nearest(boss,players);
+ const facing=focus?(Math.abs(focus.x-boss.x)>Math.abs(focus.y-boss.y)
+   ?(focus.x>boss.x?'right':'left'):(focus.y>boss.y?'down':'up')):'down';
  const spriteBoss=window.Level32Sprites?.draw(cx,'tolly',
-   {state:boss.hitFlash>0?'hurt':boss.rage?'special':
-     bossPulseWindup>0||bananaWindup>0||coneWindup>0?'attack':'idle',
-    direction:'down'},boss.x,boss.y+wobble,96,elapsed) || false;
+    {state:boss.hitFlash>0?'hurt':bossPulseWindup>0||bananaWindup>0||coneWindup>0?'attack':
+      boss.rage?'special':'walk',direction:facing},
+    boss.x,boss.y+wobble-8,139,elapsed) || false;
+ circle(boss.x,boss.y+27,46,'#402f3a77');
+ if(!spriteBoss)circle(boss.x,boss.y+wobble,52,boss.hitFlash>0?'#fff0d1':'#e4b9bd');
  if(!spriteBoss&&portrait.complete&&portrait.naturalWidth){
    const crop=Math.min(portrait.naturalWidth,portrait.naturalHeight);
    cx.save();cx.translate(boss.x,boss.y+wobble);cx.rotate(Math.sin(elapsed*3)*.055);
@@ -966,7 +976,8 @@ if(boss&&boss.hp>0){
    cx.drawImage(portrait,(portrait.naturalWidth-crop)/2,(portrait.naturalHeight-crop)/2,crop,crop,-48,-48,96,96);cx.restore();
  }else if(!spriteBoss)txt('🧑',boss.x,boss.y+21,52,'center');
  cx.save();cx.strokeStyle=boss.hitFlash>0?'#fff2ca':boss.rage?'#ff6886':bossPhase===2?'#ff959c':'#f8dea4';cx.lineWidth=5;cx.beginPath();cx.arc(boss.x,boss.y,49,0,TAU);cx.stroke();cx.restore();
- txt('👑',boss.x,boss.y-41+wobble,34,'center');txt('TOLLY · NO MORE BANANA',boss.x,boss.y-70,15,'center','#fff5ca');
+ if(!spriteBoss)txt('👑',boss.x,boss.y-41+wobble,34,'center');
+ txt('TOLLY · NO MORE BANANA',boss.x,boss.y-102,16,'center','#fff5ca');
  if(bananaWindup>0){
   cx.save();cx.strokeStyle='#ffa94f';cx.fillStyle='#ffb45122';cx.lineWidth=4;
   cx.beginPath();cx.arc(boss.x,boss.y,115,0,TAU);cx.fill();cx.stroke();cx.restore();
@@ -1021,7 +1032,7 @@ for(const p of players){
  rect(p.x-28,p.y+29,56,7,'#152636');rect(p.x-27,p.y+30,54*clamp(p.hp/p.maxHp,0,1),5,p.hp/p.maxHp<.3?'#ff9995':'#9aebbb');
 }
 for(const s of shots){txt(s.kind==='dragon'?'🐉':s.kind==='kong'?'🧊':'🔴',s.x,s.y+9,24,'center')}
-for(const h of hazards){if(h.kind==='daan-warning'){cx.save();cx.setLineDash([8,8]);circle(h.x,h.y,h.size,'#ffd35e38');cx.strokeStyle='#ffe4a3';cx.lineWidth=5;cx.beginPath();cx.arc(h.x,h.y,h.size,0,TAU);cx.stroke();cx.restore();txt('DAAN!',h.x,h.y-85,18,'center','#fff1ae')}else if(h.kind==='goop'){circle(h.x,h.y,22,'#88e5e977');circle(h.x,h.y,13,'#b0f6ff99')}else{circle(h.x,h.y,17,'#ffbd6144');txt('🍌',h.x,h.y+9,25,'center')}}
+for(const h of hazards){if(h.kind==='daan-warning'){cx.save();cx.setLineDash([8,8]);circle(h.x,h.y,h.size,'#ffd35e38');cx.strokeStyle='#ffe4a3';cx.lineWidth=5;cx.beginPath();cx.arc(h.x,h.y,h.size,0,TAU);cx.stroke();cx.restore();txt('DAAN SPITE · MOVE!',h.x,h.y-85,18,'center','#fff1ae')}else if(h.kind==='goop'){circle(h.x,h.y,22,'#88e5e977');circle(h.x,h.y,13,'#b0f6ff99')}else{circle(h.x,h.y,17,'#ffbd6144');txt('🍌',h.x,h.y+9,25,'center')}}
 if(boss&&boss.hp>0&&coneWindup>0){cx.save();cx.beginPath();cx.moveTo(boss.x,boss.y);cx.arc(boss.x,boss.y,275,coneAngle-.65,coneAngle+.65);cx.closePath();cx.fillStyle='#ff69735d';cx.fill();cx.strokeStyle='#ffeeb1';cx.lineWidth=5;cx.stroke();cx.restore()}
 for(const beam of beams){cx.save();cx.globalAlpha=Math.max(.1,beam.t/.28);cx.strokeStyle='#ff586a';cx.lineWidth=13;cx.shadowColor='#ff7373';cx.shadowBlur=17;cx.beginPath();cx.moveTo(beam.x1,beam.y1);cx.lineTo(beam.x2,beam.y2);cx.stroke();cx.strokeStyle='#fff2b5';cx.lineWidth=4;cx.stroke();cx.restore()}
 for(const f of fx){if(f.x<cam.x-60||f.x>cam.x+VIEWW+60||f.y<cam.y-60||f.y>cam.y+VIEWH+60)continue;txt(f.text,f.x,f.y,17,'center',f.col)}
