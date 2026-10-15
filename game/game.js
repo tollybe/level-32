@@ -428,7 +428,7 @@ function spawnDuo(){
    hp,maxHp:hp,speed:conf.speed*(difficulty==='story'?1:1.10),
    damage:Math.round(conf.damage*(difficulty==='story'?1:1.16)),
    size:conf.size+8,attack:1.2,kind,elite:true,age:0,
-   telegraph:0,charge:-1,trailTimer:0,slow:0,volleyWarmup:0,volleyCooldown:difficulty==='extreme'?1.6:i===0?3.2:4.8,volleyShots:0,volleyShotClock:0,volleyShotIndex:0});
+   telegraph:0,charge:-1,trailTimer:0,slow:0,volleyWarmup:0,volleyCooldown:difficulty==='extreme'?(i===0?rnd(.7,1.3):rnd(1.65,2.4)):(i===0?3.2:4.8),volleyShots:0,volleyShotClock:0,volleyShotIndex:0});
  }
  say('⚠ BOINK & BOCHT! Defeat the terrible twosome to reveal the last clue!',4);
  playSfx('boink');
@@ -720,14 +720,18 @@ function advanceProjectiles(dt){
   if(phase==='cutscene'||phase==='ended')break;
  }
 }
-// Impossible 10/10: the two elites spawn and wind up simultaneously.
-// Red flashing warning for .5 s, then 12 rapid rounds at .085 s intervals.
-// Boink uses + cardinal axes; Bocht rotates the same burst to X diagonals.
-// Cooldown only begins when the final banana has been fired.
+// Independent elite mini-boss attacks: both enter the arena together, but
+// their red warning timers, burst cadence, and next-attack draws are separate.
+// Natural partial overlaps are possible; synchronization is never forced.
+function nextDuoCooldown(kind){
+ const recovery=kind==='boink'?1.1:1.7;
+ return recovery+rnd(1,4); // draw only AFTER the current burst has ended
+}
 function updateDuoVolley(e,dt){
  if(difficulty!=='extreme'||!duoActive||!e.elite||!['boink','bocht'].includes(e.kind))return;
  if(e.volleyShots>0){
   e.volleyShotClock-=dt;
+  const interval=e.kind==='boink'?.07:.115;
   while(e.volleyShotClock<=0&&e.volleyShots>0){
    const offset=e.kind==='bocht'?Math.PI/4:0;
    const n=e.volleyShotIndex++,angle=offset+(n%4)*Math.PI/2;
@@ -735,10 +739,10 @@ function updateDuoVolley(e,dt){
     vx:Math.cos(angle)*255,vy:Math.sin(angle)*255,
     damage:8,size:18,ttl:2.15});
    e.volleyShots--;
-   e.volleyShotClock+=.085;
+   e.volleyShotClock+=interval;
    if(n%4===0){emit('PEW!',e.x,e.y-49,'#ffe1a0');playSfx('laser')}
   }
-  if(e.volleyShots===0){e.volleyCooldown=2.0;e.volleyShotClock=0}
+  if(e.volleyShots===0){e.volleyCooldown=nextDuoCooldown(e.kind);e.volleyShotClock=0}
   return;
  }
  if(e.volleyWarmup>0){
@@ -753,7 +757,7 @@ function updateDuoVolley(e,dt){
  if(e.volleyCooldown<=0){
   e.volleyWarmup=.5;e.volleyCooldown=0;
   emit('⚠ '+(e.kind==='boink'?'+':'X')+' RED WARNING!',e.x,e.y-48,'#ff7c81');
-  say('⚠ BOINK + BOCHT: RED WARNING! MACHINE-GUN BANANAS!',1.4);
+  say('⚠ '+e.kind.toUpperCase()+': RED WARNING! MACHINE-GUN BANANAS!',1.4);
  }
 }
 const PAIR_BANTER={
@@ -869,6 +873,9 @@ function update(dt){
  for(const beam of beams)beam.t-=dt;beams=beams.filter(b=>b.t>0);
  foes=foes.filter(e=>e.hp>0);
  for(const e of foes){
+    // These independent volleys continue even when players are concealed:
+    // stray bananas can still disturb a bush.
+    updateDuoVolley(e,dt);
     const p=nearest(e,players,Infinity);
     if(!p){
      e.searchTime=(e.searchTime||0)+dt;e.searching=true;
@@ -893,7 +900,6 @@ function update(dt){
        }
       }
     }
-    updateDuoVolley(e,dt);
     e.age=(e.age||0)+dt;e.slow=Math.max(0,(e.slow||0)-dt);
     const baseAngle=Math.atan2(p.y-e.y,p.x-e.x),d=dist(e,p);
     const pace=e.slow>0?.62:1;
