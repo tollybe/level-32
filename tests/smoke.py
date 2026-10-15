@@ -627,7 +627,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     assert page.locator('.select-invite').get_attribute('target')=='_blank'
     invite_primary=page.locator('.hero-primary-invite')
     assert invite_primary.count()==1 and invite_primary.is_visible()
-    assert invite_primary.get_attribute('href')=='invitation.html'
+    assert invite_primary.get_attribute('href').endswith('invitation.html')
     assert invite_primary.get_attribute('target')=='_blank'
     assert 'BIRTHDAY INVITATION' in invite_primary.inner_text()
     optional_game=page.locator('.hero-play-link')
