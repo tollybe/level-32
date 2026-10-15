@@ -976,7 +976,7 @@ const PAIR_BANTER={
  'ellie|winnifred':[
   [['ellie','I shall guard this area.'],['winnifred','Then I shall sensibly avoid it.'],['ellie','That means my guarding works!']],
   [['winnifred','Perhaps we need a treaty.'],['ellie','No surprise licking?'],['winnifred','Precisely.']],
-  [['ellie','I have secured the perimeter!'],['winnifred','Good. We shall admire each other from here.']]
+  [['ellie','I have secured the perimeter!'],['winnifred','Good. We shall admire each other from here.'],['ellie','Marvelous! I shall guard the biscuit tin next.']]
  ]
 };
 let pairConversation=null,pairBanterVisits={};
