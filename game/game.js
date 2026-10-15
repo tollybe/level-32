@@ -725,6 +725,14 @@ function updateSnackMagnet(dt){
 }
 function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,dashCharges:id==='millie'?2:1,dashRecharge:[],healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5,spriteFacing:'down',spriteMoving:false,spriteAttackAt:-1,perkGlow:0,perkRarity:'',hidden:false,bushTime:0,bushId:-1,ambushReady:0,snackCharge:0,snackNextHitAt:0,magnetTime:0,recoveryClock:0}}
 function start(){
+ if(paused){
+  paused=false;
+  $('phone-pause').textContent='Ⅱ PAWS';
+  $('phone-pause').setAttribute('aria-label','Pause the game');
+  $('phone-pause').setAttribute('aria-pressed','false');
+  $('pause').textContent='Ⅱ PAWS';
+  $('paws-panel').hidden=true;
+ }
  ++scenePresentationToken;perkOffer=null;perksAwarded=0;$('perk-panel').hidden=true;
  $('scene-control-help').hidden=true;$('ending-invite').hidden=true;cancelAnimationFrame(raf);
  bushEggSeen=false;bossBushVisits=0;bossBushOccupied=false;winston=null;winstonForcedReveal=0;pairBanterClock=12;pairConversation=null;pairBanterVisits={};worldBubbles=[];bossNicknameClock=13;bossNicknameIndex=0;
@@ -1971,6 +1979,9 @@ function togglePause(){
  paused=!paused;
  $('paws-quip').textContent=EXTRA_BANTER.paws[Math.floor(elapsed/7)%EXTRA_BANTER.paws.length].map((v,i)=>i===0?v.toUpperCase()+': ':v).join('');
  $('pause').textContent=paused?'▶ UNLEASH THE PAWSIBILITIES':'Ⅱ PAWS';
+ $('phone-pause').textContent=paused?'▶ UNPAWS':'Ⅱ PAWS';
+ $('phone-pause').setAttribute('aria-label',paused?'Resume the game':'Pause the game');
+ $('phone-pause').setAttribute('aria-pressed',String(paused));
  $('paws-panel').hidden=!paused;
  if(!paused){lastTime=performance.now();raf=requestAnimationFrame(loop)}
  else cancelAnimationFrame(raf);
