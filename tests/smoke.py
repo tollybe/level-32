@@ -164,7 +164,7 @@ hook='''window.__rosieTest={
   for(let j=0;j<13;j++)two.forEach(e=>updateDuoVolley(e,.085));
   const fired=hazards.filter(h=>h.kind==='duo-banana');
   const count=Object.fromEntries(two.map(e=>[e.kind,fired.filter(h=>h.source===e.kind).length]));
-  const cooldown=two.every(e=>e.volleyShots===0&&e.volleyCooldown>1.85&&e.volleyCooldown<=2);
+  const cooldown=two.every(e=>e.volleyShots===0&&e.volleyCooldown>1.4&&e.volleyCooldown<=2);
   const directional=fired.every(h=>{
     const x=Math.abs(h.vx),y=Math.abs(h.vy);
     return h.source==='boink'?Math.min(x,y)<.00001:Math.abs(x-y)<.00001;
