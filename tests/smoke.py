@@ -294,6 +294,69 @@ hook='''window.__rosieTest={
   return {runs,distinct:seen.size,stationary,moving,far,treeAsset:treeArt.src.includes('cherry-tree.svg')||
    treeArt.src.startsWith('data:image/svg+xml')};
  },
+ treeDepthProbe(){
+  const saved=cherryTrees;
+  const tree={x:1200,y:1100,scale:1,phase:0},tr=treeTrunk(tree);
+  cherryTrees=[tree];
+  const moving={x:tr.x-115,y:tr.y};
+  let tunneled=false;
+  for(let i=0;i<15;i++){
+   moveAroundTrees(moving,35,0,18);if(blockedByTree(moving.x,moving.y,18))tunneled=true;
+  }
+  const blocked=moving.x<tr.x-37&&Math.abs(moving.y-tr.y)<1;
+  const sliding={x:tr.x-80,y:tr.y+5};
+  for(let i=0;i<15;i++){
+   moveAroundTrees(sliding,9,7,18);
+   if(blockedByTree(sliding.x,sliding.y,18))tunneled=true;
+  }
+  const mob={x:tr.x-95,y:tr.y};
+  for(let i=0;i<110;i++){
+   const dx=tr.x+140-mob.x,dy=tr.y-mob.y,d=Math.hypot(dx,dy)||1;
+   const v=steerAroundTrees(mob,dx/d,dy/d,19);
+   moveAroundTrees(mob,v.x*2.5,v.y*2.5,19);
+   if(blockedByTree(mob.x,mob.y,19))tunneled=true;
+  }
+  const playerFade=cherryCanopyOpacity(tree,[{x:tree.x,y:tree.y-95,hp:100,alive:true}],[]);
+  const mobFade=cherryCanopyOpacity(tree,[],[{x:tree.x,y:tree.y-95,hp:100}]);
+  const normal=cherryCanopyOpacity(tree,[],[]);
+  cherryTrees=saved;
+  return {blocked,slides:sliding.y>tr.y+15,steers:mob.x>tr.x+30,
+    tunneled,playerFade,mobFade,normal};
+ },
+ millieDoubleDashProbe(){
+  const saved={phase,paused,players,selected,trees:cherryTrees};
+  phase='explore';paused=false;cherryTrees=[];
+  const p=player('millie',0);players=[p];
+  const before=p.dashCharges;
+  tryDash(0);const first=p.dashCharges;
+  tryDash(0);const second=p.dashCharges;
+  tryDash(0);const third=p.dashCharges;
+  const clocks=p.dashRecharge.length;
+  p.dashRecharge=p.dashRecharge.map(t=>t-3.31);
+  for(let i=p.dashRecharge.length-1;i>=0;i--)if(p.dashRecharge[i]<=0){
+    p.dashRecharge.splice(i,1);p.dashCharges=Math.min(2,p.dashCharges+1);
+  }
+  const recharged=p.dashCharges;
+  const other=player('rosie',0);players=[other];
+  tryDash(0);const normalFirst=other.dashCooldown>0;
+  tryDash(0);const normalSecond=other.dashCooldown>0;
+  phase=saved.phase;paused=saved.paused;players=saved.players;
+  selected=saved.selected;cherryTrees=saved.trees;
+  return {before,first,second,third,clocks,recharged,normalFirst,normalSecond};
+ },
+ teamXPBarProbe(){
+  const prev={xp,goal,level},val=goal*.5;
+  xp=val;level=2;syncHud();
+  const element=$('team-xp-progress');
+  const result={progress:parseFloat($('team-xp-fill').style.width),
+   actual:element.getAttribute('aria-valuenow'),
+   max:element.getAttribute('aria-valuemax'),
+   label:$('team-level-label').textContent,
+   perk:$('team-perk-label').textContent,
+   visible:!!element.getClientRects().length};
+  xp=prev.xp;goal=prev.goal;level=prev.level;syncHud();
+  return result;
+ },
  getEnemyList(){return [...new Set(foes.map(e=>e.kind))]},
  state(){return {phase,clues,duoActive,duoDefeated,laserUnlocked,laserIndex:laserChallenge.index,scentStep,score,kills,coneWindup,elapsed,hp:players.map(p=>p.hp),sceneName,cutsceneNext,bossHp:boss?.hp||0,daanActive,bossRage:boss?.rage||false,bossMaxHp:boss?.maxHp||0,liteFx,guardWave:gate?.wave??null,guardians:foes.filter(e=>e.guardian&&e.hp>0).length,cleared:gateCleared.slice(),mode:difficulty,overlay:!$('overlay').classList.contains('hidden'),imgSrc:$('overlay-art').getAttribute('src').slice(0,90),dialogueImages:[...$('scene-dialogues').querySelectorAll('img')].map(im=>im.getAttribute('src').slice(0,80)),missionUnlock:$('mission-unlock').classList.contains('show'),objectText:$('objective-label').textContent}}
 };'''
@@ -386,6 +449,18 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     assert set(['duo','boss1','boss2','boss3']).issubset(soundtrack['modes']),soundtrack
     assert soundtrack['legendaryBpm']>=170,soundtrack
     s=page.evaluate('window.__rosieTest.start()')
+    if not mobile and mode=='challenge' and not solo:
+        tree=page.evaluate('window.__rosieTest.treeDepthProbe()')
+        assert tree['blocked'] and tree['slides'] and tree['steers'] and not tree['tunneled'],tree
+        assert tree['playerFade']<tree['mobFade']<tree['normal'] and tree['normal']==1,tree
+        dash=page.evaluate('window.__rosieTest.millieDoubleDashProbe()')
+        assert (dash['before'],dash['first'],dash['second'],dash['third'],
+          dash['clocks'],dash['recharged'])==(2,1,0,0,2,2),dash
+        assert dash['normalFirst'] and dash['normalSecond'],dash
+        xpbar=page.evaluate('window.__rosieTest.teamXPBarProbe()')
+        assert xpbar['visible'] and abs(xpbar['progress']-50)<.01,xpbar
+        assert xpbar['label']=='TEAM LV 2' and xpbar['perk']=='NEXT PERK LV 5',xpbar
+        print('Millie double dash, tree collisions/steering/fading and shared XP meter: PASS')
     if not mobile and mode=='challenge' and not solo:
         ambush=page.evaluate('window.__rosieTest.bushAmbushProbe()')
         assert all(ambush.values()),ambush
