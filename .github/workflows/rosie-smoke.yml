@@ -2,7 +2,10 @@ name: Rosie Survivors Smoke Tests
 on:
   pull_request:
   push:
-    branches: ['**']
+    branches: [main]
+concurrency:
+  group: rosie-smoke-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
