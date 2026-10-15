@@ -52,6 +52,35 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     page.on('pageerror',lambda e:errors.append(str(e)))
     page.set_content(html,wait_until='domcontentloaded',timeout=60000)
     page.wait_for_timeout(300)
+    # Day 5 renderer is absent from gameplay until valid, approved sheets are loaded.
+    # Synthetic sheet verifies frame cropping, facing, nearest-neighbor draw and
+    # the reversible preview flag without introducing any unapproved character art.
+    sprite_check=page.evaluate("""async () => {
+      const engine=window.Level32Sprites;
+      if(!engine)return {exists:false};
+      const tile=document.createElement('canvas');tile.width=64*8;tile.height=64*4;
+      const pixels=tile.getContext('2d');
+      pixels.fillStyle='#ff0000';pixels.fillRect(0,0,64,64);
+      pixels.fillStyle='#00ff00';pixels.fillRect(64*2,64*2,64,64);
+      const img=new Image();img.src=tile.toDataURL('image/png');await img.decode();
+      const surface=document.createElement('canvas');surface.width=100;surface.height=100;
+      const ctx=surface.getContext('2d');
+      const original=ctx.imageSmoothingEnabled;
+      const defaultFallback=engine.draw(ctx,'rosie',{state:'idle',direction:'down'},50,50,32,0)===false;
+      const invalidRejected=!engine.register('rosie',tile);
+      const validAccepted=engine.register('rosie',img);
+      engine.setPreviewEnabled(true);
+      const result=engine.draw(ctx,'rosie',{state:'walk',direction:'right'},50,50,32,.16);
+      const pix=[...ctx.getImageData(50,50,1,1).data];
+      const smoothingRestored=ctx.imageSmoothingEnabled===original;
+      engine.setPreviewEnabled(false);
+      const fallbackRestored=engine.draw(ctx,'rosie',{state:'idle',direction:'down'},50,50,32,0)===false;
+      return {exists:true,defaultFallback,invalidRejected,validAccepted,result,pix,smoothingRestored,fallbackRestored};
+    }""")
+    assert sprite_check['exists'] and sprite_check['defaultFallback'],sprite_check
+    assert sprite_check['invalidRejected'] and sprite_check['validAccepted'],sprite_check
+    assert sprite_check['result'] and sprite_check['pix'][:3]==[0,255,0],sprite_check
+    assert sprite_check['smoothingRestored'] and sprite_check['fallbackRestored'],sprite_check
     s=page.evaluate('window.__rosieTest.state()')
     print('idle',s['phase'])
     page.locator('#mute').click()
