@@ -629,7 +629,7 @@ const ambientBanter=[
  'MILLIE: Did someone say throw? ...AAAAAH, IT MOVED!'
 ];
 function say(t,duration=3){$('game-message').textContent=t;messageClock=duration}
-function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5,spriteFacing:'down',spriteMoving:false,spriteAttackAt:-1,perkGlow:0,perkRarity:'',hidden:false,bushTime:0,bushId:-1,ambushReady:0}}
+function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,dashCharges:id==='millie'?2:1,dashRecharge:[],healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5,spriteFacing:'down',spriteMoving:false,spriteAttackAt:-1,perkGlow:0,perkRarity:'',hidden:false,bushTime:0,bushId:-1,ambushReady:0}}
 function start(){
  ++scenePresentationToken;perkOffer=null;perksAwarded=0;$('perk-panel').hidden=true;
  $('scene-control-help').hidden=true;$('ending-invite').hidden=true;cancelAnimationFrame(raf);
@@ -780,6 +780,12 @@ function movePlayers(dt){
   }
   p.perkGlow=Math.max(0,(p.perkGlow||0)-dt);p.inv=Math.max(0,p.inv-dt);p.dash=Math.max(0,p.dash-dt);
   p.dashCooldown=Math.max(0,p.dashCooldown-dt);
+  if(p.id==='millie'){
+   p.dashRecharge=p.dashRecharge.map(t=>t-dt);
+   for(let i=p.dashRecharge.length-1;i>=0;i--)if(p.dashRecharge[i]<=0){
+    p.dashRecharge.splice(i,1);p.dashCharges=Math.min(2,p.dashCharges+1);
+   }
+  }
   for(let i=drops.length-1;i>=0;i--){let d=drops[i];if(dist(p,d)<29){
     if(d.kind==='xp'){gainXP(12);score+=5;emit('+XP',p.x,p.y,'#a9f4d1')}
     else{p.hp=Math.min(p.maxHp,p.hp+21);emit('+21 HP',p.x,p.y,'#a9ffc9');playSfx('heal')}
@@ -1389,8 +1395,17 @@ function syncHud(){
  if(dash){dash.replaceChildren();for(const p of players){
   const pill=document.createElement('span');pill.className='dash-pill';
   const key=p.num===0?'⇧ SHIFT':'↵ ENTER';
-  pill.textContent='P'+(p.num+1)+' '+key+' = DASH · '+(p.dashCooldown<=0?'READY':p.dashCooldown.toFixed(1)+'s');
-  pill.classList.toggle('on-cooldown',p.dashCooldown>0);dash.append(pill);
+  if(p.id==='millie'){
+   pill.textContent='P'+(p.num+1)+' '+key+' = DOUBLE DASH · '+
+     ('⚡'.repeat(p.dashCharges)+'○'.repeat(2-p.dashCharges))+
+     (p.dashCharges<2?' · next '+Math.max(0,Math.min(...p.dashRecharge)).toFixed(1)+'s':'');
+   pill.classList.toggle('on-cooldown',p.dashCharges===0);
+  }else{
+   pill.textContent='P'+(p.num+1)+' '+key+' = DASH · '+
+     (p.dashCooldown<=0?'READY':p.dashCooldown.toFixed(1)+'s');
+   pill.classList.toggle('on-cooldown',p.dashCooldown>0);
+  }
+  dash.append(pill);
  }}
  updateObjective();let h='';for(const p of players){h+='<p><strong>P'+(p.num+1)+' '+p.name+'</strong> · '+Math.ceil(p.hp)+' / '+p.maxHp+' HP'+(p.id==='ellie'?' · 💚 Lick Aura':'')+'</p><div class="meter"><span style="width:'+100*clamp(p.hp/p.maxHp,0,1)+'%"></span></div>'}$('playerhud').innerHTML=h||'Choose your heroes!';
  const health=$('mobile-health');
@@ -1750,8 +1765,18 @@ $('start').addEventListener('click',start);$('overlay-start').addEventListener('
 });$('restart').addEventListener('click',start);$('pause').addEventListener('click',togglePause);$('mute').addEventListener('click',()=>{audioEnabled=!audioEnabled; if(audioCtx){audioEnabled?audioCtx.resume():audioCtx.suspend()} $('mute').textContent=audioEnabled?'🔊 MUSIC + SFX':'🔇 SOUND OFF'; if(audioEnabled) ensureAudio();});
 function tryDash(id){
  if(!['boss','explore'].includes(phase)||paused)return;
- const p=players[id];if(!p||!p.alive||p.hidden||bushes.some(b=>dist(p,b)<51)||p.dashCooldown>0)return;
- emit('DASH!',p.x,p.y-55,'#aaf5ff');p.dash=.18;p.dashCooldown=p.id==='ellie'?2.2:3.4;p.inv=Math.max(p.inv,.18);playSfx('dash');
+ const p=players[id];if(!p||!p.alive||p.hidden||bushes.some(b=>dist(p,b)<51))return;
+ if(p.id==='millie'?p.dashCharges<1:p.dashCooldown>0)return;
+ if(p.id==='millie'){
+  p.dashCharges--;
+  p.dashRecharge.push(3.3);
+  p.dashCooldown=0;
+  emit('ZOOM-ZOOM! '+p.dashCharges+'/2',p.x,p.y-55,'#aaf5ff');
+ }else{
+  p.dashCooldown=p.id==='ellie'?2.2:3.4;
+  emit('DASH!',p.x,p.y-55,'#aaf5ff');
+ }
+ p.dash=.2;p.inv=Math.max(p.inv,.2);playSfx('dash');
 }
 // Device rotation is an opt-in enhancement. iOS/browser privacy restrictions can
 // reject landscape locks; the responsive web layout still works without them.
