@@ -1,3 +1,5 @@
+> **Day 8B solo-by-default:** On the opening selection screen, co-op is unchecked initially, P1 remains Rosie, and P2 remains Winnifred if explicitly enabled. The idle showcase is one Rosie, matching the default. Existing single/two-player flows and invitations preserved.
+
 > **Day 8B guest-first follow-up:** header now puts View Birthday Invitation before optional Play the Game and removes top gamer metadata. Full invite remains accessible from character select and while playing; mobile/browser checks in PR #22.
 
 > **Day 8B under test:** On-screen return-to-scroll prompt and stronger quest marker when wards clear. Solo only: outdoor 2.4 HP/5s damage-free, hidden 0.1 HP/s; multiplayer unchanged. CI and owner device check pending.
