@@ -62,3 +62,18 @@
 - [ ] Run Extreme browser smoke and validate Daan warning on a real device.
 - [ ] Secure an approved Daan character illustration before final Day 4 acceptance.
 - [ ] Confirm Day 5 remains docs-only (no sprite assets/rendering changes).
+
+
+## Day 4.6 — supersedes historical 3-wave-everywhere checks
+- [ ] Three distinct quests: Q1 scent, Q2 two-round ambush + duo, Q3 three timed safe-window terminals.
+- [ ] Touch thumbsticks work simultaneously, and a small tilt moves slower than a full tilt.
+- [ ] Fullscreen wide play succeeds where supported and degrades gracefully on unsupported devices.
+- [ ] Alt-tab / new invitation window automatically triggers PAWS; resume once with no RAF duplication.
+- [ ] Verify visible hero HP (mobile HUD and on-field) and readable laser danger/safe labels.
+- [ ] Confirm Tolly Extreme scene keeps Daan surprise out of difficulty selector; approved Daan artwork outstanding.
+- [ ] Confirm offscreen culling does not hide clue markers, telegraphs or the player.
+- [ ] Run automated Chromium tests and real-phone two-player checks before merge/release.
+- [ ] Validate scene reactions and reduced-motion; original portrait hashes identical.
+- [ ] **Day 5 remains docs-only**, despite being fully specified.
+
+Historical checks above concerning **three guardian waves at each clue** no longer apply after the Day 4.6 branch. Use `docs/AI-HANDOFF.md` and `docs/iteration-4-6.md` for current game intent.
