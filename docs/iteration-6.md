@@ -46,3 +46,8 @@ The word “Legendary has no perks” was interpreted as **no debuff**; this mat
 - Automated regression covers P1/P2/P1 selection, solo-only choice, upgrade text, Daan's sprite load + dialogue portrait, two bounded heals, and existing boss/invitation flows.
 
 **Remaining gates:** owner accepts Daan art and telegraph clarity on desktop/phone; verify the heal pacing in a full physical playtest. The original five pet/Tolly portrait files and event details are unchanged.
+
+
+## Day 7 — Next world iteration
+
+A new dedicated [Day 7](iteration-7.md) outlines simultaneous Impossible-mode Boink/Bocht machine-gun volleys, hideable sakura bushes, a 30-second Easter-egg scene, Tolly's nonblocking Winston search and co-op relationship dialogues. These are features under test; prior real-device acceptance gates remain.
