@@ -121,7 +121,7 @@ Historical checks above concerning **three guardian waves at each clue** no long
 - [x] Runtime load and validate every 8×4 sheet and fall back automatically when missing or corrupt.
 - [x] Chibi/classic toggle available during solo, co-op, boss and mobile; original invitation links persist.
 - [x] Standalone build includes `assets/sprites/*.webp` as data URLs without fetching remote images.
-- [ ] Day 5B Chromium and JS validation green on GitHub Actions.
+- [x] Day 5B Chromium and JS validation green on GitHub Actions (PR #10; 15 October 2026).
 - [ ] Actual iPhone/Android 2-person test confirms FPS, readability, no sprite clipping and health bar visibility (both Lite FX settings).
 - [ ] Daan's real portrait/sprite approved; provisional non-likeness actor is unchanged.
 - [ ] Final event logistics, physical-device acceptance and owner release sign-off before distributing invitations.
