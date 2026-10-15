@@ -2055,9 +2055,8 @@ function enterPhonePlay(){
  if(host.requestFullscreen&&!document.fullscreenElement){
   try{
    const pending=host.requestFullscreen({navigationUI:'hide'});
-   Promise.resolve(pending).then(()=>{
-    if(screen.orientation?.lock)return screen.orientation.lock('landscape').catch(()=>{});
-   }).catch(()=>{}); // CSS still occupies 100dvh if denied.
+   Promise.resolve(pending).catch(()=>{}); // CSS still occupies 100dvh if denied.
+   // Respect the guest's own auto-rotate setting; never force landscape.
   }catch{} // iOS Safari often lacks generic element fullscreen.
  }
 }
