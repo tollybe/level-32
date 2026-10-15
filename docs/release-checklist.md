@@ -113,3 +113,15 @@ Historical checks above concerning **three guardian waves at each clue** no long
 - [ ] Physical-device review and owner acceptance of Day 4.8 and of rendered artwork before general activation.
 - [ ] Verify sprite sheet exports, loading and failed-asset fallback with real approved files.
 - [ ] Re-check all birthday CTA/window/calendar links and canonical portrait hashes at final merge/release.
+
+
+## Day 5B — Approved artwork integration
+- [x] Commit eight owner-approved chibi WebP sheets; five main characters + Bleepling, Boink, Bocht.
+- [x] Rosie all-black, Millie German Shepherd mix based on owner's supplied photo; all main character portraits unchanged.
+- [x] Runtime load and validate every 8×4 sheet and fall back automatically when missing or corrupt.
+- [x] Chibi/classic toggle available during solo, co-op, boss and mobile; original invitation links persist.
+- [x] Standalone build includes `assets/sprites/*.webp` as data URLs without fetching remote images.
+- [ ] Day 5B Chromium and JS validation green on GitHub Actions.
+- [ ] Actual iPhone/Android 2-person test confirms FPS, readability, no sprite clipping and health bar visibility (both Lite FX settings).
+- [ ] Daan's real portrait/sprite approved; provisional non-likeness actor is unchanged.
+- [ ] Final event logistics, physical-device acceptance and owner release sign-off before distributing invitations.

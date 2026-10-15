@@ -1,20 +1,28 @@
-/* Hackathon Day 5: opt-in sprite-sheet renderer.
- * No character likenesses are defined here. Approved sheets must be registered
- * separately; missing/invalid art always leaves the existing portrait renderer.
+/* Hackathon Day 5: reversible sprite-sheet renderer.
+ * Loads owner-approved Day 5 gameplay sheets, with strict dimension checks.
+ * Missing or invalid art always leaves the original portrait renderer.
  * This file never touches game physics, collisions, hitboxes or state updates.
  */
 (function () {
   'use strict';
 
-  const FRAME_SIZE = Object.freeze({rosie:64, millie:64, winnifred:64, ellie:64, tolly:96, daan:96});
+  const FRAME_SIZE = Object.freeze({rosie:64, millie:64, winnifred:64, ellie:64, tolly:96, daan:96, bleepling:64, boink:64, bocht:64});
+  const APPROVED = Object.freeze({
+    rosie:'assets/sprites/rosie.webp', millie:'assets/sprites/millie.webp',
+    winnifred:'assets/sprites/winnifred.webp', ellie:'assets/sprites/ellie.webp',
+    tolly:'assets/sprites/tolly.webp', bleepling:'assets/sprites/bleepling.webp',
+    boink:'assets/sprites/boink.webp', bocht:'assets/sprites/bocht.webp'
+  });
   const ROW = Object.freeze({down:0, left:1, right:2, up:3});
   const ANIMATIONS = Object.freeze({
     idle: [0], walk: [1, 2], attack: [3], dash: [4],
     hurt: [5], knockout: [6], special: [7]
   });
   const sheets = new Map();
-  // Only preview URLs opt in; ordinary /game/ remains visually unchanged.
-  let preview = new URLSearchParams(location.search).get('chibiPreview') === '1';
+  // Owner approved the Day 5 artwork for playtest. Guests can revert at any time
+  // with CLASSIC PORTRAITS or ?classic=1. Daan is not in the approved manifest.
+  const params=new URLSearchParams(location.search);
+  let preview=params.get('classic')!=='1' && params.get('chibiPreview')!=='0';
 
   // Sprite contract: eight columns (idle/walk1/walk2/attack/dash/hurt/
   // knockout/special), four rows (down/left/right/up). Transparent PNG or
@@ -55,13 +63,24 @@
     return true;
   }
 
-  // Preview is reversible without mutating gameplay state. register() is also
-  // used by synthetic browser tests; no unapproved character sheets ship.
+  // All loads are optional and asynchronous. A corrupt or missing sheet leaves
+  // the original portrait-based game perfectly playable.
+  function loadApproved() {
+    return Promise.all(Object.entries(APPROVED).map(([id,src])=>new Promise(resolve=>{
+      const image=new Image();
+      image.onload=()=>resolve(register(id,image));
+      image.onerror=()=>resolve(false);
+      image.src=src;
+    })));
+  }
   window.Level32Sprites = Object.freeze({
-    register, draw,
+    register, draw, loadApproved,
     setPreviewEnabled(value) { preview = Boolean(value); },
     get previewEnabled() { return preview; },
     get loadedCharacters() { return [...sheets.keys()]; },
+    approvedFiles: APPROVED,
     frameSize: FRAME_SIZE
   });
+  // Images may be embedded data URLs in the password-encrypted standalone export.
+  loadApproved();
 })();

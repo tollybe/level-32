@@ -1,6 +1,6 @@
 # Hackathon Day 5 — Chibi Renaissance
 
-**Status: Phase 5A (sprite-engine foundation) implemented behind a reversible preview flag. No new chibi character sprites are approved or shipped. The live game still renders its original canonical portraits. This is a playtest project, not a birthday-invitation release.**
+**Status: Phase 5B implemented on a review branch: eight owner-approved sprite sheets are included, with original portrait fallback and a CHIBI/CLASSIC game toggle. This is still a playtest project, NOT the birthday-invitation release. Physical-device acceptance is outstanding.**
 
 **15 October 2026:** The owner explicitly authorised beginning Day 5 after the Day 4.8 merge. This supersedes the older *do not start any Day 5 code* scheduling restriction **for this infrastructure slice only**. It does NOT waive the outstanding physical-device acceptance checks, the requirement to approve every derived likeness, or Daan's approved character-art dependency.
 
@@ -31,25 +31,37 @@ Use nearest-neighbor *only for sprite sheets*. Regular portrait/cutscene images 
 
 **Asset production rule:** Sprite sheets must be separately derived/approved against the existing character art, not invented from memory or taken from a third-party game. Keep originals under `game/assets/*.webp` at the same git blob SHAs. Do not describe the provisional `daan.svg` emblem as his real portrait.
 
-## Phase 5B — NOT YET IMPLEMENTED
+## Phase 5B — Implemented (browser validation and real-device acceptance tracked separately)
 
-1. Obtain and sign off faithful chibi designs for each animal and Tolly, with four clearly legible facings and essential poses. An approved Daan illustration is a separate prerequisite for his sprite.
-2. Put only accepted sprite files in `game/assets/sprites/` and introduce an explicit approved sprite manifest/loader. There is intentionally **no active manifest or downloadable placeholder art** yet.
-3. Test individual poses and animation pivots on an actual mobile screen (no tilting of hitboxes/HP labels); inspect co-op overlap and revive/knockout states.
-4. Test attack/hurt/dash timing and Tolly boss telegraphs across Story 4/10, Adventure 7/10 and Extreme 10/10, including Daan's phase-two hazard in Extreme.
-5. Give final go/no-go for turning on sprite rendering for guests and update the static exporter to bundle approved nested-sheet URLs.
+1. **Completed:** Approved five main character designs and generated four-direction, eight-pose sheets for Rosie (fully black), Millie (German Shepherd mix based on owner's photo), Winnifred, Ellie and Tolly. Daan remains an unapproved provisional character, unchanged.
+2. **Completed:** Added `game/assets/sprites/{rosie,millie,winnifred,ellie,tolly,bleepling,boink,bocht}.webp`, each exact 8×4 frames with 64px characters/enemies and 96px Tolly. `game/sprite-renderer.js` validates, loads and falls back on errors. Chunkling retains original procedural artwork.
+3. **Awaiting physical test:** Test individual poses, animation pivots and memory/FPS on actual mobile screens; inspect co-op overlap and revive/knockout states.
+4. **Automated tests added; player re-test pending:** Test attack/hurt/dash timing and Tolly boss telegraphs across Story, Adventure and Extreme, including the unchanged provisional Daan hazard.
+5. **Implemented for unreleased playtesting:** CHIBI on by default with a visible CLASSIC toggle and `?classic=1` fallback; the static exporter embeds nested sprite paths. Production guest release still needs real-device and event sign-off.
 
 ## Acceptance and release gates
 
 - [ ] Day 4.8 real-phone two-human tests pass in portrait and landscape, on at least Android/iPhone as available, with Lite FX ON/OFF.
-- [ ] Owner approves Tolly difficulty, all heroes' fairness and each sprite likeness.
+- [ ] Owner approves Tolly difficulty and all heroes' real-game fairness. Main character illustration concepts and matching sprite sheets have design approval; in-game animation sign-off remains pending.
 - [ ] Owner supplies/approves Daan's actual character illustration. Until then, keep the existing *provisional* static actor.
-- [ ] Canonical five `*.webp` assets verified unchanged.
+- [x] Canonical five portrait blob SHAs unchanged after sprite branch changes (separate new files under `game/assets/sprites/`).
 - [x] Reversible renderer with portrait fallback and separate physics, controls and animation states.
 - [x] Chromium tests passed in PR #9 (15 October 2026), including the sprite test and existing quest/character/win/lose/invitation coverage.
 - [ ] Approved sheets look crisp at phone scale and don't obstruct HP, boss hazards, timed lasers, PAWS or scene dialogue.
 - [ ] Both the original `/game/` page and independently shareable `game/invitation.html` remain available from start, play, win and loss.
 - [ ] Calendar file import tested on common phone platforms.
-- [ ] Owner authorises a visual rollout; until then `chibiPreview` remains off by default.
+- [x] Owner approved the designs and requested continued sprite integration. Chibi mode is default-on for the iterative *playtest* only, with classic toggle; public guest release is not authorised.
 
 **Non-goals:** new levels/quests, combat balance or difficulty changes, RSVP backends, portrait alteration, copyrighted animation/music, and changes to the Friday 13 November birthday logistics.
+
+
+## Day 5B asset/build notes (15 October 2026)
+
+- The generated source PNGs were converted to transparent WebP atlases and **actually committed to the review branch**, not merely referenced by broken URLs.
+- Portrait art in `game/assets/*.webp` is never overwritten.
+- Eight source-atlas columns: idle, walk A, walk B, attack, dash, hurt, knockout, special. Four rows: down, left, right, up. Source image transformations are only resampling/centering each crop into game-compatible cells.
+- Enemy artwork: neon slime → Bleepling; garden gremlin → Boink; blue feline sprite → Bocht; Chunkling remains procedural. Characters do not gain any new powers or mechanics.
+- On-field enemy health bars, special telegraphs, co-op UI and the independent birthday invitation remain untouched.
+- Legacy mode: `/game/?classic=1` or the `CHIBI ON · CLASSIC?` control. If any approved image fails to decode or dimensions mismatch, that actor falls back to its original portrait/shapes.
+- `tools/build.py` bundles `assets/sprites/*.webp` in the offline encrypted export so no remote image fetch is required.
+- Don't reinterpret computer-emulated touch tests as human two-thumb Android/iOS acceptance. Daan's approved likeness and final release are still outstanding.

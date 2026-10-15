@@ -893,6 +893,10 @@ for(const e of foes){
  const bob=Math.sin(elapsed*(e.kind==='boink'?9:4)+(e.age||0)*3)*3;
  cx.save();cx.translate(e.x,e.y+bob);
  circle(0,e.size*.95,e.size*.84,'#2e465077');
+ const spriteEnemy=window.Level32Sprites?.draw(cx,e.kind,
+   {state:e.telegraph>0?'attack':e.slow>0?'hurt':'walk',direction:'down'},
+   0,0,e.size*2.2,elapsed+(e.age||0)) || false;
+ if(!spriteEnemy){
  if(e.kind==='bocht'){
    cx.beginPath();cx.moveTo(-e.size*.5,-e.size*.2);cx.bezierCurveTo(-e.size*1.4,-e.size*1.2,e.size*.4,-e.size*1.8,e.size*.8,-e.size*.1);cx.bezierCurveTo(e.size*1.3,e.size*.8,-e.size*.8,e.size*1.4,-e.size*.5,-e.size*.2);cx.fillStyle='#81d6e5';cx.fill();
    circle(0,0,e.size*.64,'#9debf0');
@@ -906,6 +910,8 @@ for(const e of foes){
  circle(-e.size*.3,-e.size*.15,1.5,'white');circle(e.size*.25,-e.size*.15,1.5,'white');
  cx.beginPath();cx.arc(0,e.size*.2,e.size*.16,0,Math.PI);cx.strokeStyle='#70415d';cx.lineWidth=2;cx.stroke();
  if(e.kind==='bleepling')txt('♥',0,e.size*.45,12,'center','#fa89b6');
+ }
+ // Keep collision warnings, laser tells, slows and HP indicators above sprites.
  if(e.kind==='boink'&&e.telegraph>0){cx.beginPath();cx.arc(0,0,e.size+12,0,TAU);cx.strokeStyle='#ffe197';cx.lineWidth=5;cx.setLineDash([6,6]);cx.stroke();cx.setLineDash([]);txt('BOINK!',0,-e.size-22,14,'center','#ffe6a7')}
  if(e.kind==='bocht'){cx.beginPath();cx.arc(0,0,e.size+5,0,TAU);cx.strokeStyle='#b4f3fa';cx.lineWidth=2;cx.stroke()}
  if(e.slow>0){cx.beginPath();cx.arc(0,0,e.size+8,0,TAU);cx.strokeStyle='#a7edff';cx.lineWidth=4;cx.stroke()}
@@ -1047,6 +1053,18 @@ $('share-result').addEventListener('click',async()=>{
  catch{$('share-status').textContent='Copy blocked by this browser. Take a screenshot of your score instead.';}
 });
 $('fx-toggle').addEventListener('click',()=>{liteFx=!liteFx;syncHud()});
+// The owner-approved visuals can be reverted instantly for real-device QA.
+const spriteButton=$('sprite-toggle');
+function updateSpriteToggle(){
+ const on=Boolean(window.Level32Sprites?.previewEnabled);
+ spriteButton.textContent=on?'🐾 CHIBI ON · CLASSIC?':'🖼 CLASSIC ON · CHIBI?';
+ spriteButton.setAttribute('aria-pressed',String(on));
+}
+spriteButton.addEventListener('click',()=>{
+ window.Level32Sprites?.setPreviewEnabled(!window.Level32Sprites.previewEnabled);
+ updateSpriteToggle();
+});
+updateSpriteToggle();
 $('start').addEventListener('click',start);$('overlay-start').addEventListener('click',()=>{
  if(phase==='cutscene'){if(performance.now()-sceneOpenedAt>350)continueScene();}
  else start();

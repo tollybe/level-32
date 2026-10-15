@@ -160,3 +160,8 @@ See [Day 4.8 details](docs/iteration-4-8.md) and [AI handoff](docs/AI-HANDOFF.md
 ### Hackathon Day 5 — Chibi Renaissance (opt-in engineering foundation)
 
 The early Day 5 pass adds a separate sprite-sheet renderer and presentation-only pose tracking for the four pets and Tolly. It changes **no gameplay physics, combat numbers or original portraits**, and includes synthetic browser tests. There are **no approved sprite sheets in the repo yet**; even `/game/?chibiPreview=1` correctly falls back to the existing canonical portraits until approved art is added. Daan's actual likeness remains pending. The existing playable site is still a **playtest**, not the party release. See [Day 5 development and art criteria](docs/iteration-5.md).
+
+
+### Hackathon Day 5B — Owner-approved chibi sprites
+
+Eight new animated 8×4 directional sprite sheets are integrated for **Rosie, Millie, Winnifred, Ellie, Tolly, Bleepling, Boink and Bocht**. Rosie stays all black; Millie's design reflects the actual German Shepherd mix photo. All five original game portraits/cutscenes are untouched, Tolly still has her telegraphs, and Daan remains a deliberately provisional non-likeness support actor. The game loads verified WebP sheets asynchronously, uses chibi gameplay art by default **for playtesting**, and offers a reversible **CHIBI / CLASSIC** button or `/game/?classic=1`. The offline builder now bundles the new art. The event invitation and calendar remain independently accessible. **Real Android/iPhone duo testing, Daan artwork and final guest-release approval are still pending.** See [Day 5 roadmap](docs/iteration-5.md).

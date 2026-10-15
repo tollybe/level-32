@@ -51,7 +51,7 @@ def game_as_single_html() -> str:
         return "data:" + mime + ";base64," + base64.b64encode(asset.read_bytes()).decode("ascii")
 
     # Handles all <img src="assets/..."> and JS scene URLs; leaves absolute URLs alone.
-    html = re.sub(r"assets/[\w-]+\.(?:webp|png|jpg|svg)", lambda m: image_data_path(m.group(0)), html)
+    html = re.sub(r"assets/(?:sprites/)?[\w-]+\.(?:webp|png|jpg|svg)", lambda m: image_data_path(m.group(0)), html)
     return html
 
 

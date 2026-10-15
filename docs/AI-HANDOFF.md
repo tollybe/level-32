@@ -1,3 +1,5 @@
+> **Day 5B update (15 October 2026):** Eight approved real sprite assets (five characters, Bleepling, Boink, Bocht) now exist under `game/assets/sprites/` on the Day 5B integration branch. A loader registers them with strict dimensions; Chibi is ON by default only for this unreleased playtest, and a CLASSIC toggle / `?classic=1` returns to original portrait rendering. Tolly, the pet art, and enemy telegraphs retain original gameplay. Daan still has no approved character sprite. See `docs/iteration-5.md`. Older 'Day 5 not implemented' references below are historical.
+
 > **Day 5 addendum (15 October 2026):** The owner has now authorised starting Day 5. Merged into `main` via PR #9, a reversible sprite renderer and purely visual pose routing are implemented, but **no chibi sheets or likenesses have been generated or approved**, and ordinary gameplay still uses original portraits. Refer to `docs/iteration-5.md`. Any older “Day 5 not implemented” text below refers to the prior state; sprite art/rollout and real-phone Day 4.8 acceptance remain pending.
 
 # AI HANDOFF — LEVEL 32 / Rosie Survivors
