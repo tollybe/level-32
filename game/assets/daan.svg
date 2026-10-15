@@ -1,1 +1,33 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320" role="img" aria-labelledby="title desc"><title id="title">Daan — provisional character emblem</title><desc id="desc">A labeled, abstract placeholder emblem for Daan's extreme-mode entrance. Not intended as Daan's physical likeness.</desc><defs><radialGradient id="g"><stop stop-color="#79649b"/><stop offset="1" stop-color="#262b48"/></radialGradient></defs><rect x="9" y="9" width="302" height="302" rx="52" fill="url(#g)" stroke="#f6d895" stroke-width="12"/><path d="M160 55L233 96V180L160 239L87 180V96Z" fill="#e7c77b" opacity=".16" stroke="#f4d996" stroke-width="9"/><path d="M160 84l33 59-33 59-33-59z" fill="#f9e3b7"/><text x="160" y="276" text-anchor="middle" font-family="Verdana,sans-serif" font-size="40" font-weight="bold" fill="#fff1c4">DAAN</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320" role="img" aria-label="Chibi portrait of Daan based on the supplied reference photograph">
+<defs><radialGradient id="scene" cx=".55" cy=".35" r=".9"><stop stop-color="#6d936e"/><stop offset="1" stop-color="#253b38"/></radialGradient></defs>
+<rect width="320" height="320" rx="34" fill="url(#scene)"/>
+<circle cx="160" cy="143" r="118" fill="#bed7b5" opacity=".16"/>
+<g transform="translate(25 25) scale(2.8)"><g>
+  <ellipse cx="48" cy="85" rx="23" ry="5.5" fill="#1b1d35" opacity=".4"/>
+  <g transform="translate(0 0)">
+  
+  <path d="M32 68L31 82H44L48 69M55 69L54 82H67L64 68" fill="#a52b50" stroke="#3b3045" stroke-width="3.3" stroke-linejoin="round"/>
+  <path d="M30 82h16v5H29zM54 82h15v5H54z" fill="#535b57" stroke="#242938" stroke-width="2"/>
+  <path d="M27 47Q48 38 70 47L69 69Q49 77 29 68Z" fill="#363d45" stroke="#202b35" stroke-width="3.6"/>
+  <path d="M35 49L45 63M62 49L52 63" stroke="#536052" stroke-width="4" opacity=".9"/>
+  <path d="M32 54h35" stroke="#536274" stroke-width="2" opacity=".6"/>
+  <path d="M32 48Q22 50 19 65" stroke="#353e45" stroke-width="10" stroke-linecap="round" fill="none"/>
+  <path d="M65 48Q76 52 79 65" stroke="#353e45" stroke-width="10" stroke-linecap="round" fill="none"/>
+  <circle cx="19" cy="65" r="6" fill="#e6b393" stroke="#3c3940" stroke-width="1.5"/>
+  <circle cx="79" cy="65" r="6" fill="#e6b393" stroke="#3c3940" stroke-width="1.5"/>
+  <ellipse cx="48" cy="32" rx="24" ry="24" fill="#ebbc99" stroke="#3d3434" stroke-width="3.4"/>
+  <path d="M25 26Q28 8 42 10Q54 0 70 15L73 26Q64 19 59 17Q48 23 40 20Q34 26 25 26Z" fill="#d3a16c" stroke="#875f38" stroke-width="2.5"/>
+   <path d="M36 12q8-7 15-5M55 12q9-3 15 5" fill="none" stroke="#f1ce9e" stroke-width="3" stroke-linecap="round"/>
+   <path d="M34 32q5-4 10 0M54 32q5-4 10 0" fill="none" stroke="#a26b45" stroke-width="2"/>
+   <ellipse cx="39" cy="36" rx="2.5" ry="3.4" fill="#34455b"/><ellipse cx="58" cy="36" rx="2.5" ry="3.4" fill="#34455b"/>
+   <path d="M39 46q9 9 20 0" fill="none" stroke="#8b4d43" stroke-width="2.5" stroke-linecap="round"/>
+   <path d="M41 50q8 3 15 0" fill="none" stroke="#e5b69b" stroke-width="1.4" opacity=".7"/>
+  
+  
+  
+  
+  
+  </g>
+ </g></g>
+<text x="160" y="307" text-anchor="middle" fill="#fff7d9" font-family="Trebuchet MS,sans-serif" font-size="25" font-weight="bold">DAAN · THE REINFORCEMENT</text>
+</svg>
