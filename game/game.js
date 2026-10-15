@@ -10,7 +10,17 @@ let selected=['rosie','winnifred'],players=[],foes=[],shots=[],drops=[],fx=[],ha
 let cutsceneNext=null,sceneName=null,reviveSeconds=1.85,hudClock=0;
 let duoActive=false,duoDefeated=false,laserUnlocked=false,beams=[],coneCooldown=6.8,coneWindup=0,coneAngle=0,bossPulseCooldown=4,bossPulseWindup=0,bananaWindup=0;
 let gate=null,gateCleared=[false,false,false],difficulty='challenge',questToastClock=0,comboCount=0,comboClock=0;
-const GATE_WAVES={challenge:[[3,3,2],[3,3,3],[4,3,3]],story:[[2,2,2],[2,2,2],[2,2,3]]};
+let daan=null,daanRespawn=0,deathPenalty=0,mythicAngle=0,mythicArcWindup=0,mythicArcCooldown=0;
+const DIFFICULTIES={
+ story:{label:'Story',multiplier:1,deathLoss:.20,hp:.77,damage:.70,spawn:1.65},
+ challenge:{label:'Adventure',multiplier:1.5,deathLoss:.35,hp:1,damage:1,spawn:1},
+ impossible:{label:'Impossible · Daan’s Dare',multiplier:3,deathLoss:.50,hp:1.38,damage:1.4,spawn:.72}
+};
+const mode=()=>DIFFICULTIES[difficulty]||DIFFICULTIES.challenge;
+function awardScore(points){score+=Math.round(points*mode().multiplier)}
+function bestKey(){return 'rosie-survivors-best:'+difficulty+':'+players.length+'p'}
+function readBest(){try{return Number(localStorage.getItem(bestKey()))||0}catch{return 0}}
+const GATE_WAVES={challenge:[[3,3,2],[3,3,3],[4,3,3]],story:[[2,2,2],[2,2,2],[2,2,3]],impossible:[[5,5,6],[5,6,6],[6,6,7]]};
 const ENEMY_TYPES={
  bleepling:{hp:42,speed:117,damage:13,size:21,score:12,xp:7},
  boink:{hp:60,speed:114,damage:12,size:26,score:20,xp:9},
@@ -258,10 +268,10 @@ function spawnGuardianWave(){
  for(let i=0;i<count;i++){
   const kind=(i===0&&gate.wave===2)?'chunkling':(i%3===0?'boink':i%3===1?'bleepling':'bocht');
   const c=ENEMY_TYPES[kind],a=TAU*(i+.3+gate.wave*.27)/count,radius=190+(i%2)*38;
-  const hp=Math.round(c.hp*(difficulty==='story'?.84:1.2));
+  const hp=Math.round(c.hp*(difficulty==='story'?.84:difficulty==='impossible'?1.48:1.2)*(players.length===2?1.28:1));
   foes.push({x:clamp(origin.x+Math.cos(a)*radius,30,WIDTH-30),y:clamp(origin.y+Math.sin(a)*radius,30,HEIGHT-30),
-   hp,maxHp:hp,speed:c.speed*(difficulty==='story'?.9:1.04),
-   damage:Math.round(c.damage*(difficulty==='story'?.7:1)),size:c.size,attack:.85,
+   hp,maxHp:hp,speed:c.speed*(difficulty==='story'?.9:difficulty==='impossible'?1.19:1.04),
+   damage:Math.round(c.damage*mode().damage),size:c.size,attack:.85,
    kind,guardian:true,age:0,telegraph:0,charge:-1,trailTimer:0,slow:0});
  }
  gate.remainingDelay=3.3;
@@ -303,11 +313,11 @@ function continueScene(){
  $('scene-dialogues').hidden=true;
  $('pause').disabled=false;$('pause').textContent='Ⅱ PAUSE';
  if(kind==='intro'){
-   const hp=(players.length===2?1070:845)*(difficulty==='story'?.77:1);
-   boss={x:fridge.x+45,y:fridge.y-80,hp,maxHp:hp,size:49,speed:difficulty==='story'?96:137,attack:1.1};
+   const hp=Math.round(845*(players.length===2?1.52:1)*mode().hp);
+   boss={x:fridge.x+45,y:fridge.y-80,hp,maxHp:hp,size:49,speed:difficulty==='story'?96:difficulty==='impossible'?157:137,attack:1.1};
    hazards=[];foes=foes.slice(-5);bossPhase=1;coneWarned=false;coneCooldown=6.6;coneWindup=0;bossPulseCooldown=1.65;bossPulseWindup=0;bananaWindup=0;
    $('bossbar').classList.add('show');$('boss-card').classList.add('show');
-   say('⚔ TOLLY: No Rosie, you’re on a diet — no more banana!',5);playSfx('boss');score+=200;
+   say('⚔ TOLLY: No Rosie, you’re on a diet — no more banana!',5);playSfx('boss');awardScore(200);
    showQuestToast('FINAL BOSS · TOLLY!','Move away from the yellow shockwave and dash to safety!',4.6);
  }else if(kind==='phase2'){
    say('⚠ CONE OF SHAME PROTOCOL ACTIVATED! Watch the warning arc!',4);playSfx('phase');
@@ -343,7 +353,7 @@ function openBriefing(){
  $('briefing-p2-card').hidden=!duo;$('briefing-solo-hint').hidden=duo;
  $('briefing-p1-move').textContent=duo?'WASD only':'WASD OR arrow keys';
  $('briefing-p1-dash-extra').hidden=duo;
- $('briefing-mode').textContent=$('difficulty').value==='story'?'STORY MODE · Gentle 4/10':'ADVENTURE MODE · Target 7/10';
+ $('briefing-mode').textContent=$('difficulty').value==='story'?'STORY MODE · Gentle 4/10':$('difficulty').value==='impossible'?'IMPOSSIBLE · 10/10 · Score ×3 · Third boss phase!':'ADVENTURE MODE · Target 7/10';
  $('control-briefing').hidden=false;$('briefing-go').focus();
 }
 function closeBriefing(){ $('control-briefing').hidden=true; }
@@ -352,14 +362,15 @@ function start(){
  $('ending-invite').hidden=true;cancelAnimationFrame(raf);
  players=[player(selected[0],0)];if($('coop').checked)players.push(player(selected[1],1));
  foes=[];shots=[];drops=[];fx=[];hazards=[];beams=[];difficulty=$('difficulty').value;gate=null;gateCleared=[false,false,false];comboCount=0;comboClock=0;hideQuestToast();duoActive=false;duoDefeated=false;laserUnlocked=false;coneCooldown=6.8;coneWindup=0;bossPulseCooldown=4;bossPulseWindup=0;bananaWindup=0;phase='explore';paused=false;boss=null;cutsceneNext=null;sceneName=null;musicStep=0;musicMode='idle';musicBar=0;musicNextBarAt=0;
- elapsed=0;score=0;kills=0;level=1;xp=0;goal=35;clues=0;fridgeVisible=false;
+ elapsed=0;score=0;kills=0;level=1;xp=0;goal=35;clues=0;fridgeVisible=false;deathPenalty=0;daan=null;daanRespawn=0;mythicArcCooldown=0;mythicArcWindup=0;best=readBest();
  spawnClock=.55;surgeClock=33;attackClock=0;hudClock=0;keys.clear();ensureAudio();
  $('scene-skip').hidden=true;$('share-result').classList.remove('show');$('mission-unlock').classList.remove('show');$('scene-dialogues').hidden=true;$('share-status').textContent='';$('overlay').classList.remove('cinematic');$('overlay').classList.add('hidden');$('pause').disabled=false;$('pause').textContent='Ⅱ PAUSE';
- $('bossbar').classList.remove('show');$('boss-card').classList.remove('show');$('overlay-art').classList.remove('show');$('scene-dialogues').hidden=true;$('overlay-kicker').textContent='ARCADE MODE';
+ $('bossbar').classList.remove('show','mythic');$('boss-card').classList.remove('show');$('overlay-art').classList.remove('show');$('scene-dialogues').hidden=true;$('overlay-kicker').textContent='ARCADE MODE';
  say('Okay '+players.map(p=>p.name).join(' & ')+'… '+(players.length===1?'SUCH TOLLY!':'SUCHT TOLLY!')+' ADVENTURE MODE!',5);
  $('controls-reminder').textContent=players.length===1?'SOLO · WASD OR ARROWS to move · SHIFT OR ENTER to dash · automatic attacks':'CO-OP · P1 WASD + SHIFT · P2 ARROWS + ENTER · automatic attacks';
  closeBriefing();
  showQuestToast('QUEST 1 · FOLLOW THE PAWPRINTS','Find the glowing scroll and defeat its three guardian waves.',5);
+ $('scoring-mode').textContent=mode().label+' · score ×'+mode().multiplier+' · full wipe −'+Math.round(mode().deathLoss*100)+'%';
  syncHud();lastTime=performance.now();raf=requestAnimationFrame(loop);
  $('game-section').scrollIntoView({behavior:'smooth',block:'start'});
 }
@@ -377,7 +388,7 @@ function spawnBleepling(){
  const c=ENEMY_TYPES[kind],hp=Math.round(c.hp+tier*(kind==='chunkling'?11:6));
  foes.push({x:clamp(focus.x+Math.cos(angle)*radius,35,WIDTH-35),
   y:clamp(focus.y+Math.sin(angle)*radius,35,HEIGHT-35),hp,maxHp:hp,
-  speed:c.speed+Math.min(31,elapsed*.14),attack:rnd(.3,.8),size:c.size,kind,damage:Math.ceil((c.damage+Math.floor(tier*.75))*(difficulty==='story'?.7:1)),age:0,telegraph:0,charge:-1,trailTimer:0,slow:0});
+  speed:(c.speed+Math.min(31,elapsed*.14))*(difficulty==='impossible'?1.12:1),attack:rnd(.3,.8),size:c.size,kind,damage:Math.ceil((c.damage+Math.floor(tier*.75))*mode().damage),age:0,telegraph:0,charge:-1,trailTimer:0,slow:0});
 }
 function emit(text,x,y,col='#ffe1aa'){fx.push({text,x,y,col,t:1.1})}
 function nearest(origin,arr,r=Infinity){let item=null,bd=r;for(const o of arr){if(o.hp<=0||o.alive===false)continue;const d=dist(origin,o);if(d<bd){bd=d;item=o}}return item}
@@ -389,16 +400,16 @@ function damage(enemy,amount,p){
    coneWarned=true;bossPhase=2;showScene('phase2','THE CONE OF SHAME!',"Tolly has reached for the ultimate weapon. Watch the red warning arc!",[['tolly',"ARG. DON'T MAKE ME GET THE CONE OF SHAME OUT!!!"]]);return;
  }
  if(enemy.hp<=0){
-  if(enemy===boss){score+=900;emit('FRIDGE OPEN!',enemy.x,enemy.y-50);resetEnd(true);return}
+  if(enemy===boss){awardScore(900);emit('FRIDGE OPEN!',enemy.x,enemy.y-50);resetEnd(true);return}
   kills++;comboCount=comboClock>0?comboCount+1:1;comboClock=3.4;
   const baseScore=ENEMY_TYPES[enemy.kind]?.score||12;
   const multiplier=1+Math.min(1.5,Math.floor((comboCount-1)/3)*.25);
-  score+=Math.round(baseScore*multiplier);
+  awardScore(baseScore*multiplier);
   xp+=(ENEMY_TYPES[enemy.kind]?.xp||7);
   if(comboCount===5)emit('SNACK STREAK! ×'+multiplier.toFixed(2),enemy.x,enemy.y-35,'#fff2b2');
   emit('+'+(ENEMY_TYPES[enemy.kind]?.score||12),enemy.x,enemy.y); playSfx('hit');
   if(enemy.elite&&['boink','bocht'].includes(enemy.kind)&&!foes.some(f=>f!==enemy&&f.elite&&f.hp>0)){
-   duoActive=false;duoDefeated=true;score+=250;
+   duoActive=false;duoDefeated=true;awardScore(250);
    say('🎉 BOINK & BOCHT HAVE BEEN BOINKED! The last clue is revealed!',5);
    players.filter(q=>q.alive).forEach(q=>q.hp=Math.min(q.maxHp,q.hp+20));playSfx('victory');
   }
@@ -436,7 +447,7 @@ function movePlayers(dt){
   p.cool-=dt;if(p.cool<=0){fire(p);p.cool=p.rate}
   p.laserCooldown-=dt;if(laserUnlocked&&p.laserCooldown<=0){laserAttack(p);p.laserCooldown=5.3}
   for(let i=drops.length-1;i>=0;i--){let d=drops[i];if(dist(p,d)<29){
-    if(d.kind==='xp'){xp+=12;score+=5;emit('+XP',p.x,p.y,'#a9f4d1')}
+    if(d.kind==='xp'){xp+=12;awardScore(5);emit('+XP',p.x,p.y,'#a9f4d1')}
     else{p.hp=Math.min(p.maxHp,p.hp+21);emit('+21 HP',p.x,p.y,'#a9ffc9');playSfx('heal')}
     drops.splice(i,1);
   }}
@@ -472,7 +483,7 @@ function updateRevives(dt){
   down.alive=true;down.hp=Math.ceil(down.maxHp*.42);down.inv=2.25;
   down.reviveProgress=0;down.healClock=1.2;
   for(const enemy of foes){if(dist(enemy,down)<100){enemy.x=clamp(enemy.x+(enemy.x-down.x)*.55,24,WIDTH-24);enemy.y=clamp(enemy.y+(enemy.y-down.y)*.55,24,HEIGHT-24)}}
-  score+=150;emit('💚 REVIVED!',down.x,down.y-36,'#a7ffe2');
+  awardScore(150);emit('💚 REVIVED!',down.x,down.y-36,'#a7ffe2');
   say('💚 '+helper.name+' revived '+down.name+'! Back to the snacks!',3.2);playSfx('heal');
  }
 }
@@ -511,9 +522,9 @@ function update(dt){
  updateEllieAuras(dt);
  spawnClock-=dt;
  if(spawnClock<=0&&foes.length<(gate?23:duoActive?20:phase==='boss'?48:62)){
-   const n=gate?1:duoActive?1:phase==='boss'?(difficulty==='story'?1:2):elapsed>75?3:elapsed>18?2:1;
+   const n=gate?1:duoActive?1:phase==='boss'?(difficulty==='story'?1:difficulty==='impossible'?3:2):elapsed>75?3:elapsed>18?2:1;
    for(let j=0;j<n&&foes.length<65;j++)spawnBleepling();
-   spawnClock=Math.max(.42,.93-elapsed*.0035)*(difficulty==='story'?1.65:1)*(gate?1.5:1)*(phase==='boss'?.9:1);
+   spawnClock=Math.max(.42,.93-elapsed*.0035)*mode().spawn*(gate?1.5:1)*(phase==='boss'?.9:1);
  }
  surgeClock-=dt;
  if(surgeClock<=0&&!duoActive&&!gate&&foes.length<60){
@@ -582,7 +593,7 @@ function update(dt){
       if(!gate)beginGuardian(i);
       return;
      }
-     clues++;score+=100;playSfx('clue');gate=null;
+     clues++;awardScore(100);playSfx('clue');gate=null;
      const scene=CLUE_SCENES[clues-1];
      showScene(scene.kind,scene.title,scene.dialogue);
      return;
@@ -605,7 +616,7 @@ function update(dt){
         for(const q of players.filter(p=>p.alive&&dist(p,boss)<150)){
           const a=Math.atan2(q.y-boss.y,q.x-boss.x);
           q.x=clamp(q.x+Math.cos(a)*110,24,WIDTH-24);q.y=clamp(q.y+Math.sin(a)*110,24,HEIGHT-24);
-          if(q.inv<=0){const amount=Math.round((q.id==='winnifred'?18:bossPhase===2?29:23)*(difficulty==='story'?.7:1));
+          if(q.inv<=0){const amount=Math.round((q.id==='winnifred'?18:bossPhase>=2?29:23)*mode().damage);
             q.hp=Math.max(0,q.hp-amount);q.inv=.95;if(q.hp===0)q.alive=false;
             emit('FRIDGE REJECTION -'+amount,q.x,q.y-36,'#fff2ad');}
           else emit('SHOO!',q.x,q.y-34,'#fff2ad');
@@ -651,11 +662,11 @@ function update(dt){
          const dir=base+(j-(count-1)/2)*(.20);
          const speed=frenzy?198:176;
          hazards.push({x:boss.x+Math.cos(dir)*30,y:boss.y+Math.sin(dir)*30,
-            vx:Math.cos(dir)*speed,vy:Math.sin(dir)*speed,ttl:3.3,damage:Math.ceil((frenzy?20:17)*(difficulty==='story'?.72:1))});
+            vx:Math.cos(dir)*speed,vy:Math.sin(dir)*speed,ttl:3.3,damage:Math.ceil((frenzy?20:17)*mode().damage)});
        }
        for(const q of players){
          if(q.alive&&dist(q,boss)<110&&q.inv<=0){
-           q.hp=Math.max(0,q.hp-Math.ceil((frenzy?25:19)*(difficulty==='story'?.7:1)));q.inv=.56;
+           q.hp=Math.max(0,q.hp-Math.ceil((frenzy?25:19)*mode().damage));q.inv=.56;
            emit('BANANA BLAST',q.x,q.y-18,'#ffe8a0');
            if(q.hp===0)q.alive=false; else playSfx('special');
          }
@@ -877,7 +888,7 @@ function drawOffscreenArrows(){
   txt((p.alive?'P':'✚ P')+(p.num+1),x,y+35,15,'center',color);
  }
 }
-function render(){let live=players.filter(p=>p.alive);let center=live.length?{x:live.reduce((a,p)=>a+p.x,0)/live.length,y:live.reduce((a,p)=>a+p.y,0)/live.length}:{x:400,y:400};cam.x=clamp(center.x-VIEWW/2,0,WIDTH-VIEWW);cam.y=clamp(center.y-VIEWH/2,0,HEIGHT-VIEWH);world();drawObjectiveMarker();drawOffscreenArrows();rect(0,0,VIEWW,42,'#1a273ac9');txt('🌸 SAKURA GARDEN · '+(phase==='boss'?'FRIDGE DEFENCE':'THE GREAT SNACK RIFT'),15,28,18);txt('🐾 '+kills+'  ✨ LV '+level+'  🧾 '+clues+'/3  '+(difficulty==='story'?'🌼 STORY':'⚔ ADVENTURE'),VIEWW-17,28,17,'right');let dx=fridge.x-center.x,dy=fridge.y-center.y;if(clues>=3&&phase==='explore')txt('🧭 FRIDGE '+Math.round(Math.hypot(dx,dy))+'m',VIEWW/2,28,17,'center','#ffe6a4')}
+function render(){let live=players.filter(p=>p.alive);let center=live.length?{x:live.reduce((a,p)=>a+p.x,0)/live.length,y:live.reduce((a,p)=>a+p.y,0)/live.length}:{x:400,y:400};cam.x=clamp(center.x-VIEWW/2,0,WIDTH-VIEWW);cam.y=clamp(center.y-VIEWH/2,0,HEIGHT-VIEWH);world();drawObjectiveMarker();drawOffscreenArrows();rect(0,0,VIEWW,42,'#1a273ac9');txt('🌸 SAKURA GARDEN · '+(phase==='boss'?'FRIDGE DEFENCE':'THE GREAT SNACK RIFT'),15,28,18);txt('🐾 '+kills+'  ✨ LV '+level+'  🧾 '+clues+'/3  '+(difficulty==='story'?'🌼 STORY':difficulty==='impossible'?'💠 IMPOSSIBLE':'⚔ ADVENTURE'),VIEWW-17,28,17,'right');let dx=fridge.x-center.x,dy=fridge.y-center.y;if(clues>=3&&phase==='explore')txt('🧭 FRIDGE '+Math.round(Math.hypot(dx,dy))+'m',VIEWW/2,28,17,'center','#ffe6a4')}
 function loop(now){let dt=Math.min(.045,(now-lastTime)/1000||.016);lastTime=now;if(!paused&&phase!=='ended'&&phase!=='cutscene')update(dt);render();if(phase!=='ended')raf=requestAnimationFrame(loop)}
 function togglePause(){if(phase==='idle'||phase==='ended'||phase==='cutscene')return;paused=!paused;$('pause').textContent=paused?'▶ RESUME':'Ⅱ PAUSE';if(!paused){lastTime=performance.now();raf=requestAnimationFrame(loop)}else cancelAnimationFrame(raf);$('game-message').textContent=paused?'PAUSED':'QUEST RESUMED'}
 const inviteHref=location.pathname.includes('/game/')?'invitation.html':'game/invitation.html';
