@@ -1,6 +1,6 @@
 # Hackathon Day 7 — Bush Stealth, Winston & Impossible Crossfire
 
-**Status: merged to `main` in PR #16, Chromium syntax and gameplay regression CI green (15 October 2026); still a playtest, not a guest release.** Builds on Day 6C. Canonical five pet/Tolly portraits and approved game sprite files are unchanged; the bush asset is new and separate.
+**Status: Day 7B merged to `main` via PR #17 (15 October 2026) with green syntax and full Chromium gameplay CI. Still a playtest pending owner real-device approval; not a guest release.** Builds on Day 6C. Canonical five pet/Tolly portraits and approved game sprite files are unchanged; the bush asset is new and separate.
 
 ## World and bush stealth
 
@@ -46,7 +46,7 @@ Banter triggers when both heroes are alive, visible and within 165 world units. 
 - **No attacks under cover**: all normal weapons, laser attacks and dashes are disabled inside bushes. Existing live projectiles and laser beams owned by a character are cancelled when they enter cover. Cooldowns do not fire while hidden.
 - **Ambush crit**: after hiding for at least 0.3s, stepping out arms a 2.1-second window for a **single 2× critical hit** against an *ordinary mob*. Tolly and elite minibosses are immune. The bonus is consumed only when an eligible mob is hit; Rosie's second-target pierce modifier remains intact. Re-entering cover resets the bonus.
 - **Banana hits through foliage**: an elite Boink/Bocht banana may strike a bush containing a player. Foliage absorbs 75% of that projectile's damage, while the player gets knocked outside the bush, gains 0.9s post-hit invulnerability, and exclaims **"OW!"**. Knockout by banana cancels the pending ambush crit. A single projectile can hit only one hiding player.
-- **Acceptance:** automated tests now verify separate and sometimes overlapping bursts, cooldown bounds, all twelve bananas per enemy, firing suppression on entry, mob-only crit (including boss/elite immunity), reduced damage and displacement, plus the names and duet. The full existing Story/Adventure/Extreme and co-op journey must pass before merge. Real-device feel, readability and audio remain for owner approval.
+- **Acceptance:** green PR #17 automated tests verify separate and sometimes overlapping bursts, cooldown bounds, all twelve bananas per enemy, firing suppression on entry, mob-only crit (including boss/elite immunity), reduced damage and displacement, plus the names and duet. The full Story/Adventure/Extreme and co-op regression suite passed before merge. Real-device feel, readability and audio remain for owner approval.
 
 ## Garden atmosphere
 
