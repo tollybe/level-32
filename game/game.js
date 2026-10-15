@@ -341,8 +341,14 @@ function spawnDuo(){
  duoActive=true;duoDefeated=false;
  const pos=players.find(p=>p.alive)||players[0];
  for(const [i,kind] of ['boink','bocht'].entries()){
-  const conf=ENEMY_TYPES[kind],angle=(i===0?-.8:.8);
-  foes.push({x:clamp(pos.x+Math.cos(angle)*220,45,WIDTH-45),y:clamp(pos.y+Math.sin(angle)*220,45,HEIGHT-45),hp:conf.hp*3,maxHp:conf.hp*3,speed:conf.speed,damage:conf.damage,size:conf.size+8,attack:1.4,kind,elite:true,age:0,telegraph:0,charge:-1,trailTimer:0,slow:0});
+  const conf=ENEMY_TYPES[kind],scale=difficulty==='story'?1.15:difficulty==='extreme'?2.15:1.7;
+  const x=i===0?pos.x+210:pos.x-210,y=i===0?pos.y-180:pos.y+170;
+  const hp=Math.round(conf.hp*3*scale);
+  foes.push({x:clamp(x,45,WIDTH-45),y:clamp(y,45,HEIGHT-45),
+   hp,maxHp:hp,speed:conf.speed*(difficulty==='story'?1:1.10),
+   damage:Math.round(conf.damage*(difficulty==='story'?1:1.16)),
+   size:conf.size+8,attack:1.2,kind,elite:true,age:0,
+   telegraph:0,charge:-1,trailTimer:0,slow:0});
  }
  say('⚠ BOINK & BOCHT! Defeat the terrible twosome to reveal the last clue!',4);
  playSfx('boink');
@@ -658,6 +664,18 @@ function update(dt){
  foes=foes.filter(e=>e.hp>0);
  for(const e of foes){
     const p=nearest(e,players,Infinity);if(!p)continue;
+    // Elite twins separate whenever pursuit would otherwise stack their sprites.
+    if(e.elite&&duoActive&&['boink','bocht'].includes(e.kind)){
+      const other=foes.find(q=>q!==e&&q.elite&&q.hp>0&&['boink','bocht'].includes(q.kind));
+      if(other){
+       const separation=dist(e,other);
+       if(separation<110){
+        const a=separation>1?Math.atan2(e.y-other.y,e.x-other.x):(e.kind==='boink'?-.8:2.3);
+        e.x=clamp(e.x+Math.cos(a)*(110-separation)*.54,35,WIDTH-35);
+        e.y=clamp(e.y+Math.sin(a)*(110-separation)*.54,35,HEIGHT-35);
+       }
+      }
+    }
     e.age=(e.age||0)+dt;e.slow=Math.max(0,(e.slow||0)-dt);
     const baseAngle=Math.atan2(p.y-e.y,p.x-e.x),d=dist(e,p);
     const pace=e.slow>0?.62:1;
