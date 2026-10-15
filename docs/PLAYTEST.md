@@ -24,3 +24,11 @@ The project is still a **playtest**, not an invitation release. The public page 
 - Confirm invitation dates and venue addresses; the 20:30–20:40 transfer remains tight and needs host planning.
 - Birthday details must always be accessible without winning. The game is never a gatekeeper.
 - Day 5 chibi sprite overhaul is not authorized until the user accepts Day 4.7.
+
+
+## Day 4.8 targeted replay after real feedback
+- **Boss challenge:** time the Adventure 2P Tolly fight and identify whether the last-quarter frenzy increases challenge fairly; note 0–10 enjoyment/difficulty rating.
+- **Animation:** confirm Rosie, Millie, Winnifred and Ellie retain their existing portraits while showing gentle bobbing/dashing, and Tolly flashes on hit.
+- **Daan:** look for a *temporary distinct body/insignia actor* in Extreme phase 2. It is not the person's final character illustration.
+- **Performance:** run same phone with Lite FX on and off. Note if slowdowns coincide with Bleepling crowds, boss hazards, cutscene artwork or audio.
+- **Controls and scenes:** P1 ⇧ Shift / P2 ↵ Enter HUD; press **C** to move dialogue to next line; arrow keys must not skip. After completing a scene, briefly protected combat resumes. Mobile NEXT still works.
