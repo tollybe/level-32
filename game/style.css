@@ -188,3 +188,28 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:3px solid #9cf
  .mobile-keys .touch-dash{width:85px;font-size:.74rem;min-height:45px;margin:0}
  .game-frame{min-height:0}
 }
+
+/* Day 4.6: character reactions reuse the immutable portraits. */
+@keyframes millieStartle{0%{transform:translateY(0)}30%{transform:translateY(-13px) rotate(-8deg)}60%{transform:translateY(0) rotate(8deg)}100%{transform:translateY(0)}}
+@keyframes dramaticCollapse{0%{transform:rotate(0)}100%{transform:rotate(80deg) translateY(12px)}}
+.scene-line:not([hidden])[data-reaction="startled"] .scene-face{animation:millieStartle .65s ease-out}
+.scene-line:not([hidden])[data-reaction="dramatic-collapse"] .scene-face{animation:dramaticCollapse .65s ease-out both;transform-origin:bottom center}
+.scene-line:not([hidden])[data-reaction="aristocat"]{border-color:#ebd99d}
+@media(prefers-reduced-motion:reduce){.scene-line .scene-face{animation:none!important}}
+#focus-status:empty{display:none}#focus-play{min-height:44px}
+#game-section:fullscreen{background:#182339;overflow:auto;max-width:none;width:100vw;height:100dvh;margin:0;padding:5px 10px;display:block}
+#game-section:fullscreen>.eyebrow,#game-section:fullscreen>h2,#game-section:fullscreen>.boss-card,#game-section:fullscreen>.bossbar{display:none}
+#game-section:fullscreen .game-layout{display:block}
+#game-section:fullscreen .side,#game-section:fullscreen .objective-strip,#game-section:fullscreen .footnote:not(#focus-status){display:none}
+#game-section:fullscreen .mobile-game-status{grid-template-columns:1fr 1fr;margin:2px 0;gap:8px}
+#game-section:fullscreen .mobile-game-status>*{padding:4px 7px}
+#game-section:fullscreen .game-frame{min-height:0;width:min(100%,calc((100dvh - 165px)*1.6));margin:auto}
+#game-section:fullscreen .mobile-keys{display:flex;position:relative;padding:3px;background:#182339;justify-content:space-around;margin:0}
+#game-section:fullscreen .touch-player{flex-direction:row;justify-content:center;gap:8px}
+#game-section:fullscreen .joystick{width:min(94px,22dvh);height:min(94px,22dvh)}
+#game-section:fullscreen .joystick-knob{width:38px;height:38px;left:calc(50% - 19px);top:calc(50% - 19px)}
+#game-section:fullscreen .touch-dash{width:82px;min-height:45px;font-size:.72rem;margin:0}
+#game-section:fullscreen .game-actions{margin:0;gap:3px}
+#game-section:fullscreen .game-actions .footer-invite{font-size:.7rem;min-height:39px;padding:6px}
+#game-section:fullscreen .game-actions #game-message{display:none}
+@media(max-width:620px){#game-section:fullscreen .game-actions .footer-invite{display:none}}
