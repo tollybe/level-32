@@ -108,17 +108,27 @@ function moveAroundTrees(actor,deltaX,deltaY,radius=18){
  }
 }
 function steerAroundTrees(actor,vx,vy,radius=20){
- let ax=vx,ay=vy;
+ // Choose and remember one route around a trunk. Alternating tangents each
+ // frame could otherwise cause enemies to oscillate forever beside a tree.
+ if(actor.treeWaypoint){
+  const w=actor.treeWaypoint,dx=w.x-actor.x,dy=w.y-actor.y;
+  const d=Math.hypot(dx,dy);
+  if(d>13&&cherryTrees.includes(w.tree))return {x:dx/d,y:dy/d};
+  actor.treeWaypoint=null;
+ }
  for(const t of cherryTrees){
   const tr=treeTrunk(t),rx=tr.x-actor.x,ry=tr.y-actor.y;
   const ahead=rx*vx+ry*vy,cross=rx*vy-ry*vx;
-  if(ahead>0&&ahead<90&&Math.abs(cross)<tr.r+radius+22){
-   const dir=cross>=0?-1:1;
-   ax+=-vy*dir*.95;ay+=vx*dir*.95;
+  if(ahead>0&&ahead<120&&Math.abs(cross)<tr.r+radius+19){
+   const side=cross>=0?-1:1,clearance=tr.r+radius+39;
+   const wx=clamp(tr.x-vy*side*clearance,24,WIDTH-24);
+   const wy=clamp(tr.y+vx*side*clearance,24,HEIGHT-24);
+   const dx=wx-actor.x,dy=wy-actor.y,d=Math.hypot(dx,dy)||1;
+   actor.treeWaypoint={tree:t,x:wx,y:wy};
+   return {x:dx/d,y:dy/d};
   }
  }
- const length=Math.hypot(ax,ay)||1;
- return {x:ax/length,y:ay/length};
+ return {x:vx,y:vy};
 }
 function cherryCanopyOpacity(t,cast=players,mobs=foes){
  const behind=e=>e.hp>0&&e.alive!==false&&
