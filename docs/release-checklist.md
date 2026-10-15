@@ -243,7 +243,9 @@ Historical checks above concerning **three guardian waves at each clue** no long
 
 ## Day 8E — Mobile Dash thumb position after auto-rotation
 
-- [ ] Chromium portrait and landscape checks: P1 joystick is within 46 px of the physical left edge and Dash within 46 px of the physical right edge, with both anchored near the bottom and safe-area padding.
-- [ ] Chromium: rotate the **existing open game** from portrait to landscape and back, verify Dash follows the right edge without refreshing the page. Exercise solo and co-op layouts; P2 stays opposite-facing.
+- [x] PR #25 Chromium green: portrait and landscape P1 joystick is within 46 px of the physical left edge and Dash within 46 px of the physical right edge, with both anchored near the bottom and safe-area padding.
+- [x] PR #25 Chromium green: rotate the **existing open game** from portrait to landscape and back, verify Dash follows the right edge without refreshing the page. Exercise solo and co-op layouts; P2 stays opposite-facing.
 - [ ] Host phone test: rotate while running, place right thumb comfortably on Dash, confirm no clash with system gesture/navigation area.
 - [ ] Desktop CSS and controls unchanged.
+
+**Day 8E merged:** PR #25, passing JavaScript and full desktop/portrait/landscape/Extreme Chromium regression plus live phone viewport rotation. Owner's physical right-thumb comfort still needs checking.
