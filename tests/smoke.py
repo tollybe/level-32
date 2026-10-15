@@ -128,7 +128,7 @@ hook='''window.__rosieTest={
      foes=[];gate=null;spawnDuo();
      const elites=foes.filter(e=>e.elite);
      // Force the same scripted attack phase; only Extreme should fire.
-     for(const e of elites){e.volleyWarmup=.04;updateDuoVolley(e,.05)}
+     for(const e of elites){e.volleyWarmup=.04;updateDuoVolley(e,.05);updateDuoVolley(e,.085)}
      const banana=hazards.filter(h=>h.kind==='duo-banana');
      const signature=banana.map(h=>({source:h.source,vx:h.vx,vy:h.vy}));
      results.push({mode,hero,heroHp:p.maxHp,baseHp:roster[hero].hp,
@@ -148,6 +148,87 @@ hook='''window.__rosieTest={
      !art.classList.contains('scene-art-pending')},
  soundtrackConfig(){return {modes:Object.keys(battleScores),legendaryBpm:battleScores.boss3.bpm,
    tiers:DIFFICULTY_BALANCE}},
+ duoMachineGunProbe(){
+  const prev={hazards:hazards.slice(),duoActive,mode:difficulty};
+  const two=foes.filter(e=>e.elite&&['boink','bocht'].includes(e.kind)&&e.hp>0);
+  if(two.length!==2)return {error:'missing twin elites'};
+  difficulty='extreme';duoActive=true;hazards=[];
+  const older=two.map(e=>({e,volleyWarmup:e.volleyWarmup,volleyCooldown:e.volleyCooldown,
+   volleyShots:e.volleyShots,volleyShotClock:e.volleyShotClock,volleyShotIndex:e.volleyShotIndex}));
+  for(const e of two){e.volleyWarmup=.5;e.volleyCooldown=0;e.volleyShots=0;e.volleyShotClock=0;e.volleyShotIndex=0}
+  const before=hazards.length;
+  two.forEach(e=>updateDuoVolley(e,.25));
+  const redWarn=two.every(e=>e.volleyWarmup>.24&&e.volleyShots===0);
+  two.forEach(e=>updateDuoVolley(e,.26));
+  const synced=two.every(e=>e.volleyShots===12);
+  for(let j=0;j<13;j++)two.forEach(e=>updateDuoVolley(e,.085));
+  const fired=hazards.filter(h=>h.kind==='duo-banana');
+  const count=Object.fromEntries(two.map(e=>[e.kind,fired.filter(h=>h.source===e.kind).length]));
+  const cooldown=two.every(e=>e.volleyShots===0&&e.volleyCooldown===2);
+  const directional=fired.every(h=>{
+    const x=Math.abs(h.vx),y=Math.abs(h.vy);
+    return h.source==='boink'?Math.min(x,y)<.00001:Math.abs(x-y)<.00001;
+  });
+  for(const o of older)Object.assign(o.e,o);
+  hazards=prev.hazards;duoActive=prev.duoActive;difficulty=prev.mode;
+  return {redWarn,synced,count,cooldown,directional,before};
+ },
+ bushStealthProbe(){
+  const was={phase,gate,foes:foes.slice(),boss,bushEggSeen,
+   pos:players.map(p=>({x:p.x,y:p.y,hidden:p.hidden,bushTime:p.bushTime,bushId:p.bushId}))};
+  const b=bushes[0];phase='explore';gate=null;boss=null;foes=[];
+  players.forEach(p=>{p.x=b.x;p.y=b.y;p.inv=9999});
+  updateBushes(.1);
+  const hidden=players.every(p=>p.hidden);
+  const cannotFire=(()=>{const count=shots.length;const target={x:b.x+45,y:b.y,hp:100,size:12};
+   foes=[target];for(const p of players)fire(p);
+   return shots.length===count&&target.hp===100;
+  })();
+  const notTargeted=nearest({x:b.x,y:b.y},players)===null;
+  foes[0].kind='bleepling';foes[0].attack=99;foes[0].slow=0;
+  update(.1);const question=Boolean(foes[0].searching);
+  bushEggSeen=false;updateBushes(30.1);
+  const easter=phase==='cutscene'&&sceneName==='bushEgg';
+  if(easter)for(let i=0;i<10&&phase==='cutscene';i++)continueScene();
+  players.forEach(p=>{p.x=b.x+125;p.y=b.y});
+  updateBushes(.1);
+  const visible=players.every(p=>!p.hidden);
+  phase=was.phase;gate=was.gate;foes=was.foes;boss=was.boss;
+  bushEggSeen=was.bushEggSeen;
+  players.forEach((p,i)=>Object.assign(p,was.pos[i]));
+  return {hidden,cannotFire,notTargeted,question,easter,visible};
+ },
+ bossWinstonProbe(){
+  if(!boss||phase!=='boss')return {error:'not at Tolly'};
+  const orig={bossBushVisits,bossBushOccupied,winston,winstonForcedReveal,worldBubbles:worldBubbles.slice(),
+    pos:players.map(p=>({x:p.x,y:p.y,hidden:p.hidden,bushTime:p.bushTime,bushId:p.bushId}))};
+  bossBushVisits=0;bossBushOccupied=false;winston=null;winstonForcedReveal=0;worldBubbles=[];
+  const b=bushes[3];players.forEach(p=>{p.x=b.x;p.y=b.y});
+  updateBushes(.05);const first=bossBushVisits===1&&!winston;
+  players.forEach(p=>{p.x=b.x+160;p.y=b.y});
+  updateBushes(.05);
+  players.forEach(p=>{p.x=b.x;p.y=b.y});
+  updateBushes(.05);const second=bossBushVisits===2&&Boolean(winston);
+  updateBushes(8.1);const shakes=Boolean(winston?.shaking)&&!winston?.complete;
+  updateBushes(2.0);const exposed=Boolean(winston?.complete)&&winstonForcedReveal>0&&players.every(p=>!p.hidden);
+  const words=worldBubbles.map(b=>b.line).join(' ');
+  const textOK=words.includes("WINSTON")&&words.includes('AHAHAHAH');
+  bossBushVisits=orig.bossBushVisits;bossBushOccupied=orig.bossBushOccupied;winston=orig.winston;
+  winstonForcedReveal=orig.winstonForcedReveal;worldBubbles=orig.worldBubbles;
+  players.forEach((p,i)=>Object.assign(p,orig.pos[i]));
+  return {first,second,shakes,exposed,textOK};
+ },
+ pairDialogueProbe(){
+  const saved={players,worldBubbles:worldBubbles.slice(),pairBanterClock};
+  const keys=Object.keys(PAIR_BANTER),details=[];
+  for(const key of keys){
+   players=key.split('|').map((id,i)=>player(id,i));
+   players[0].x=players[1].x;players[0].y=players[1].y;worldBubbles=[];pairBanterClock=0;
+   updatePairBanter(.1);details.push({key,lines:worldBubbles.length});
+  }
+  players=saved.players;worldBubbles=saved.worldBubbles;pairBanterClock=saved.pairBanterClock;
+  return details;
+ },
  getEnemyList(){return [...new Set(foes.map(e=>e.kind))]},
  state(){return {phase,clues,duoActive,duoDefeated,laserUnlocked,laserIndex:laserChallenge.index,scentStep,score,kills,coneWindup,elapsed,hp:players.map(p=>p.hp),sceneName,cutsceneNext,bossHp:boss?.hp||0,daanActive,bossRage:boss?.rage||false,bossMaxHp:boss?.maxHp||0,liteFx,guardWave:gate?.wave??null,guardians:foes.filter(e=>e.guardian&&e.hp>0).length,cleared:gateCleared.slice(),mode:difficulty,overlay:!$('overlay').classList.contains('hidden'),imgSrc:$('overlay-art').getAttribute('src').slice(0,90),dialogueImages:[...$('scene-dialogues').querySelectorAll('img')].map(im=>im.getAttribute('src').slice(0,80)),missionUnlock:$('mission-unlock').classList.contains('show'),objectText:$('objective-label').textContent}}
 };'''
@@ -230,7 +311,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
             assert all(x<y<z for x,y,z in zip(story['eliteHp'],adventure['eliteHp'],extreme['eliteHp'])),tiers
             assert not story['banana'] and not adventure['banana'],tiers
             pattern=extreme['banana']
-            assert len(pattern)==8,pattern
+            assert len(pattern)==2,pattern
             for shot in pattern:
                 vx,vy=abs(shot['vx']),abs(shot['vy'])
                 if shot['source']=='boink': assert min(vx,vy)<1e-6,shot
@@ -240,6 +321,12 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     assert set(['duo','boss1','boss2','boss3']).issubset(soundtrack['modes']),soundtrack
     assert soundtrack['legendaryBpm']>=170,soundtrack
     s=page.evaluate('window.__rosieTest.start()')
+    if not mobile and mode=='challenge' and not solo:
+        stealth=page.evaluate('window.__rosieTest.bushStealthProbe()')
+        assert all(stealth.values()),stealth
+        pairs=page.evaluate('window.__rosieTest.pairDialogueProbe()')
+        assert len(pairs)==6 and all(pair['lines']==2 for pair in pairs),pairs
+        print('Bush concealment, 30s scene, search and all six pair dialogues: PASS')
     assert page.locator('.hero-stats').count()==4
     for card in page.locator('.hero').all():
         assert card.locator('.hero-stats').is_visible(), 'Stats must be displayed without hover'
@@ -337,6 +424,11 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     assert s['duoActive'] and s['phase']=='explore',s
     print('mini-boss',page.evaluate('window.__rosieTest.getEnemyList()'))
     assert page.evaluate('window.__rosieTest.duoGap()')>350, 'Boink and Bocht must spawn apart'
+    if mode=='extreme':
+        burst=page.evaluate('window.__rosieTest.duoMachineGunProbe()')
+        assert burst['redWarn'] and burst['synced'] and burst['cooldown'] and burst['directional'],burst
+        assert burst['count']=={'boink':12,'bocht':12},burst
+        print('Impossible synchronized red warning and 24 total machine-gun shots: PASS')
     assert page.evaluate('window.__rosieTest.musicModeNow()')=='duo'
     s=page.evaluate('window.__rosieTest.killsDuo()')
     assert s['duoDefeated'] and not s['duoActive'],s
@@ -357,6 +449,10 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     print('fridge reveal: PASS')
     s=page.evaluate('window.__rosieTest.continue()')
     assert s['phase']=='boss'
+    if not mobile and not solo and mode=='challenge':
+        winston=page.evaluate('window.__rosieTest.bossWinstonProbe()')
+        assert all(winston.values()),winston
+        print('Tolly in-world Winston, Rosie's shake and timed expose: PASS')
     assert s['bossMaxHp']>=(1400 if not solo else 900) if mode!='story' else s['bossMaxHp']>400,s
     camp=page.evaluate('window.__rosieTest.bossCampCheck()')
     assert camp['pushed'] and camp['hpAfter'] < camp['hpBefore'] and camp['bossAfter']>0, camp
