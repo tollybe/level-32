@@ -1,4 +1,4 @@
-> **Day 7 branch (under test):** Simultaneous Impossible Boink and Bocht red-warning machine-gun volleys, hideable flowering bushes, 30-second secret, nonblocking Tolly/Winston banter with Rosie's wiggle reveal, and six co-op personality dialogues. No guest release until green CI and owner phone feedback. See `docs/iteration-7.md`.
+> **Day 7 merged into `main` via PR #16, green CI:** Simultaneous Impossible Boink and Bocht red-warning machine-gun volleys, hideable flowering bushes, 30-second secret, nonblocking Tolly/Winston banter with Rosie's wiggle reveal, and six co-op personality dialogues. No guest release until owner phone feedback. See `docs/iteration-7.md`.
 
 > **Day 6C merged (PR #15, green CI):** The owner supplied a reference photograph for Daan. Chibi sprite and dialogue portrait drawn from the reference, distinct gold boulder warning and green limited Tolly heal, plus team XP/P1-P2 alternating perks at team levels 5/10/15. Real-device owner art/attack/heal checks still required. See `docs/iteration-6.md`.
 
