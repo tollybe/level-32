@@ -169,7 +169,7 @@ hook='''window.__rosieTest={
     const x=Math.abs(h.vx),y=Math.abs(h.vy);
     return h.source==='boink'?Math.min(x,y)<.00001:Math.abs(x-y)<.00001;
   });
-  for(const o of older)Object.assign(o.e,o);
+  for(const o of older)Object.assign(o.e,{volleyWarmup:o.volleyWarmup,volleyCooldown:o.volleyCooldown,volleyShots:o.volleyShots,volleyShotClock:o.volleyShotClock,volleyShotIndex:o.volleyShotIndex});
   hazards=prev.hazards;duoActive=prev.duoActive;difficulty=prev.mode;
   return {redWarn,synced,count,cooldown,directional,before};
  },
