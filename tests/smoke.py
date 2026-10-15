@@ -51,10 +51,13 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     errors=[]
     page.on('pageerror',lambda e:errors.append(str(e)))
     page.set_content(html,wait_until='domcontentloaded',timeout=60000)
-    page.wait_for_timeout(300)
-    # Day 5 renderer is absent from gameplay until valid, approved sheets are loaded.
-    # Synthetic sheet verifies frame cropping, facing, nearest-neighbor draw and
-    # the reversible preview flag without introducing any unapproved character art.
+    page.wait_for_function('window.Level32Sprites && window.Level32Sprites.loadedCharacters.length === 8', timeout=15000)
+    # Day 5B: eight real approved images must decode and pass dimensions in Chromium.
+    assert page.evaluate("window.Level32Sprites.loadedCharacters.length")==8
+    assert page.evaluate("window.Level32Sprites.previewEnabled") is True
+    assert not page.evaluate("window.Level32Sprites.loadedCharacters.includes('daan')")
+    # Synthetic sheet verifies frame cropping and reversible fallback, then
+    # restores the actual approved artwork before the gameplay regression run.
     sprite_check=page.evaluate("""async () => {
       const engine=window.Level32Sprites;
       if(!engine)return {exists:false};
@@ -66,6 +69,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
       const surface=document.createElement('canvas');surface.width=100;surface.height=100;
       const ctx=surface.getContext('2d');
       const original=ctx.imageSmoothingEnabled;
+      engine.setPreviewEnabled(false);
       const defaultFallback=engine.draw(ctx,'rosie',{state:'idle',direction:'down'},50,50,32,0)===false;
       const invalidRejected=!engine.register('rosie',tile);
       const validAccepted=engine.register('rosie',img);
@@ -75,12 +79,17 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
       const smoothingRestored=ctx.imageSmoothingEnabled===original;
       engine.setPreviewEnabled(false);
       const fallbackRestored=engine.draw(ctx,'rosie',{state:'idle',direction:'down'},50,50,32,0)===false;
-      return {exists:true,defaultFallback,invalidRejected,validAccepted,result,pix,smoothingRestored,fallbackRestored};
+      const realSheets=await engine.loadApproved();
+      engine.setPreviewEnabled(true);
+      const artRestored=realSheets.every(Boolean) && engine.loadedCharacters.length===8;
+      const visibleRestored=engine.draw(ctx,'rosie',{state:'idle',direction:'down'},50,50,32,0);
+      return {exists:true,defaultFallback,invalidRejected,validAccepted,result,pix,smoothingRestored,fallbackRestored,artRestored,visibleRestored};
     }""")
     assert sprite_check['exists'] and sprite_check['defaultFallback'],sprite_check
     assert sprite_check['invalidRejected'] and sprite_check['validAccepted'],sprite_check
     assert sprite_check['result'] and sprite_check['pix'][:3]==[0,255,0],sprite_check
     assert sprite_check['smoothingRestored'] and sprite_check['fallbackRestored'],sprite_check
+    assert sprite_check['artRestored'] and sprite_check['visibleRestored'],sprite_check
     s=page.evaluate('window.__rosieTest.state()')
     print('idle',s['phase'])
     page.locator('#mute').click()
@@ -95,6 +104,15 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     s=page.evaluate('window.__rosieTest.start()')
     assert page.locator('#pause').inner_text().endswith('PAWS')
     assert page.locator('#fx-toggle').count()==1
+    assert page.locator('#sprite-toggle').count()==1
+    assert page.locator('#sprite-toggle').get_attribute('aria-pressed')=='true'
+    page.locator('#sprite-toggle').click()
+    assert page.locator('#sprite-toggle').get_attribute('aria-pressed')=='false'
+    assert page.evaluate("window.Level32Sprites.previewEnabled") is False
+    page.locator('#sprite-toggle').click()
+    assert page.locator('#sprite-toggle').get_attribute('aria-pressed')=='true'
+    assert page.evaluate("window.Level32Sprites.previewEnabled") is True
+    assert page.evaluate("window.__rosieTest.state().phase")=='explore'
     assert page.locator('#dash-status .dash-pill').count()==(1 if solo else 2)
     assert 'SHIFT' in page.locator('#dash-status').inner_text()
     assert page.locator('#scene-control-help').count()==1
