@@ -86,6 +86,17 @@ function blockedByTree(x,y,radius=18){
  return cherryTrees.some(t=>{const tr=treeTrunk(t);return Math.hypot(x-tr.x,y-tr.y)<tr.r+radius});
 }
 function moveAroundTrees(actor,deltaX,deltaY,radius=18){
+ // Knockback, scripted boss shoves and spawn changes may push an actor into
+ // a trunk. Eject them before movement so they cannot get permanently stuck.
+ for(const t of cherryTrees){
+  const tr=treeTrunk(t),dx=actor.x-tr.x,dy=actor.y-tr.y;
+  const d=Math.hypot(dx,dy),limit=tr.r+radius+1;
+  if(d<limit){
+   const angle=d>.001?Math.atan2(dy,dx):0;
+   actor.x=clamp(tr.x+Math.cos(angle)*limit,24,WIDTH-24);
+   actor.y=clamp(tr.y+Math.sin(angle)*limit,24,HEIGHT-24);
+  }
+ }
  const steps=Math.max(1,Math.ceil(Math.hypot(deltaX,deltaY)/9));
  for(let i=0;i<steps;i++){
   const nx=clamp(actor.x+deltaX/steps,24,WIDTH-24);
