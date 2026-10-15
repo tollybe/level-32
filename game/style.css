@@ -232,3 +232,36 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:3px solid #9cf
 .overlay.cinematic .scene-control-help{order:3}
 #fx-toggle{font-size:.8rem}
 @media(max-width:620px){.dash-pill{font-size:.68rem;padding:5px 7px}.dash-status{gap:4px}.scene-control-help{font-size:.75rem;padding:6px}}
+
+/* Hackathon Day 6 — keyboard/touch-accessible five-star card stats. */
+#character-select .hero{position:relative}
+#character-select .hero-stats{display:none;position:absolute;inset:5px;z-index:4;
+ background:linear-gradient(160deg,#202c45,#3d2845);color:#fff3d5;
+ border:2px solid #f6d78c;border-radius:7px;box-shadow:0 6px 16px #101522bb;
+ flex-direction:column;justify-content:center;gap:9px;padding:12px;
+ text-align:left;pointer-events:none}
+#character-select .hero:is(:hover,:focus-visible,:focus) .hero-stats{display:flex}
+#character-select .hero-stats>strong{color:#ffdc9f;text-align:center;letter-spacing:.07em;font-size:.9rem}
+#character-select .stat-line{display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:.73rem;font-weight:900}
+#character-select .stars{color:#f3d68a;font-size:1rem;letter-spacing:0}
+#character-select .stats-summary{font-size:.76rem;line-height:1.35;color:#d6f6e1;text-align:center}
+#character-select .hero:hover{z-index:8}
+@media(hover:none){#character-select .hero:focus .hero-stats{display:flex}}
+/* The upgrade pauses gameplay until a stat is selected. */
+.game-frame{position:relative}
+.perk-panel{position:absolute;inset:0;z-index:25;background:#10172be8;display:grid;
+ place-items:center;padding:15px;overflow-y:auto}
+.perk-panel[hidden]{display:none!important}
+.perk-inner{width:min(98%,550px);background:linear-gradient(#383052,#1c2941);
+ border:3px solid #f2d28c;border-radius:15px;padding:20px;color:#fff3d6;
+ box-shadow:0 10px 32px #000a;text-align:center}
+.perk-inner h3{font-size:clamp(1.1rem,3vw,1.55rem);margin:10px 0 5px}
+.perk-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:18px 0}
+.perk-choice{min-height:112px;padding:12px;border:2px solid #b8c9dd;border-radius:9px;
+ background:#273b50;color:#fff9e6;font-weight:850;font-size:.9rem;cursor:pointer}
+.perk-choice:focus-visible{outline:3px solid #baffd6;outline-offset:3px}
+.perk-choice:hover{transform:translateY(-2px)}
+.perk-epic{border-color:#cda1ff;background:#3d295f}
+.perk-legendary{border-color:#ffdd87;background:linear-gradient(135deg,#88532f,#504466)}
+@media(max-width:520px){.perk-choices{grid-template-columns:1fr;gap:8px}.perk-choice{min-height:70px}.perk-inner{padding:11px}}
+@media(prefers-reduced-motion:reduce){.perk-choice:hover{transform:none}}

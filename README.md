@@ -170,3 +170,8 @@ Eight new animated 8×4 directional sprite sheets are integrated for **Rosie, Mi
 ### Day 5C — Tolly and Daan action, Rosie projectile bugfix
 
 Owner screenshot feedback: Tolly should look like a full chibi on the battlefield; the circle portrait overlay was hiding her full-body appearance. Daan must have an actual action: in **Extreme mode only**, after phase-two cutscene, his provisional emblem-face sprite performs SPITE (a boulder-slam animation linked to his existing telegraphed ground shockwave). No unapproved Daan facial likeness is included. Rosie's dragon hits **two different enemies maximum**; swept collision prevents pass-through misses on slower phones. Original portrait images, birthday details, and character damage/cooldowns stay intact. Physical-device retesting still needed.
+
+
+### Day 6 — Battle music, boss phases and level-up perks (under review)
+
+Hero cards now have five-star combat statistics; Rosie pierces a second target at half damage, Millie hits one enemy with her ball, Winnifred has the highest close-range DPS and Ellie is the low-DPS support. Three Tolly phases, original music variations, a stronger separated Boink/Bocht miniboss, empowering Super-mode aura, and a five-level HP/Damage rarity choice are documented in [Day 6](docs/iteration-6.md). Mobile playtest, Daan likeness and guest release are not approved.

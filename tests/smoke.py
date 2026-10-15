@@ -53,6 +53,28 @@ hook='''window.__rosieTest={
   daanPulse=.02;update(.04);
   return {active:daanActive,action:daanActionTimer,warning:hazards.some(h=>h.kind==='daan-warning')};
  },
+ phase3(){if(!boss)throw Error('no boss');damage(boss,boss.maxHp*.19,players[0]);return this.state()},
+ duoGap(){const pair=foes.filter(e=>e.elite&&e.hp>0);return pair.length===2?dist(pair[0],pair[1]):0},
+ musicModeNow(){return currentMusic()},
+ perkProbe(){
+  const previous={level,xp,goal,phase,players:players.map(p=>({hp:p.hp,maxHp:p.maxHp,speed:p.speed,damage:p.damage,perkGlow:p.perkGlow,perkRarity:p.perkRarity}))};
+  const oldLevel=level;level=4;xp=goal-1;gainXP(2);
+  const offered=phase==='upgrade'&&Boolean(perkOffer),choices=$('perk-choices').querySelectorAll('button').length;
+  const rarities=perkOffer?.offers.map(x=>x.rarity)||[];
+  acceptUpgrade(0);
+  const closed=phase===previous.phase&&$('perk-panel').hidden&&!perkOffer;
+  level=previous.level;xp=previous.xp;goal=previous.goal;
+  players.forEach((p,i)=>Object.assign(p,previous.players[i]));
+  return {offered,choices,rarities,closed,level:oldLevel};
+ },
+ xpProbe(){
+  const old={level,xp,goal},modes={};
+  level=6;goal=999999;xp=0;gainXP(10);modes.afterFive=xp;
+  level=5;xp=0;gainXP(10);modes.firstFive=xp;
+  level=old.level;xp=old.xp;goal=old.goal;
+  return modes;
+ },
+ heroBalance(){return Object.fromEntries(Object.entries(roster).map(([key,v])=>[key,Math.round(v.damage/v.rate)]))},
  getEnemyList(){return [...new Set(foes.map(e=>e.kind))]},
  state(){return {phase,clues,duoActive,duoDefeated,laserUnlocked,laserIndex:laserChallenge.index,scentStep,score,kills,coneWindup,elapsed,hp:players.map(p=>p.hp),sceneName,cutsceneNext,bossHp:boss?.hp||0,daanActive,bossRage:boss?.rage||false,bossMaxHp:boss?.maxHp||0,liteFx,guardWave:gate?.wave??null,guardians:foes.filter(e=>e.guardian&&e.hp>0).length,cleared:gateCleared.slice(),mode:difficulty,overlay:!$('overlay').classList.contains('hidden'),imgSrc:$('overlay-art').getAttribute('src').slice(0,90),dialogueImages:[...$('scene-dialogues').querySelectorAll('img')].map(im=>im.getAttribute('src').slice(0,80)),missionUnlock:$('mission-unlock').classList.contains('show'),objectText:$('objective-label').textContent}}
 };'''
@@ -121,8 +143,17 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     assert page.locator('.hero-invite-line a').get_attribute('target')=='_blank'
     assert page.locator('#ending-invite').is_hidden()
     s=page.evaluate('window.__rosieTest.start()')
+    assert page.locator('.hero-stats').count()==4
+    assert 'FIGHTER STATS' in page.locator('.hero-stats').first.inner_text()
+    ratios=page.evaluate('window.__rosieTest.heroBalance()')
+    assert ratios['winnifred']>ratios['rosie'] and ratios['millie']>ratios['ellie'],ratios
+    levels=page.evaluate('window.__rosieTest.xpProbe()')
+    assert levels['firstFive']==10 and abs(levels['afterFive']-(10 if mode=='story' else 6 if mode=='extreme' else 7.8))<0.00001,levels
+    upgrade=page.evaluate('window.__rosieTest.perkProbe()')
+    assert upgrade['offered'] and upgrade['choices']==2 and upgrade['closed'],upgrade
+    assert all(x in ['normal','epic','legendary'] for x in upgrade['rarities']),upgrade
     pierce=page.evaluate('window.__rosieTest.dragonPierceCheck()')
-    assert pierce['hp']==[183,183,200] and pierce['hits']==2 and pierce['left']==0,pierce
+    assert pierce['hp']==[183,191.5,200] and pierce['hits']==2 and pierce['left']==0,pierce
     print('Rosie two-enemy swept collision: PASS')
     assert page.locator('#pause').inner_text().endswith('PAWS')
     assert page.locator('#fx-toggle').count()==1
@@ -160,7 +191,9 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     assert skipped['clues']==0
     s=page.evaluate('window.__rosieTest.track()')
     assert s['cleared'][0] and s['clues']==0
+    scroll_before=page.evaluate('window.scrollY')
     s=page.evaluate('window.__rosieTest.place(0)')
+    assert abs(page.evaluate('window.scrollY')-scroll_before)<2, 'First cinematic must not jump document'
     assert s['phase']=='cutscene' and s['clues']==1 and s['cleared'][0], s
     assert s['sceneName']=='clue1' and s['imgSrc'].startswith('data:image/webp'),s
     assert len(s['dialogueImages'])==3,s
@@ -190,6 +223,8 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     s=page.evaluate('window.__rosieTest.continue()')
     assert s['duoActive'] and s['phase']=='explore',s
     print('mini-boss',page.evaluate('window.__rosieTest.getEnemyList()'))
+    assert page.evaluate('window.__rosieTest.duoGap()')>350, 'Boink and Bocht must spawn apart'
+    assert page.evaluate('window.__rosieTest.musicModeNow()')=='duo'
     s=page.evaluate('window.__rosieTest.killsDuo()')
     assert s['duoDefeated'] and not s['duoActive'],s
     # Third quest is now a green-window laser security puzzle, not guardian waves.
@@ -216,7 +251,12 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     assert s['phase']=='cutscene' and s['sceneName']=='phase2'
     s=page.evaluate('window.__rosieTest.continue()')
     assert s['phase']=='boss'
-    assert s['daanActive']==(mode=='extreme'),s
+    assert not s['daanActive'], 'Daan must not join until phase three'
+    s=page.evaluate('window.__rosieTest.phase3()')
+    assert s['phase']=='cutscene' and s['sceneName']=='phase3',s
+    s=page.evaluate('window.__rosieTest.continue()')
+    assert s['phase']=='boss' and s['daanActive']==(mode=='extreme'),s
+    assert page.evaluate('window.__rosieTest.musicModeNow()')=='boss3'
     if mode=='extreme':
         spite=page.evaluate('window.__rosieTest.triggerDaanSpite()')
         assert spite['active'] and spite['warning'] and spite['action']>0,spite

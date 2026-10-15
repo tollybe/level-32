@@ -76,3 +76,8 @@ Use nearest-neighbor *only for sprite sheets*. Regular portrait/cutscene images 
 - Daan's character selection remains intentionally concealed; final approval of his likeness, real-phone Tolly scale and balance, and iPhone/Android co-op testing remain owner review gates.
 
 **Expected character behavior:** Rosie does not gain unlimited multi-target or pass-through damage. Daan's SPITE is **the same previously shipped warned shockwave**, now visually synchronised, not an extra attack added to his cooldown.
+
+
+## Day 6 extension
+
+The next hackathon branch implements guest gameplay feedback: first-dialogue scroll correction, accessible hero stats, improved combat roles, Tolly three-phase boss with Daan Extreme-only in phase three, and an original battle soundtrack for each encounter. Every 5 levels opens a rarity-based HP/DPS selection for one random player; XP gains are reduced after level five at higher difficulties. Super-mode aura visuals and tougher separated Boink/Bocht are included. Full checklist and remaining approval gates are in `docs/iteration-6.md`.
