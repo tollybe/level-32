@@ -109,3 +109,12 @@ The focus changed after playtesting revealed that combat felt **4/10** and guest
 | Tests | Expanded Playwright smoke suite and script-level simulation | Run Chromium automation on desktop/mobile |
 
 **Difficulty numbers are targets, not measured ratings.** If the challenge becomes punishing for first-time guests, adjust wave health and spawn rate before touching base character art. The invitation always remains accessible without completion.
+
+
+## Day 4 extension — Extreme Mode & Daan (15 October 2026)
+
+- **Extreme Mode (10/10)** is a third difficulty setting, above Adventure 7/10 and Story 4/10. More guardians, more guardian HP/speed/damage, higher ambient enemy pressure and higher boss HP/speed. Numbers are tuning parameters, not a measured 10/10 rating.
+- **Daan** appears in Extreme Mode as an extra **static-image** supporting encounter in Tolly's second phase, triggering visible, delayed, avoidable shockwave zones. This is not a selectable player, and it is not a chibi sprite.
+- **Art caveat:** `game/assets/daan.svg` is a labeled provisional emblem, *not an approved likeness*. Replace it with an approved canonical illustration before treating Daan's portrait-art requirement as complete. Existing canonical animal and Tolly art stays unchanged.
+- Invitation access is independent of selecting, defeating or surviving Extreme Mode.
+- **Release gate:** static and browser-level difficulty selection, timing, animation safety, Daan hazard damage and invitation navigability require playtesting. Do not mark the entire Day 4 release complete on implementation alone.
