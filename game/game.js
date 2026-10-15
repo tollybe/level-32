@@ -1608,6 +1608,11 @@ function syncHud(){
  const wardProgress=gate?'<div class="missionline">⚔ SCROLL '+(gate.index+1)+' · WAVE '+(gate.wave+1)+'/3 · '+foes.filter(e=>e.guardian&&e.hp>0).length+' guardians remain</div>':'';
  $('missions').innerHTML=wardProgress+'<div class="missionline '+(clues>=1?'done':'')+'">'+(clues>=1?'✓':'○')+' Find the first scroll</div><div class="missionline '+(clues>=2?'done':'')+'">'+(clues>=2?'✓':'○')+' Discover the sausage clue</div><div class="missionline '+(clues>=3?'done':'')+'">'+(clues>=3?'✓':'○')+' Reveal the fridge shrine</div><div class="missionline '+(phase==='boss'||phase==='ended'?'done':'')+'">'+(phase==='boss'||phase==='ended'?'✓':'○')+' Find Tolly</div><div class="missionline '+(phase==='ended'&&boss&&boss.hp<=0?'done':'')+'">'+(phase==='ended'&&boss&&boss.hp<=0?'✓':'○')+' Free the tasty treats & reveal Mission Two</div>';$('scoreline').textContent='Score: '+score+' · TEAM LV '+level+' · XP '+Math.floor(xp)+'/'+goal+' · NEXT PERK: '+(players[perksAwarded%players.length]?.name||'—');$('timerline').textContent='Time: '+Math.floor(elapsed/60)+':'+String(Math.floor(elapsed%60)).padStart(2,'0')+' · Snacklings boinked: '+kills;$('bestline').textContent='Personal best: '+(best||'—')}
 function rect(x,y,w,h,col){cx.fillStyle=col;cx.fillRect(x,y,w,h)}function circle(x,y,r,col){cx.fillStyle=col;cx.beginPath();cx.arc(x,y,r,0,TAU);cx.fill()}function line(x1,y1,x2,y2,col,width=2){cx.strokeStyle=col;cx.lineWidth=width;cx.beginPath();cx.moveTo(x1,y1);cx.lineTo(x2,y2);cx.stroke()}
+function snackMeterGeometry(p){
+ return {x:p.x-27,y:p.y+39,
+  width:54*clamp(p.snackCharge/SNACK_MAX,0,1),maxWidth:54,
+  hpBarY:p.y+30};
+}
 function drawQuestDressing(){
  // World-space illustration primitives: no changes to canonical character artwork.
  for(const [i,spot] of clueSpots.entries()){
@@ -1842,9 +1847,10 @@ for(const p of players){
  // Health stays readable next to the character on phone and desktop.
  rect(p.x-28,p.y+29,56,7,'#152636');
  rect(p.x-27,p.y+30,54*clamp(p.hp/p.maxHp,0,1),5,p.hp/p.maxHp<.3?'#ff9995':'#9aebbb');
- // A second, unobtrusive bar reflects Snack Power for this individual pet.
- rect(p.x-28,p.y+38,56,5,'#292c40');
- rect(p.x-27,p.y+39,54*clamp(p.snackCharge/SNACK_MAX,0,1),3,
+ // A second, unobtrusive bar grows immediately beneath this pet's HP bar.
+ const snackBar=snackMeterGeometry(p);
+ rect(snackBar.x-1,snackBar.y-1,snackBar.maxWidth+2,5,'#292c40');
+ rect(snackBar.x,snackBar.y,snackBar.width,3,
   p.snackCharge>=SNACK_MAX?'#fff0aa':'#eabb82');
  if(p.snackCharge>=SNACK_MAX)txt('🍫 READY',p.x,p.y-55,13,'center','#ffe8ad');
  if(p.magnetTime>0){
