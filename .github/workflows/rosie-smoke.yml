@@ -1,0 +1,25 @@
+name: Rosie Survivors Smoke Tests
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  browser-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install browser test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install cryptography playwright
+          python -m playwright install --with-deps chromium
+      - name: Check JavaScript syntax
+        run: node --check game/game.js
+      - name: Browser smoke: desktop, portrait, landscape and Extreme
+        run: python tests/smoke.py
