@@ -39,7 +39,8 @@ const SCENE_LINES={
  clue2:[['millie','BALL?'],['ellie','Millie. That is a sausage wrapper.'],['millie','...BALL SHAPED SAUSAGE?'],['winnifred','We are being watched by two suspicious puddings.']],
  clue3:[['winnifred','A final note. From the fridge guardian herself.'],['rosie','Does it say BANANA?'],['winnifred','It says: NO MORE BANANA. In three different fonts.'],['ellie','Good news. I found the laser pointer. Bad news. It found us.'],['rosie','Then we invite the humans. They LOVE running into lasers.']],
  intro:[['tolly','NO ROSIE. YOU ARE ON A DIET.'],['rosie','...I have come to negotiate the banana tax.'],['tolly','You brought a sausage sword.'],['winnifred','A very persuasive sausage sword.']],
- phase2:[['tolly','I HAVE BEEN TOO LENIENT.'],['ellie','That sounds like a cone-related sentence.'],['tolly','CONE OF SHAME: DEPLOYED.'],['rosie','I suddenly regret all of my life choices.']],
+ phase2:[['tolly','I HAVE BEEN TOO LENIENT.'],['ellie','Her power level is rising.'],['tolly','NINE. THOUSAND. BANANAS.'],['winnifred','Good heavens. The Cone of Shame has evolved.']],
+ mythic:[['rosie','We won! The fridge is ours!'],['tolly','YOU FOOLS. THIS WAS NOT EVEN MY FINAL FORM.'],['winnifred','I beg your pardon?'],['tolly','PHASE THREE. SUMMON... DAAN!'],['ellie','HE IS CLIMBING OUT OF THE FRIDGE. WHY.']],
  victory:[['tolly','Fine. You may have the banana and cheese tax.'],['rosie','Excellent. Now about the birthday...'],['winnifred','The REAL quest is an invitation. How unusually civilised.']],
  defeat:[['tolly','Mwahahaha! The fridge remains mine!'],['ellie','Okay, but can we still go to the party?'],['tolly','...Obviously. This is an invitation, not an exam.']]
 };
@@ -247,17 +248,22 @@ function showScene(kind,title,dialogue){
  $('ending-invite').hidden=true;sceneName=kind;cutsceneNext=kind;phase='cutscene';keys.clear();
  $('pause').disabled=true;
  $('overlay').classList.add('cinematic');$('overlay').classList.remove('hidden');$('overlay').dataset.scene=kind;
- $('overlay-kicker').textContent=kind.startsWith('clue')?'DISCOVERY · CLUE '+kind.slice(-1)+'/3':kind==='intro'?'THE FRIDGE HAS BEEN FOUND':'PHASE TWO · CONE OF SHAME';
+ $('overlay-kicker').textContent=kind.startsWith('clue')?'DISCOVERY · CLUE '+kind.slice(-1)+'/3':kind==='intro'?'THE FRIDGE HAS BEEN FOUND':kind==='mythic'?'IMPOSSIBLE MODE · SECRET PHASE THREE':'PHASE TWO · POWER LEVEL 9000';
  $('overlay').querySelector('h3').textContent=title;
  $('overlay').querySelector('p').textContent=dialogue;
- const sceneArt=$('overlay-art');sceneArt.src=SCENE_ART[kind];sceneArt.classList.add('show');sceneArt.style.maxWidth='';
+ const sceneArt=$('overlay-art');
+ const transform=kind==='phase2'||kind==='mythic',power=$('phase-transformation');
+ power.hidden=!transform;power.classList.toggle('mythic',kind==='mythic');
+ $('transformation-label').textContent=kind==='mythic'?'MYTHIC FORM · ♾ DAAN SUMMON!':'POWER LEVEL 9000!';
+ $('transformation-caption').textContent=kind==='mythic'?'THE FRIDGE WAS ONLY THE BEGINNING.':'TOLLY IS UNLEASHING THE CONE OF SHAME.';
+ sceneArt.src=SCENE_ART[kind]||SCENE_ART.phase2;sceneArt.classList.toggle('show',!transform);sceneArt.style.maxWidth='';
  if(kind==='clue3'){
   // Avoid upscaling the chapter-three art beyond its source pixel width.
   const limitToNative=()=>{if(sceneName==='clue3'&&sceneArt.naturalWidth)sceneArt.style.maxWidth=Math.min(680,sceneArt.naturalWidth)+'px';};
   if(sceneArt.complete)limitToNative();else sceneArt.addEventListener('load',limitToNative,{once:true});
  }
  renderSceneLines(kind);$('mission-unlock').classList.remove('show');
- $('overlay-start').dataset.continueLabel='▶ '+(kind==='intro'?'FACE TOLLY':kind==='phase2'?'CONTINUE THE BATTLE':kind==='clue2'?'FACE BOINK & BOCHT':'CONTINUE EXPLORING');
+ $('overlay-start').dataset.continueLabel='▶ '+(kind==='intro'?'FACE TOLLY':kind==='phase2'?'▶ FIGHT POWER LEVEL 9000':kind==='mythic'?'ENTER MYTHIC PHASE THREE':kind==='clue2'?'FACE BOINK & BOCHT':'CONTINUE EXPLORING');
  $('overlay-start').textContent=(SCENE_LINES[kind]||[]).length>1?'▶ NEXT LINE':$('overlay-start').dataset.continueLabel;
  $('scene-skip').hidden=false;
 }
@@ -308,9 +314,9 @@ function continueScene(){
  if(advanceSceneBeat())return;
  const kind=cutsceneNext;
  cutsceneNext=null;keys.clear();
- phase=kind==='intro'||kind==='phase2'?'boss':'explore';
+ phase=kind==='intro'||kind==='phase2'||kind==='mythic'?'boss':'explore';
  $('overlay').classList.remove('cinematic');$('overlay').classList.add('hidden');$('scene-skip').hidden=true;
- $('scene-dialogues').hidden=true;
+ $('scene-dialogues').hidden=true;$('phase-transformation').hidden=true;
  $('pause').disabled=false;$('pause').textContent='Ⅱ PAUSE';
  if(kind==='intro'){
    const hp=Math.round(845*(players.length===2?1.52:1)*mode().hp);
@@ -319,6 +325,17 @@ function continueScene(){
    $('bossbar').classList.add('show');$('boss-card').classList.add('show');
    say('⚔ TOLLY: No Rosie, you’re on a diet — no more banana!',5);playSfx('boss');awardScore(200);
    showQuestToast('FINAL BOSS · TOLLY!','Move away from the yellow shockwave and dash to safety!',4.6);
+ }else if(kind==='mythic'){
+   bossPhase=3;
+   const hp=Math.round(780*(players.length===2?1.58:1));
+   boss.maxHp=hp;boss.hp=hp;boss.speed=players.length===2?143:138;boss.attack=1.4;
+   coneCooldown=5;coneWindup=0;bossPulseCooldown=2.1;bossPulseWindup=0;bananaWindup=0;
+   mythicArcWindup=0;mythicArcCooldown=3.5;daanRespawn=0;daan=null;hazards=[];
+   summonDaan();
+   players.filter(p=>p.alive).forEach(p=>p.inv=Math.max(p.inv,2.0));
+   $('bossbar').classList.add('mythic');$('bossbar').firstChild.textContent='💠 MYTHIC · TOLLY + DAAN';
+   showQuestToast('MYTHIC PHASE · THE FRIDGE REVIVES!','New turquoise HP bar. Daan slams the ground; dodge the circles!',5.5);
+   say('💠 MYTHIC FORM! TOLLY SUMMONS DAAN!',4.3);playSfx('phase');
  }else if(kind==='phase2'){
    say('⚠ CONE OF SHAME PROTOCOL ACTIVATED! Watch the warning arc!',4);playSfx('phase');
    players.filter(p=>p.alive).forEach(p=>p.inv=Math.max(p.inv,1.3));
@@ -397,10 +414,23 @@ function damage(enemy,amount,p){
  if(phase==='ended'||phase==='cutscene'||enemy.hp<=0)return;
  enemy.hp-=amount;
  if(enemy===boss&&enemy.hp>0&&!coneWarned&&enemy.hp<=enemy.maxHp*.5){
-   coneWarned=true;bossPhase=2;showScene('phase2','THE CONE OF SHAME!',"Tolly has reached for the ultimate weapon. Watch the red warning arc!",[['tolly',"ARG. DON'T MAKE ME GET THE CONE OF SHAME OUT!!!"]]);return;
+   coneWarned=true;bossPhase=2;showScene('phase2','TOLLY · POWER LEVEL 9000!',"The battlefield freezes as Tolly ascends beyond ordinary fridge-guardian powers.");playSfx('phase');return;
  }
  if(enemy.hp<=0){
-  if(enemy===boss){awardScore(900);emit('FRIDGE OPEN!',enemy.x,enemy.y-50);resetEnd(true);return}
+  if(enemy===boss){
+   if(difficulty==='impossible'&&bossPhase===2){
+     boss.hp=0;showScene('mythic','WAIT... THIS IS NOT HER FINAL FORM!',
+       'Tolly falls... then the fridge glows cyan. The music stops. Something is climbing out.');
+     return;
+   }
+   awardScore(bossPhase===3?1450:900);emit('FRIDGE OPEN!',enemy.x,enemy.y-50);resetEnd(true);return;
+  }
+  if(enemy===daan){
+   daan=null;daanRespawn=13;
+   awardScore(180);emit('DAAN BOULDERED!',enemy.x,enemy.y-40,'#b8ffef');
+   say('🧗 DAAN RETREATS TO FIND MORE CHALK! He may return...',3);
+   return;
+  }
   kills++;comboCount=comboClock>0?comboCount+1:1;comboClock=3.4;
   const baseScore=ENEMY_TYPES[enemy.kind]?.score||12;
   const multiplier=1+Math.min(1.5,Math.floor((comboCount-1)/3)*.25);
