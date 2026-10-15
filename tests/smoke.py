@@ -485,6 +485,81 @@ hook='''window.__rosieTest={
    syncHud();
   }
  },
+ scrollReturnProbe(){
+  const previous={phase,clues,gate,duoActive,duoDefeated,gateCleared:gateCleared.slice()};
+  try{
+   phase='explore';gate=null;duoActive=false;duoDefeated=true;
+   const checkpoints=[];
+   for(let i=0;i<3;i++){
+    clues=i;gateCleared=[false,false,false];gateCleared[i]=true;
+    syncHud();
+    const label=$('objective-label').textContent,detail=$('objective-detail').textContent;
+    const banner=$('scroll-return-notice'),r=banner.getBoundingClientRect();
+    const frame=banner.parentElement.getBoundingClientRect();
+    checkpoints.push({visible:!banner.hidden,
+     strong:label.includes('SCROLL UNSEALED'),
+     instruction:detail.includes('glowing scroll')&&banner.textContent.includes('RETURN AND READ'),
+     distance:$('scroll-return-distance').textContent.includes('steps'),
+     marker:currentObjective()?.x===clueSpots[i].x,
+     fits:r.width>100&&r.left>=frame.left-1&&r.right<=frame.right+1});
+   }
+   gateCleared=[false,false,false];clues=0;syncHud();
+   const noFalsePrompt=$('scroll-return-notice').hidden&&
+     !$('objective-strip').classList.contains('scroll-unsealed');
+   gateCleared[0]=true;gate={index:0,wave:0,remainingDelay:3};syncHud();
+   const busyHidden=$('scroll-return-notice').hidden;
+   gate=null;phase='boss';syncHud();
+   const bossHidden=$('scroll-return-notice').hidden;
+   return {checkpoints,noFalsePrompt,busyHidden,bossHidden};
+  }finally{
+   phase=previous.phase;clues=previous.clues;gate=previous.gate;
+   duoActive=previous.duoActive;duoDefeated=previous.duoDefeated;
+   gateCleared=previous.gateCleared;syncHud();
+  }
+ },
+ soloRecoveryProbe(){
+  const saved={players,phase,fx};
+  try{
+   phase='explore';fx=[];
+   const p=player('rosie',0);players=[p];
+   p.hp=p.maxHp-30;p.recoveryClock=0;
+   const initial=p.hp;
+   updateSoloRecovery(4.5);
+   const waiting=p.hp===initial;
+   updateSoloRecovery(.5);
+   const outside=Math.abs(p.hp-(initial+2.4))<1e-6;
+   p.recoveryClock=4.9;recordPlayerHit(p);
+   const reset=p.recoveryClock===0;
+   const beforeHitWait=p.hp;updateSoloRecovery(4.9);
+   const noEarlyHeal=p.hp===beforeHitWait;
+   updateSoloRecovery(.1);
+   const healedAfterFive=Math.abs(p.hp-(beforeHitWait+2.4))<1e-6;
+   p.hidden=true;p.recoveryClock=3;
+   const bushBefore=p.hp;
+   updateSoloRecovery(10);
+   const bushSlow=Math.abs(p.hp-(bushBefore+1))<1e-6&&p.recoveryClock===0;
+   p.hidden=false;
+   const returnBefore=p.hp;updateSoloRecovery(4.9);
+   const noStoredOutdoorTick=p.hp===returnBefore;
+   updateSoloRecovery(.1);
+   const backOutside=Math.abs(p.hp-(returnBefore+2.4))<1e-6;
+   p.hp=p.maxHp-.7;p.recoveryClock=0;updateSoloRecovery(5);
+   const capped=p.hp===p.maxHp;
+   p.hp=p.maxHp-10;p.recoveryClock=0;
+   players=[p,player('ellie',1)];
+   const coOpBefore=p.hp;updateSoloRecovery(15);
+   const coopNoRegen=p.hp===coOpBefore;
+   p.hidden=true;updateSoloRecovery(12);
+   const coopBushNoRegen=p.hp===coOpBefore;
+   players=[p];phase='cutscene';updateSoloRecovery(30);
+   const pausedByScene=p.hp===coOpBefore;
+   phase='explore';p.alive=false;p.hp=0;updateSoloRecovery(20);
+   const noResurrection=p.hp===0;
+   return {waiting,outside,reset,noEarlyHeal,healedAfterFive,bushSlow,
+    noStoredOutdoorTick,backOutside,capped,coopNoRegen,coopBushNoRegen,
+    pausedByScene,noResurrection};
+  }finally{players=saved.players;phase=saved.phase;fx=saved.fx;syncHud()}
+ },
  getEnemyList(){return [...new Set(foes.map(e=>e.kind))]},
  state(){return {phase,clues,duoActive,duoDefeated,laserUnlocked,laserIndex:laserChallenge.index,scentStep,score,kills,coneWindup,elapsed,hp:players.map(p=>p.hp),sceneName,cutsceneNext,bossHp:boss?.hp||0,daanActive,bossRage:boss?.rage||false,bossMaxHp:boss?.maxHp||0,liteFx,guardWave:gate?.wave??null,guardians:foes.filter(e=>e.guardian&&e.hp>0).length,cleared:gateCleared.slice(),mode:difficulty,overlay:!$('overlay').classList.contains('hidden'),imgSrc:$('overlay-art').getAttribute('src').slice(0,90),dialogueImages:[...$('scene-dialogues').querySelectorAll('img')].map(im=>im.getAttribute('src').slice(0,80)),missionUnlock:$('mission-unlock').classList.contains('show'),objectText:$('objective-label').textContent}}
 };'''
@@ -577,6 +652,12 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     assert set(['duo','boss1','boss2','boss3']).issubset(soundtrack['modes']),soundtrack
     assert soundtrack['legendaryBpm']>=170,soundtrack
     s=page.evaluate('window.__rosieTest.start()')
+    prompt=page.evaluate('window.__rosieTest.scrollReturnProbe()')
+    assert len(prompt['checkpoints'])==3 and all(all(entry.values())
+      for entry in prompt['checkpoints']),prompt
+    assert prompt['noFalsePrompt'] and prompt['busyHidden'] and prompt['bossHidden'],prompt
+    recovery=page.evaluate('window.__rosieTest.soloRecoveryProbe()')
+    assert all(recovery.values()),recovery
     if not mobile and mode=='challenge' and not solo:
         snack=page.evaluate('window.__rosieTest.snackPowerProbe()')
         assert snack['fullHpChocolate'] and snack['partialChocolate'],snack
