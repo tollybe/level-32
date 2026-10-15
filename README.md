@@ -165,3 +165,8 @@ The early Day 5 pass adds a separate sprite-sheet renderer and presentation-only
 ### Hackathon Day 5B — Owner-approved chibi sprites
 
 Eight new animated 8×4 directional sprite sheets are integrated for **Rosie, Millie, Winnifred, Ellie, Tolly, Bleepling, Boink and Bocht**. Rosie stays all black; Millie's design reflects the actual German Shepherd mix photo. All five original game portraits/cutscenes are untouched, Tolly still has her telegraphs, and Daan remains a deliberately provisional non-likeness support actor. The game loads verified WebP sheets asynchronously, uses chibi gameplay art by default **for playtesting**, and offers a reversible **CHIBI / CLASSIC** button or `/game/?classic=1`. The offline builder now bundles the new art. The event invitation and calendar remain independently accessible. **Real Android/iPhone duo testing, Daan artwork and final guest-release approval are still pending.** See [Day 5 roadmap](docs/iteration-5.md).
+
+
+### Day 5C — Tolly and Daan action, Rosie projectile bugfix
+
+Owner screenshot feedback: Tolly should look like a full chibi on the battlefield; the circle portrait overlay was hiding her full-body appearance. Daan must have an actual action: in **Extreme mode only**, after phase-two cutscene, his provisional emblem-face sprite performs SPITE (a boulder-slam animation linked to his existing telegraphed ground shockwave). No unapproved Daan facial likeness is included. Rosie's dragon hits **two different enemies maximum**; swept collision prevents pass-through misses on slower phones. Original portrait images, birthday details, and character damage/cooldowns stay intact. Physical-device retesting still needed.
