@@ -240,3 +240,10 @@ Historical checks above concerning **three guardian waves at each clue** no long
 - [ ] Owner physically tries one shared phone across a table (portrait and landscape) and reviews touch comfort, scene readability, damage-free dialogue.
 
 **Day 8D integration:** PR #24 merged to `main` on 15 October 2026 after green JS syntax, desktop/portrait/landscape/Extreme gameplay smoke tests. Real handheld opposite-seat controls and visual scene size still need owner approval.
+
+## Day 8E — Mobile Dash thumb position after auto-rotation
+
+- [ ] Chromium portrait and landscape checks: P1 joystick is within 46 px of the physical left edge and Dash within 46 px of the physical right edge, with both anchored near the bottom and safe-area padding.
+- [ ] Chromium: rotate the **existing open game** from portrait to landscape and back, verify Dash follows the right edge without refreshing the page. Exercise solo and co-op layouts; P2 stays opposite-facing.
+- [ ] Host phone test: rotate while running, place right thumb comfortably on Dash, confirm no clash with system gesture/navigation area.
+- [ ] Desktop CSS and controls unchanged.

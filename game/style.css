@@ -673,3 +673,26 @@ body.solo-play .mobile-keys{justify-content:flex-start}
  body.phone-play #game-section .overlay.cinematic #scene-control-help{display:none!important}
  body.phone-play:not(.solo-play) #game-section .touch-player{flex-direction:row}
 }
+
+/* Mobile thumb zones must attach to the physical viewport edges, not flex
+   spacing in .mobile-keys (which can shrink after auto-rotation). This only
+   changes Player 1 on touch phones; desktop and face-to-face Player 2 stay
+   unchanged. The safe-area offsets protect rounded corners / gesture bars. */
+@media (pointer:coarse){
+ body.phone-play #game-section .touch-player:first-child > .joystick[data-joystick="0"]{
+  position:fixed!important;
+  left:calc(env(safe-area-inset-left,0px) + 14px)!important;
+  bottom:calc(env(safe-area-inset-bottom,0px) + 16px)!important;
+  top:auto!important;right:auto!important;
+  margin:0!important;z-index:32;
+ }
+ body.phone-play #game-section .touch-player:first-child > .touch-dash[data-dash="0"]{
+  position:fixed!important;
+  right:calc(env(safe-area-inset-right,0px) + 14px)!important;
+  bottom:calc(env(safe-area-inset-bottom,0px) + 24px)!important;
+  left:auto!important;top:auto!important;
+  width:clamp(88px,14vw,112px);min-height:54px;
+  max-width:none;margin:0!important;z-index:32;
+  touch-action:manipulation;
+ }
+}
