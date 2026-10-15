@@ -7,7 +7,7 @@ const WIDTH=2600,HEIGHT=1900, VIEWW=960,VIEWH=600, TAU=Math.PI*2, keys=new Set()
 const petImages=Object.fromEntries(Array.from(document.querySelectorAll('#heroes .hero'),el=>[el.dataset.hero,el.querySelector('.portrait img')]));
 const roster={rosie:{name:'Rosie',emoji:'🐕‍🦺',color:'#222a36',hp:130,speed:220,range:225,rate:.56,damage:17,weapon:'dragon'},millie:{name:'Millie',emoji:'🐕',color:'#31323d',hp:135,speed:205,range:220,rate:.56,damage:18,weapon:'ball'},winnifred:{name:'Winnifred',emoji:'🐈',color:'#e4d4bc',hp:128,speed:240,range:96,rate:.34,damage:30,weapon:'sausage'},ellie:{name:'Ellie',emoji:'🐶',color:'#121823',hp:150,speed:250,range:175,rate:.92,damage:8,weapon:'kong',auraRadius:135,healPulse:2.7,selfRegen:1.4}};
 let selected=['rosie','winnifred'],players=[],foes=[],shots=[],drops=[],fx=[],hazards=[],boss=null,phase='idle',paused=false,score=0,kills=0,level=1,xp=0,goal=35,spawnClock=0,surgeClock=33,elapsed=0,clues=0,fridgeVisible=false,fridge={x:2180,y:1440},cam={x:0,y:0},lastTime=0,raf=0,messageClock=0,attackClock=0,heldTouch={},joystickAxes=[{x:0,y:0},{x:0,y:0}],audioCtx=null,audioEnabled=true,musicTimer=null,musicStep=0,musicMode='idle',musicBar=0,musicNextBarAt=0,sloganClock=8,bossPhase=1,coneWarned=false;
-let cutsceneNext=null,sceneName=null,reviveSeconds=1.85,hudClock=0,sceneOpenedAt=0,perkOffer=null,perkReturnPhase='explore';
+let cutsceneNext=null,sceneName=null,reviveSeconds=1.85,hudClock=0,sceneOpenedAt=0,perkOffer=null,perkReturnPhase='explore',scenePresentationToken=0;
 let liteFx=typeof matchMedia==='function'&&matchMedia('(pointer:coarse)').matches;
 let duoActive=false,duoDefeated=false,laserUnlocked=false,beams=[],coneCooldown=6.8,coneWindup=0,coneAngle=0,bossPulseCooldown=4,bossPulseWindup=0,bananaWindup=0;
 let gate=null,gateCleared=[false,false,false],difficulty='challenge',daanActive=false,daanPulse=0,daanActionTimer=0;
@@ -33,6 +33,23 @@ let laserChallenge={index:0,timer:0,zapCooldown:0};
 const laserSafe=()=>laserChallenge.timer%3.5>=1.55;
 const scenery=(()=>{let seed=9145;const r=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};return Array.from({length:450},()=>({x:r()*WIDTH,y:r()*HEIGHT,t:r(),s:10+r()*24}))})();
 const SCENE_ART={"clue1":"assets/scene-clue1.webp","clue2":"assets/scene-clue2.webp","clue3":"assets/scene-clue3.webp","intro":"assets/scene-intro.webp","phase2":"assets/scene-phase2.webp","phase3":"assets/scene-phase2.webp","victory":"assets/scene-victory.webp","defeat":"assets/scene-defeat.webp"};
+// Decode art before revealing the overlay: avoid one-frame stale backgrounds.
+const sceneArtCache=Object.fromEntries(Object.entries(SCENE_ART).map(([key,url])=>{
+ const img=new Image();img.src=url;return [key,img];
+}));
+function presentSceneArt(kind,token){
+ const art=$('overlay-art'),img=sceneArtCache[kind];
+ const reveal=()=>{
+  if(token!==scenePresentationToken||phase!=='cutscene'||sceneName!==kind)return;
+  art.src=img?.src||SCENE_ART[kind];
+  art.classList.remove('scene-art-pending');
+  $('overlay').classList.remove('hidden');
+ };
+ if(img?.complete&&img.naturalWidth){reveal();return}
+ if(img?.decode)img.decode().then(reveal).catch(reveal);
+ else if(img){img.addEventListener('load',reveal,{once:true});img.addEventListener('error',reveal,{once:true})}
+ else reveal();
+}
 // Never generate alternate faces for the pets: scene portraits reuse the actual
 // character-select images (and Tolly's existing portrait) for a consistent cast.
 const EXTRA_BANTER={
@@ -287,17 +304,17 @@ document.querySelectorAll('[data-slot]').forEach(b=>b.addEventListener('click',(
 $('coop').addEventListener('change',()=>{if(!$('coop').checked)$('assign').value='0';setSelection()});setSelection();
 function showScene(kind,title,dialogue){
  $('ending-invite').hidden=true;sceneName=kind;cutsceneNext=kind;phase='cutscene';keys.clear();
- sceneOpenedAt=performance.now();joystickAxes.forEach(axis=>{axis.x=0;axis.y=0});
+ sceneOpenedAt=performance.now();const presentationToken=++scenePresentationToken;joystickAxes.forEach(axis=>{axis.x=0;axis.y=0});
  $('pause').disabled=true;
- $('overlay').classList.add('cinematic');$('overlay').classList.remove('hidden');$('overlay').dataset.scene=kind;
+ $('overlay').classList.add('cinematic');$('overlay').classList.add('hidden');$('overlay').dataset.scene=kind;
  $('overlay-kicker').textContent=kind.startsWith('clue')?'DISCOVERY · CLUE '+kind.slice(-1)+'/3':kind==='intro'?'THE FRIDGE HAS BEEN FOUND':kind==='phase3'?'FINAL PHASE · LEGENDARY DEFENCE':'PHASE TWO · CONE OF SHAME';
  $('overlay').querySelector('h3').textContent=title;
  $('overlay').querySelector('p').textContent=dialogue;
- const sceneArt=$('overlay-art');sceneArt.src=SCENE_ART[kind];sceneArt.classList.add('show');sceneArt.style.maxWidth='';
+ const sceneArt=$('overlay-art');sceneArt.classList.add('show','scene-art-pending');sceneArt.style.maxWidth='';
  if(kind==='clue3'){
   // Avoid upscaling the chapter-three art beyond its source pixel width.
-  const limitToNative=()=>{if(sceneName==='clue3'&&sceneArt.naturalWidth)sceneArt.style.maxWidth=Math.min(680,sceneArt.naturalWidth)+'px';};
-  if(sceneArt.complete)limitToNative();else sceneArt.addEventListener('load',limitToNative,{once:true});
+  const limitToNative=()=>{const image=sceneArtCache[kind];if(sceneName==='clue3'&&image?.naturalWidth)sceneArt.style.maxWidth=Math.min(680,image.naturalWidth)+'px';};
+  if(sceneArtCache[kind]?.complete)limitToNative();else sceneArtCache[kind]?.addEventListener('load',limitToNative,{once:true});
  }
  renderSceneLines(kind);$('mission-unlock').classList.remove('show');
  $('overlay-start').dataset.continueLabel='▶ '+(kind==='intro'?'FACE TOLLY':kind==='phase2'||kind==='phase3'?'CONTINUE THE BATTLE':kind==='clue2'?'FACE BOINK & BOCHT':'CONTINUE EXPLORING');
@@ -306,7 +323,8 @@ function showScene(kind,title,dialogue){
  $('scene-control-help').hidden=false;
  // New readers on a phone should see the first spoken line, not only the art.
  const visibleLine=$('scene-dialogues').querySelector('.scene-line:not([hidden])');
- if(visibleLine)$('overlay').querySelector('.overlay-inner').scrollTop=0; // Avoid jumping document on first dialogue beat.
+ if(visibleLine)$('overlay').querySelector('.overlay-inner').scrollTop=0;
+ presentSceneArt(kind,presentationToken);
 }
 // Quest wards require three short, visible guardian waves at every scroll.
 function spawnGuardianWave(){
@@ -357,7 +375,7 @@ function continueScene(){
  if(phase!=='cutscene')return;
  if(advanceSceneBeat())return;
  const kind=cutsceneNext;
- cutsceneNext=null;keys.clear();
+ ++scenePresentationToken;cutsceneNext=null;keys.clear();
  $('scene-control-help').hidden=true;
  players.filter(p=>p.alive).forEach(p=>p.inv=Math.max(p.inv,1.7));
  phase=['intro','phase2','phase3'].includes(kind)?'boss':'explore';
@@ -405,7 +423,7 @@ const ambientBanter=[
 function say(t,duration=3){$('game-message').textContent=t;messageClock=duration}
 function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5,spriteFacing:'down',spriteMoving:false,spriteAttackAt:-1,perkGlow:0,perkRarity:''}}
 function start(){
- perkOffer=null;$('perk-panel').hidden=true;
+ ++scenePresentationToken;perkOffer=null;$('perk-panel').hidden=true;
  $('scene-control-help').hidden=true;$('ending-invite').hidden=true;cancelAnimationFrame(raf);
  joystickAxes.forEach(a=>{a.x=0;a.y=0});document.querySelectorAll('.joystick-knob').forEach(k=>k.style.transform='translate(0px,0px)');
  players=[player(selected[0],0)];if($('coop').checked)players.push(player(selected[1],1));
