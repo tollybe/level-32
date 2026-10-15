@@ -124,3 +124,11 @@ Day 4 applies the [Iteration 4 roadmap](docs/iteration-4.md), motivated by playt
 - In Extreme, Daan arrives in Tolly's second phase as a static-asset encounter, warning of a dodgable shockwave.
 - **Daan asset is provisional:** `game/assets/daan.svg` is a labeled emblem pending an approved likeness; it is not a chibi sprite. All original character portraits remain untouched.
 - See `docs/iteration-5.md` for Day 5, **documentation only**. Day 5 implementation is blocked on Day 4 testing and asset approval.
+
+
+### Day 4.5 — Paws, Puns & Polish (review branch)
+- PAWS button and themed overlay with resumption via the button or Escape.
+- Extra authored laser/character banter and occasional character quips during exploration.
+- Distinct clue-site ground details and birthday/fridge decorations, rendered without modifying canonical portraits.
+- Includes new desktop Extreme smoke test scenario; full browser/manual validation is still required.
+- Day 5 stays **documentation-only** until Day 4 and 4.5 are accepted. See `docs/iteration-4-5.md` and `docs/iteration-5.md`.
