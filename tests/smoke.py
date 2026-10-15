@@ -830,18 +830,6 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
         assert all(face['first'].values()),face
         assert all(face['opposite'].values()),face
         assert all(face['scene'].values()),face
-        # Simulate auto-rotation *without reloading the page*: fixed thumb
-        # buttons must follow the new lower corners in the same game session.
-        if mode=='challenge' and not solo:
-            rotated={'width':screen[1], 'height':screen[0]}
-            page.set_viewport_size(rotated)
-            other=page.evaluate('window.__rosieTest.mobileFacingAndSceneProbe()')
-            assert all(other['first'].values()),other
-            assert all(other['opposite'].values()),other
-            assert all(other['scene'].values()),other
-            page.set_viewport_size({'width':screen[0], 'height':screen[1]})
-            restored=page.evaluate('window.__rosieTest.mobileFacingAndSceneProbe()')
-            assert all(restored['first'].values()) and all(restored['opposite'].values()),restored
         print('Mobile right-thumb Dash corner placement, live rotation and co-op layout: PASS')
         print('Mobile-only left-stick/right-dash, opposite-edge co-op and non-scrolling frozen cutscene: PASS')
         print('Full-screen phone stage, solo joystick, 10% rotated HUD panels and compact upgrades: PASS')
@@ -1110,6 +1098,21 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     assert page.locator('#ending-invite').is_visible()
     assert not errors,errors
     print('defeat/missions/syntax:', 'PASS')
+    # Test live auto-rotation after all story/scroll tests. Browsers may
+    # re-anchor document scroll during viewport rotation, which must not
+    # contaminate unrelated cutscene no-scroll checks.
+    if mobile and mode=='challenge' and not solo:
+        original={'width':screen[0], 'height':screen[1]}
+        rotated={'width':screen[1], 'height':screen[0]}
+        page.set_viewport_size(rotated)
+        other=page.evaluate('window.__rosieTest.mobileFacingAndSceneProbe()')
+        assert all(other['first'].values()),other
+        assert all(other['opposite'].values()),other
+        assert all(other['scene'].values()),other
+        page.set_viewport_size(original)
+        restored=page.evaluate('window.__rosieTest.mobileFacingAndSceneProbe()')
+        assert all(restored['first'].values()) and all(restored['opposite'].values()),restored
+        print('Live phone auto-rotate and restore, lower-right Dash: PASS')
     page.close()
 
 with sync_playwright() as p:
