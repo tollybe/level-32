@@ -11,6 +11,11 @@ hook='''window.__rosieTest={
  track(){for(const spot of scentTrail){players[0].x=spot.x;players[0].y=spot.y;update(.016)}return this.state()},
  solveLaser(){laserChallenge.timer=2.0;for(const spot of laserNodes){players[0].x=spot.x;players[0].y=spot.y;update(.016)}return this.state()},
  joystickCheck(){const p=players[0],before=p.x;joystickAxes[0].x=.35;joystickAxes[0].y=0;movePlayers(.1);const partial=p.x-before;joystickAxes[0].x=1;movePlayers(.1);const full=p.x-before-partial;joystickAxes[0].x=0;return {partial,full}},
+ dualStickCheck(){if(players.length<2)return null;const a=players[0].x,b=players[1].x;
+   joystickAxes[0].x=.8;joystickAxes[1].x=-.6;movePlayers(.04);joystickAxes[0].x=joystickAxes[1].x=0;
+   return {first:players[0].x-a,second:players[1].x-b}},
+ unsafeLaser(){laserChallenge.timer=0;const node=laserNodes[laserChallenge.index];
+   players[0].x=node.x;players[0].y=node.y;update(.016);return this.state()},
  step(){update(.016);return this.state()},
  clearGuards(){for(let n=0;n<4&&gate;n++){
   foes.filter(e=>e.guardian&&e.hp>0).forEach(e=>e.hp=0);
@@ -34,14 +39,14 @@ hook='''window.__rosieTest={
  killBoss(){damage(boss,boss.hp+9999,players[0]);return this.state()},
  lose(){resetEnd(false);return this.state()},
  getEnemyList(){return [...new Set(foes.map(e=>e.kind))]},
- state(){return {phase,clues,duoActive,duoDefeated,laserUnlocked,laserIndex:laserChallenge.index,scentStep,score,kills,coneWindup,elapsed,hp:players.map(p=>p.hp),sceneName,cutsceneNext,bossHp:boss?.hp||0,guardWave:gate?.wave??null,guardians:foes.filter(e=>e.guardian&&e.hp>0).length,cleared:gateCleared.slice(),mode:difficulty,overlay:!$('overlay').classList.contains('hidden'),imgSrc:$('overlay-art').getAttribute('src').slice(0,90),dialogueImages:[...$('scene-dialogues').querySelectorAll('img')].map(im=>im.getAttribute('src').slice(0,80)),missionUnlock:$('mission-unlock').classList.contains('show'),objectText:$('objective-label').textContent}}
+ state(){return {phase,clues,duoActive,duoDefeated,laserUnlocked,laserIndex:laserChallenge.index,scentStep,score,kills,coneWindup,elapsed,hp:players.map(p=>p.hp),sceneName,cutsceneNext,bossHp:boss?.hp||0,daanActive,guardWave:gate?.wave??null,guardians:foes.filter(e=>e.guardian&&e.hp>0).length,cleared:gateCleared.slice(),mode:difficulty,overlay:!$('overlay').classList.contains('hidden'),imgSrc:$('overlay-art').getAttribute('src').slice(0,90),dialogueImages:[...$('scene-dialogues').querySelectorAll('img')].map(im=>im.getAttribute('src').slice(0,80)),missionUnlock:$('mission-unlock').classList.contains('show'),objectText:$('objective-label').textContent}}
 };'''
 pos=html.rfind('})();')
 assert pos>0
 html=html[:pos]+hook+'\n'+html[pos:]
 assert 'window.__rosieTest' in html
 
-def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge'):
+def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=False):
     page=browser.new_page(viewport={'width':screen[0],'height':screen[1]},device_scale_factor=1, is_mobile=mobile,has_touch=mobile)
     errors=[]
     page.on('pageerror',lambda e:errors.append(str(e)))
@@ -51,6 +56,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge'):
     print('idle',s['phase'])
     page.locator('#mute').click()
     page.locator('#difficulty').select_option(mode)
+    if solo: page.locator('#coop').uncheck()
     assert page.locator('[data-dash]').count()==2
     assert page.locator('[data-joystick]').count()==2
     assert 'Daan joins' not in page.locator('#difficulty').inner_text()
@@ -69,6 +75,12 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge'):
     page.locator('#pause').click()
     assert page.locator('#paws-panel').is_hidden()
     assert s['phase']=='explore' and s['mode']==mode
+    assert len(s['hp'])==(1 if solo else 2),s
+    if not solo:
+        simultaneous=page.evaluate('window.__rosieTest.dualStickCheck()')
+        assert simultaneous['first']>0 and simultaneous['second']<0,simultaneous
+    assert page.locator('#focus-play').count()==1
+    assert page.locator('.footer-invite').count()==1
     analog=page.evaluate('window.__rosieTest.joystickCheck()')
     assert analog['partial']>0 and analog['full']>analog['partial']*1.8,analog
     skipped=page.evaluate('window.__rosieTest.place(1)')
@@ -107,6 +119,8 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge'):
     # Third quest is now a green-window laser security puzzle, not guardian waves.
     s=page.evaluate('window.__rosieTest.place(2)')
     assert s['phase']=='explore' and s['clues']==2 and s['laserIndex']==0,s
+    unsafe=page.evaluate('window.__rosieTest.unsafeLaser()')
+    assert unsafe['laserIndex']==0 and not unsafe['cleared'][2],unsafe
     s=page.evaluate('window.__rosieTest.solveLaser()')
     assert s['cleared'][2] and s['laserIndex']==3,s
     s=page.evaluate('window.__rosieTest.place(2)')
@@ -125,6 +139,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge'):
     assert s['phase']=='cutscene' and s['sceneName']=='phase2'
     s=page.evaluate('window.__rosieTest.continue()')
     assert s['phase']=='boss'
+    assert s['daanActive']==(mode=='extreme'),s
     s=page.evaluate('window.__rosieTest.killBoss()')
     assert s['phase']=='ended' and s['missionUnlock'] and s['overlay']
     assert len(s['dialogueImages'])>=2 and all(im.startswith('data:image/webp') for im in s['dialogueImages'])
@@ -155,4 +170,6 @@ with sync_playwright() as p:
     browser_run(browser,screen=(390,844),mobile=True,mode='story')
     browser_run(browser,screen=(844,390),mobile=True,mode='challenge')
     browser_run(browser,screen=(1280,900),mode='extreme')
+    browser_run(browser,screen=(1280,900),mode='story',solo=True)
+    browser_run(browser,screen=(390,844),mobile=True,mode='extreme',solo=True)
     browser.close()
