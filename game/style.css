@@ -136,3 +136,10 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:3px solid #9cf
 
 /* Day 4 10/10 mode: option accessible on smaller screens. */
 .difficulty-choice select{max-width:100%;min-width:0}
+
+/* Day 4.5 world and PAWS screen. Do not modify or re-render canonical portraits. */
+.paws-panel[hidden]{display:none}
+.paws-panel{position:absolute;z-index:5;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:20px;background:#151628e8;color:#fff4da;border:3px solid #f2d391;pointer-events:none}
+.paws-panel strong{font-size:clamp(1.15rem,3vw,2rem);color:#f5d68f;letter-spacing:.08em}
+.paws-panel p{max-width:400px;margin:7px auto;font-size:clamp(.8rem,2vw,1rem);line-height:1.5}
+@media(prefers-reduced-motion:reduce){.paws-panel,.scene-line{animation:none!important;transition:none!important}}

@@ -53,3 +53,12 @@
 - [ ] Run full browser smoke suite and actual physical-phone gameplay checks.
 - [ ] Test win, loss and direct invitation/calendar links in all three modes.
 - [ ] Accept Day 4 explicitly before starting Day 5: see [Day 5 plan](iteration-5.md).
+
+
+## Day 4.5 — additional acceptance gates
+- [ ] PAWS controls and Escape freeze/restart correctly on phones and desktops.
+- [ ] Check persona dialogue and optional banter; no forced delays or copyrighted dialogue.
+- [ ] Verify decorations preserve enemy/telegraph visibility.
+- [ ] Run Extreme browser smoke and validate Daan warning on a real device.
+- [ ] Secure an approved Daan character illustration before final Day 4 acceptance.
+- [ ] Confirm Day 5 remains docs-only (no sprite assets/rendering changes).
