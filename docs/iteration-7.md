@@ -97,3 +97,5 @@ The ground gains 180 little grass tufts that part when a moving player brushes p
 ## Day 8C — Phone UX
 
 Phone gameplay fills the screen using native fullscreen or a fixed-viewport fallback. Rotated HUD panels use 10% opacity to reveal action while health and XP remain legible. Solo hides P2's controls. Upgrade choices are compact and touch friendly. The phone PAWS button changes to UNPAWS to resume. See the release checklist for acceptance tests; real-device validation remains pending.
+
+**Day 8C status:** PR #23 merged into `main` with green JavaScript syntax and desktop/portrait/landscape/Extreme Chromium gameplay regressions. Native phone ergonomics and real-world auto-rotate remain for owner validation.
