@@ -9,7 +9,7 @@ const roster={rosie:{name:'Rosie',emoji:'🐕‍🦺',color:'#222a36',hp:130,spe
 let selected=['rosie','winnifred'],players=[],foes=[],shots=[],drops=[],fx=[],hazards=[],boss=null,phase='idle',paused=false,score=0,kills=0,level=1,xp=0,goal=35,spawnClock=0,surgeClock=33,elapsed=0,clues=0,fridgeVisible=false,fridge={x:2180,y:1440},cam={x:0,y:0},lastTime=0,raf=0,messageClock=0,attackClock=0,heldTouch={},joystickAxes=[{x:0,y:0},{x:0,y:0}],audioCtx=null,audioEnabled=true,musicTimer=null,musicStep=0,musicMode='idle',musicBar=0,musicNextBarAt=0,sloganClock=8,bossPhase=1,coneWarned=false;
 let cutsceneNext=null,sceneName=null,reviveSeconds=1.85,hudClock=0,sceneOpenedAt=0,perkOffer=null,perkReturnPhase='explore',scenePresentationToken=0,perksAwarded=0;
 let liteFx=typeof matchMedia==='function'&&matchMedia('(pointer:coarse)').matches;
-let duoActive=false,duoDefeated=false,laserUnlocked=false,beams=[],coneCooldown=6.8,coneWindup=0,coneAngle=0,bossPulseCooldown=4,bossPulseWindup=0,bananaWindup=0;
+let duoActive=false,duoDefeated=false,laserUnlocked=false,beams=[],bushEggSeen=false,bossBushVisits=0,bossBushOccupied=false,winston=null,winstonForcedReveal=0,pairBanterClock=12,worldBubbles=[],coneCooldown=6.8,coneWindup=0,coneAngle=0,bossPulseCooldown=4,bossPulseWindup=0,bananaWindup=0;
 let gate=null,gateCleared=[false,false,false],difficulty='challenge',daanActive=false,daanPulse=0,daanActionTimer=0,daanHealCooldown=0,daanHealWindup=0,daanHealsRemaining=0,daanHealFlash=0;
 const GATE_WAVES={challenge:[[3,3,2],[3,3,3],[4,3,3]],story:[[2,2,2],[2,2,2],[2,2,3]],extreme:[[5,5,5],[6,5,6],[6,7,7]]};
 const daanPortrait=new Image();daanPortrait.src='assets/daan.svg';
@@ -42,8 +42,10 @@ const scentTrail=[{x:440,y:500},{x:550,y:570},{x:660,y:620}];let scentStep=0;
 const laserNodes=[{x:1450,y:1210},{x:1555,y:1320},{x:1680,y:1435}];
 let laserChallenge={index:0,timer:0,zapCooldown:0};
 const laserSafe=()=>laserChallenge.timer%3.5>=1.55;
+const bushes=[{x:545,y:430},{x:970,y:740},{x:1445,y:1130},{x:2020,y:1520},{x:2365,y:1525}];
+const bushArt=new Image();bushArt.src='assets/sprites/bush.svg';
 const scenery=(()=>{let seed=9145;const r=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};return Array.from({length:450},()=>({x:r()*WIDTH,y:r()*HEIGHT,t:r(),s:10+r()*24}))})();
-const SCENE_ART={"clue1":"assets/scene-clue1.webp","clue2":"assets/scene-clue2.webp","clue3":"assets/scene-clue3.webp","intro":"assets/scene-intro.webp","phase2":"assets/scene-phase2.webp","phase3":"assets/scene-phase2.webp","victory":"assets/scene-victory.webp","defeat":"assets/scene-defeat.webp"};
+const SCENE_ART={"clue1":"assets/scene-clue1.webp","clue2":"assets/scene-clue2.webp","clue3":"assets/scene-clue3.webp","intro":"assets/scene-intro.webp","phase2":"assets/scene-phase2.webp","phase3":"assets/scene-phase2.webp","victory":"assets/scene-victory.webp","defeat":"assets/scene-defeat.webp","bushEgg":"assets/scene-clue1.webp"};
 // Decode art before revealing the overlay: avoid one-frame stale backgrounds.
 const sceneArtCache=Object.fromEntries(Object.entries(SCENE_ART).map(([key,url])=>{
  const img=new Image();img.src=url;return [key,img];
@@ -76,7 +78,8 @@ const SCENE_LINES={
  phase2:[['tolly','I HAVE BEEN TOO LENIENT.'],['ellie','That sounds like a cone-related sentence.'],['tolly','CONE OF SHAME: DEPLOYED.'],['rosie','I suddenly regret all of my life choices.']],
  phase3:[['tolly','YOU HAVE TRIGGERED MY FINAL FORM.'],['winnifred','A third course? How unusual.'],['tolly','THERE SHALL BE NO BANANA.']],
  victory:[['tolly','Fine. You may have the banana and cheese tax.'],['rosie','Excellent. Now about the birthday...'],['winnifred','The REAL quest is an invitation. How unusually civilised.']],
- defeat:[['tolly','Mwahahaha! The fridge remains mine!'],['ellie','Okay, but can we still go to the party?'],['tolly','...Obviously. This is an invitation, not an exam.']]
+ defeat:[['tolly','Mwahahaha! The fridge remains mine!'],['ellie','Okay, but can we still go to the party?'],['tolly','...Obviously. This is an invitation, not an exam.']],
+ bushEgg:[['rosie','I have been in this bush for THIRTY SECONDS.'],['millie','IS THE BUSH A BALL?!'],['winnifred','A most undignified hiding place.'],['ellie','Please come out. I have a very important lick.']]
 };
 const CLUE_SCENES=[
  {kind:'clue1',title:'CLUE 1 · THE MYSTERIOUS PAWPRINTS',dialogue:'* A trail of golden pawprints snakes through the garden. Something smells suspiciously delicious.'},
@@ -425,7 +428,7 @@ function spawnDuo(){
    hp,maxHp:hp,speed:conf.speed*(difficulty==='story'?1:1.10),
    damage:Math.round(conf.damage*(difficulty==='story'?1:1.16)),
    size:conf.size+8,attack:1.2,kind,elite:true,age:0,
-   telegraph:0,charge:-1,trailTimer:0,slow:0,volleyWarmup:0,volleyCooldown:i===0?3.2:4.8});
+   telegraph:0,charge:-1,trailTimer:0,slow:0,volleyWarmup:0,volleyCooldown:difficulty==='extreme'?1.6:i===0?3.2:4.8,volleyShots:0,volleyShotClock:0,volleyShotIndex:0});
  }
  say('⚠ BOINK & BOCHT! Defeat the terrible twosome to reveal the last clue!',4);
  playSfx('boink');
@@ -442,6 +445,7 @@ function continueScene(){
  $('scene-dialogues').hidden=true;
  $('pause').disabled=false;$('pause').textContent='Ⅱ PAWS';
  if(kind==='intro'){
+   bossBushVisits=0;bossBushOccupied=false;winston=null;winstonForcedReveal=0;
    const hp=(players.length===2?2040:1450)*(difficulty==='story'?.67:difficulty==='extreme'?EXTREME.bossHp:1);
    boss={x:fridge.x+45,y:fridge.y-80,hp,maxHp:hp,size:49,speed:difficulty==='story'?96:difficulty==='extreme'?137*EXTREME.bossSpeed:145,attack:1.1,hitFlash:0,rage:false};
    hazards=[];foes=foes.slice(-5);bossPhase=1;coneWarned=false;coneCooldown=6.6;coneWindup=0;bossPulseCooldown=1.65;bossPulseWindup=0;bananaWindup=0;daanActive=false;daanPulse=4;daanActionTimer=0;daanHealCooldown=0;daanHealWindup=0;daanHealsRemaining=0;daanHealFlash=0;
@@ -480,10 +484,11 @@ const ambientBanter=[
  'MILLIE: Did someone say throw? ...AAAAAH, IT MOVED!'
 ];
 function say(t,duration=3){$('game-message').textContent=t;messageClock=duration}
-function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5,spriteFacing:'down',spriteMoving:false,spriteAttackAt:-1,perkGlow:0,perkRarity:''}}
+function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5,spriteFacing:'down',spriteMoving:false,spriteAttackAt:-1,perkGlow:0,perkRarity:'',hidden:false,bushTime:0,bushId:-1}}
 function start(){
  ++scenePresentationToken;perkOffer=null;perksAwarded=0;$('perk-panel').hidden=true;
  $('scene-control-help').hidden=true;$('ending-invite').hidden=true;cancelAnimationFrame(raf);
+ bushEggSeen=false;bossBushVisits=0;bossBushOccupied=false;winston=null;winstonForcedReveal=0;pairBanterClock=12;worldBubbles=[];
  joystickAxes.forEach(a=>{a.x=0;a.y=0});document.querySelectorAll('.joystick-knob').forEach(k=>k.style.transform='translate(0px,0px)');
  players=[player(selected[0],0)];if($('coop').checked)players.push(player(selected[1],1));
  const startHealth=DIFFICULTY_BALANCE[$('difficulty').value].startingHealth;
@@ -514,8 +519,8 @@ function spawnBleepling(){
   speed:c.speed+Math.min(31,elapsed*.14),attack:rnd(.3,.8),size:c.size,kind,damage:Math.ceil((c.damage+Math.floor(tier*.75))*difficultyBalance().mobDamage),age:0,telegraph:0,charge:-1,trailTimer:0,slow:0});
 }
 function emit(text,x,y,col='#ffe1aa'){if(fx.length<(liteFx?45:90))fx.push({text,x,y,col,t:1.1})}
-function nearest(origin,arr,r=Infinity){let item=null,bd=r;for(const o of arr){if(o.hp<=0||o.alive===false)continue;const d=dist(origin,o);if(d<bd){bd=d;item=o}}return item}
-function fire(p){const target=nearest(p,[...foes,...(boss?[boss]:[])],p.range);if(!target)return;p.spriteAttackAt=elapsed;if(p.weapon==='sausage'){for(const e of [...foes,...(boss?[boss]:[])])if(e.hp>0&&dist(p,e)<p.range){damage(e,p.damage+level*2,p);emit('⚔',e.x,e.y,'#fff0a7')}return}const angle=Math.atan2(target.y-p.y,target.x-p.x);shots.push({x:p.x,y:p.y,vx:Math.cos(angle)*410,vy:Math.sin(angle)*410,damage:p.damage+level*2,ttl:1.1,owner:p.num,kind:p.weapon,pierce:p.weapon==='dragon'?1:0,hitTargets:new Set()})}
+function nearest(origin,arr,r=Infinity){let item=null,bd=r;for(const o of arr){if(o.hp<=0||o.alive===false||o.hidden)continue;const d=dist(origin,o);if(d<bd){bd=d;item=o}}return item}
+function fire(p){if(p.hidden)return;const target=nearest(p,[...foes,...(boss?[boss]:[])],p.range);if(!target)return;p.spriteAttackAt=elapsed;if(p.weapon==='sausage'){for(const e of [...foes,...(boss?[boss]:[])])if(e.hp>0&&dist(p,e)<p.range){damage(e,p.damage+level*2,p);emit('⚔',e.x,e.y,'#fff0a7')}return}const angle=Math.atan2(target.y-p.y,target.x-p.x);shots.push({x:p.x,y:p.y,vx:Math.cos(angle)*410,vy:Math.sin(angle)*410,damage:p.damage+level*2,ttl:1.1,owner:p.num,kind:p.weapon,pierce:p.weapon==='dragon'?1:0,hitTargets:new Set()})}
 // XP remains standard for the first five levels in all difficulty modes.
 function gainXP(amount){
  xp+=amount*(level<=5?1:difficulty==='story'?1:difficulty==='extreme'?.60:.78);
@@ -633,7 +638,7 @@ function movePlayers(dt){
 }
 // Mission Two foreshadowing: the legendary laser pointer unlocks after clue three.
 function laserAttack(p){
- if(!laserUnlocked||!p.alive||phase!=='explore'&&phase!=='boss')return;
+ if(!laserUnlocked||!p.alive||p.hidden||phase!=='explore'&&phase!=='boss')return;
  const pool=[...foes,...(boss&&boss.hp>0?[boss]:[])].filter(e=>e.hp>0&&dist(p,e)<310);
  if(!pool.length)return;
  const target=nearest(p,pool,310);if(!target)return;
@@ -655,7 +660,7 @@ function updateRevives(dt){
  if(players.length<2)return;
  for(const down of players.filter(p=>!p.alive)){
   const helper=players.find(p=>p.alive && dist(p,down)<55);
-  if(!helper){down.reviveProgress=Math.max(0,(down.reviveProgress||0)-dt*.7);continue}
+  if(!helper||helper.hidden){down.reviveProgress=Math.max(0,(down.reviveProgress||0)-dt*.7);continue}
   down.reviveProgress=Math.min(reviveSeconds,(down.reviveProgress||0)+dt);
   if(down.reviveProgress<reviveSeconds)continue;
   down.alive=true;down.hp=Math.ceil(down.maxHp*.42);down.inv=2.25;
@@ -667,7 +672,7 @@ function updateRevives(dt){
 }
 function updateEllieAuras(dt){
  for(const ellie of players){
-  if(ellie.id!=='ellie'||!ellie.alive) continue;
+  if(ellie.id!=='ellie'||!ellie.alive||ellie.hidden) continue;
   ellie.hp=Math.min(ellie.maxHp,ellie.hp+ellie.selfRegen*dt); // self-sustain between pulses
   ellie.healFlash=Math.max(0,ellie.healFlash-dt);
   ellie.healClock-=dt;
@@ -715,28 +720,117 @@ function advanceProjectiles(dt){
   if(phase==='cutscene'||phase==='ended')break;
  }
 }
-// Extreme-only mini-boss attack: Boink fires an axis-aligned '+' volley;
-// Bocht fires a 45-degree 'X' volley. A readable .78s windup precedes each.
+// Impossible 10/10: the two elites spawn and wind up simultaneously.
+// Red flashing warning for .5 s, then 12 rapid rounds at .085 s intervals.
+// Boink uses + cardinal axes; Bocht rotates the same burst to X diagonals.
+// Cooldown only begins when the final banana has been fired.
 function updateDuoVolley(e,dt){
  if(difficulty!=='extreme'||!duoActive||!e.elite||!['boink','bocht'].includes(e.kind))return;
+ if(e.volleyShots>0){
+  e.volleyShotClock-=dt;
+  while(e.volleyShotClock<=0&&e.volleyShots>0){
+   const offset=e.kind==='bocht'?Math.PI/4:0;
+   const n=e.volleyShotIndex++,angle=offset+(n%4)*Math.PI/2;
+   hazards.push({kind:'duo-banana',source:e.kind,x:e.x,y:e.y,
+    vx:Math.cos(angle)*255,vy:Math.sin(angle)*255,
+    damage:8,size:18,ttl:2.15});
+   e.volleyShots--;
+   e.volleyShotClock+=.085;
+   if(n%4===0){emit('PEW!',e.x,e.y-49,'#ffe1a0');playSfx('laser')}
+  }
+  if(e.volleyShots===0){e.volleyCooldown=2.0;e.volleyShotClock=0}
+  return;
+ }
  if(e.volleyWarmup>0){
   e.volleyWarmup-=dt;
   if(e.volleyWarmup<=0){
-   const offset=e.kind==='bocht'?Math.PI/4:0;
-   for(let n=0;n<4;n++){
-    const angle=offset+n*Math.PI/2;
-    hazards.push({kind:'duo-banana',source:e.kind,x:e.x,y:e.y,
-      vx:Math.cos(angle)*220,vy:Math.sin(angle)*220,damage:11,size:19,ttl:2.3});
-   }
-   playSfx('special');
+   e.volleyWarmup=0;e.volleyShots=12;e.volleyShotClock=0;
+   e.volleyShotIndex=0;playSfx('special');
   }
   return;
  }
  e.volleyCooldown-=dt;
  if(e.volleyCooldown<=0){
-  e.volleyWarmup=.78;e.volleyCooldown=e.kind==='boink'?4.3:5.1;
-  say(e.kind==='boink'?'⚠ BOINK: + BANANA CROSS!':'⚠ BOCHT: X BANANA CROSS!',1.6);
-  emit(e.kind==='boink'?'⚠ +':'⚠ X',e.x,e.y-42,'#ffe4aa');
+  e.volleyWarmup=.5;e.volleyCooldown=0;
+  emit('⚠ '+(e.kind==='boink'?'+':'X')+' RED WARNING!',e.x,e.y-48,'#ff7c81');
+  say('⚠ BOINK + BOCHT: RED WARNING! MACHINE-GUN BANANAS!',1.4);
+ }
+}
+const PAIR_BANTER={
+ 'rosie|winnifred':[['rosie','...Are we friends?'],['winnifred','From a respectable distance, perhaps.']],
+ 'millie|rosie':[['millie','ROSIE! BALL! PLAY!'],['rosie','Tuesday and Thursday. Every week. A little quiet, please?']],
+ 'ellie|rosie':[['ellie','I must lick the puppy.'],['rosie','You are my puppy, Ellie. Fine, one lick.']],
+ 'millie|winnifred':[['millie','HELLO CAT! PLAY?'],['winnifred','Kindly keep your enthusiasm over there.']],
+ 'ellie|winnifred':[['ellie','I shall guard this area.'],['winnifred','Then I shall avoid that area.']],
+ 'ellie|millie':[['millie','RUUUUN!'],['ellie','ZOOMIES FOREVER!']]
+};
+function bubble(speaker,line,ttl=3.8){
+ worldBubbles.push({speaker,line,ttl});if(worldBubbles.length>8)worldBubbles.shift();
+}
+function updatePairBanter(dt){
+ if(players.length!==2||players.some(p=>!p.alive||p.hidden))return;
+ pairBanterClock-=dt;
+ if(pairBanterClock>0||dist(players[0],players[1])>165)return;
+ const lines=PAIR_BANTER[players.map(p=>p.id).sort().join('|')];
+ if(lines)for(const [speaker,line] of lines)bubble(speaker,line,4.5);
+ pairBanterClock=19;
+}
+function updateBushes(dt){
+ const reveal=winstonForcedReveal>0;winstonForcedReveal=Math.max(0,winstonForcedReveal-dt);
+ for(const p of players){
+  if(!p.alive){p.hidden=false;p.bushTime=0;p.bushId=-1;continue}
+  p.bushId=bushes.findIndex(b=>dist(p,b)<51);
+  p.hidden=p.bushId>=0&&!reveal;
+  p.bushTime=p.hidden?p.bushTime+dt:0;
+  if(p.hidden&&p.bushTime>=30&&!bushEggSeen&&phase==='explore'){
+   bushEggSeen=true;
+   showScene('bushEgg','THE THIRTY-SECOND BUSH CONVENTION',
+    'The forest has been waiting for someone to notice these leaves.');
+   return;
+  }
+ }
+ if(phase!=='boss'||!boss||boss.hp<=0)return;
+ const inside=players.some(p=>p.hidden);
+ if(inside&&!bossBushOccupied&&!winston?.complete){
+  bossBushVisits++;
+  if(bossBushVisits===1)bubble('tolly','...? Where have my enemies gone?',3.6);
+  if(bossBushVisits===2){winston={elapsed:0,step:0,complete:false,shaking:false};
+   bubble('tolly',"WHERE'S WINSTON?!",3.9);}
+ }
+ bossBushOccupied=inside;
+ if(!winston||winston.complete)return;
+ if(!inside){winston.elapsed=0;winston.step=0;return}
+ winston.elapsed+=dt;
+ const lines=[
+  {at:1.8,speaker:'rosie',line:'Guys... we are in trouble.'},
+  {at:3.5,speaker:players.find(p=>p.id==='winnifred')?'winnifred':players.find(p=>p.id==='ellie')?'ellie':'millie',line:'ROSIE! DO NOT GIVE US AWAY!'},
+  {at:5.5,speaker:'tolly',line:"WHERE'S WINSTON?!!?"}
+ ];
+ while(winston.step<lines.length&&winston.elapsed>=lines[winston.step].at){
+  const line=lines[winston.step++];bubble(line.speaker,line.line,3.4);
+ }
+ if(winston.elapsed>=8)winston.shaking=true;
+ if(winston.elapsed>=10){
+  winston.complete=true;winstonForcedReveal=4;
+  players.forEach(p=>{p.hidden=false;p.bushTime=0;p.inv=Math.max(p.inv,1.1)});
+  bubble('rosie','OH NO! MY WIGGLE BOTTOM GAVE US AWAY!',3.8);
+  bubble('tolly','AHAHAHAH! WORKS EVERY TIME!!',4.2);
+  emit('❗ BUSH TRICK EXPOSED!',boss.x,boss.y-135,'#fff1aa');
+  boss.attack=Math.max(.8,boss.attack);
+ }
+}
+function drawWorldBubbles(){
+ for(const b of worldBubbles){
+  const p=b.speaker==='tolly'?boss:players.find(p=>p.id===b.speaker&&p.alive)
+   ||bushes.find((b,i)=>players.some(q=>q.bushId===i));
+  if(!p)continue;
+  const x=p.x,y=p.y-(b.speaker==='tolly'?152:82);
+  const line=b.line.length>46?b.line.slice(0,44)+'…':b.line;
+  const w=Math.min(430,Math.max(140,line.length*8.5+20));
+  cx.save();cx.globalAlpha=Math.min(1,b.ttl);rect(x-w/2,y-31,w,45,'#19243bea');
+  cx.strokeStyle=b.speaker==='tolly'?'#ffb7c6':'#b8ffe4';
+  cx.lineWidth=3;cx.strokeRect(x-w/2,y-31,w,45);
+  txt(line,x,y-4,Math.min(17,490/line.length),'center','#fff4d5');cx.restore();
  }
 }
 function update(dt){
@@ -751,7 +845,10 @@ function update(dt){
   sloganClock=phase==='boss'?6.5:9.5;
  }
  movePlayers(dt);
+ updateBushes(dt);
  if(phase==='ended'||phase==='cutscene')return;
+ updatePairBanter(dt);
+ worldBubbles.forEach(b=>b.ttl-=dt);worldBubbles=worldBubbles.filter(b=>b.ttl>0);
  updateRevives(dt);
  updateEllieAuras(dt);
  spawnClock-=dt;
@@ -772,7 +869,18 @@ function update(dt){
  for(const beam of beams)beam.t-=dt;beams=beams.filter(b=>b.t>0);
  foes=foes.filter(e=>e.hp>0);
  for(const e of foes){
-    const p=nearest(e,players,Infinity);if(!p)continue;
+    const p=nearest(e,players,Infinity);
+    if(!p){
+     e.searchTime=(e.searchTime||0)+dt;e.searching=true;
+     if(e.searchTime>4){
+      const b=bushes.find((b,i)=>players.some(q=>q.hidden&&q.bushId===i));
+      if(b&&dist(e,b)>110){const a=Math.atan2(b.y-e.y,b.x-e.x);
+       e.x=clamp(e.x+Math.cos(a)*e.speed*.22*dt,24,WIDTH-24);
+       e.y=clamp(e.y+Math.sin(a)*e.speed*.22*dt,24,HEIGHT-24);}
+     }
+     continue;
+    }
+    e.searchTime=0;e.searching=false;
     // Elite twins separate whenever pursuit would otherwise stack their sprites.
     if(e.elite&&duoActive&&['boink','bocht'].includes(e.kind)){
       const other=foes.find(q=>q!==e&&q.elite&&q.hp>0&&['boink','bocht'].includes(q.kind));
@@ -920,7 +1028,7 @@ function update(dt){
     if(bossPulseWindup>0){
       bossPulseWindup-=dt;
       if(bossPulseWindup<=0){
-        for(const q of players.filter(p=>p.alive&&dist(p,boss)<150)){
+        for(const q of players.filter(p=>p.alive&&!p.hidden&&dist(p,boss)<150)){
           const a=Math.atan2(q.y-boss.y,q.x-boss.x);
           q.x=clamp(q.x+Math.cos(a)*110,24,WIDTH-24);q.y=clamp(q.y+Math.sin(a)*110,24,HEIGHT-24);
           if(q.inv<=0){const amount=Math.round((q.id==='winnifred'?18:bossPhase===2?29:23)*(difficulty==='story'?.7:1));
@@ -930,7 +1038,7 @@ function update(dt){
         }
         playSfx('cone');
       }
-    }else if(bossPulseCooldown<=0&&players.some(p=>p.alive&&dist(p,boss)<210)){
+    }else if(bossPulseCooldown<=0&&players.some(p=>p.alive&&!p.hidden&&dist(p,boss)<210)){
       bossPulseWindup=.9;bossPulseCooldown=boss.rage?2.05:bossPhase===2?2.8:3.6;
       say('⚠ TOLLY: NO CAMPING ON THE FRIDGE! MOVE OUT OF THE GOLD RING!',2.2);
     }
@@ -942,7 +1050,7 @@ function update(dt){
          coneWindup-=dt;
          if(coneWindup<=0){
            for(const q of players){
-             if(!q.alive||q.inv>0||dist(q,boss)>275)continue;
+             if(!q.alive||q.hidden||q.inv>0||dist(q,boss)>275)continue;
              const direction=Math.atan2(q.y-boss.y,q.x-boss.x);
              const diff=Math.atan2(Math.sin(direction-coneAngle),Math.cos(direction-coneAngle));
              if(Math.abs(diff)<.65){q.hp=Math.max(0,q.hp-24);q.inv=.95;emit('CONE SWEEP -24',q.x,q.y-36,'#ffbeca');if(q.hp===0)q.alive=false;}
@@ -972,7 +1080,7 @@ function update(dt){
             vx:Math.cos(dir)*speed,vy:Math.sin(dir)*speed,ttl:3.3,damage:Math.ceil((frenzy?20:17)*(difficulty==='story'?.72:1))});
        }
        for(const q of players){
-         if(q.alive&&dist(q,boss)<110&&q.inv<=0){
+         if(q.alive&&!q.hidden&&dist(q,boss)<110&&q.inv<=0){
            q.hp=Math.max(0,q.hp-Math.ceil((frenzy?25:19)*(difficulty==='story'?.7:1)));q.inv=.56;
            emit('BANANA BLAST',q.x,q.y-18,'#ffe8a0');
            if(q.hp===0)q.alive=false; else playSfx('special');
@@ -996,7 +1104,7 @@ function update(dt){
      if(daanHazard.ttl<=0){
        hazards.push({kind:'daan-impact',x:daanHazard.x,y:daanHazard.y,ttl:.38,size:daanHazard.size});
        playSfx('cone');
-       for(const p of players.filter(p=>p.alive&&dist(p,daanHazard)<daanHazard.size)){
+       for(const p of players.filter(p=>p.alive&&!p.hidden&&dist(p,daanHazard)<daanHazard.size)){
          if(p.inv<=0){p.hp=Math.max(0,p.hp-24);p.inv=.8;if(p.hp===0)p.alive=false;emit('DAAN SHOCKWAVE -24',p.x,p.y-26,'#ffe3ab')}
        }
        hazards.splice(i,1);
@@ -1011,7 +1119,7 @@ function update(dt){
     if(h.ttl<=0){hazards.splice(i,1);continue}
     let struck=false;
     for(const p of players){
-      if(p.alive&&p.inv<=0&&dist(h,p)<(h.size||30)){
+      if(p.alive&&!p.hidden&&p.inv<=0&&dist(h,p)<(h.size||30)){
         if(h.kind==='goop'){p.slowTime=Math.max(p.slowTime||0,1.3);struck=false;break;}
         p.hp=Math.max(0,p.hp-h.damage);p.inv=.55;
         emit('-'+h.damage,p.x,p.y-23,'#ffe8ac');
@@ -1128,6 +1236,13 @@ cx.strokeStyle='#b6ab90';cx.lineWidth=95;cx.lineCap='round';cx.beginPath();cx.mo
 rect(360,900,230,55,'#8e4d4e');for(let i=0;i<6;i++)rect(373+i*39,900,12,55,'#d28b71');line(365,885,585,885,'#7d4247',10);
 for(const [ix,ob] of scenery.entries()){if(liteFx&&ix%3!==0)continue;if(ob.x<cam.x-80||ob.x>cam.x+VIEWW+80||ob.y<cam.y-80||ob.y>cam.y+VIEWH+80)continue;if(ob.t<.40){circle(ob.x,ob.y,ob.s,'#315c4c');circle(ob.x+9,ob.y-9,ob.s*.78,ob.t<.20?'#e9a4b5':'#e3c0be');circle(ob.x-12,ob.y-5,ob.s*.63,'#f7c1c6')}else if(ob.t<.68){circle(ob.x,ob.y,ob.s*.4,'#e8d99e');circle(ob.x+10,ob.y+6,ob.s*.23,'#edd5a5')}else{circle(ob.x,ob.y,ob.s*.35,'#527d5b');circle(ob.x-9,ob.y,ob.s*.35,'#4d7559')}}
 drawQuestDressing();
+// Hideable sakura hedges in world space, never changing character assets.
+for(const b of bushes){
+ if(b.x<cam.x-100||b.x>cam.x+VIEWW+100||b.y<cam.y-100||b.y>cam.y+VIEWH+100)continue;
+ if(bushArt.complete&&bushArt.naturalWidth)cx.drawImage(bushArt,b.x-59,b.y-56,118,112);
+ else{circle(b.x,b.y,53,'#316e51');circle(b.x-16,b.y-12,28,'#73b27b');
+  circle(b.x+20,b.y-17,30,'#3a8a67');}
+}
 // Laser terminals are world geometry, not character art.
 if(clues===2&&duoDefeated&&!gateCleared[2]){
  for(let i=laserChallenge.index;i<laserNodes.length;i++){
@@ -1156,7 +1271,7 @@ for(const e of foes){
  cx.save();cx.translate(e.x,e.y+bob);
  circle(0,e.size*.95,e.size*.84,'#2e465077');
  const spriteEnemy=window.Level32Sprites?.draw(cx,e.kind,
-   {state:e.telegraph>0?'attack':e.slow>0?'hurt':'walk',direction:'down'},
+   {state:e.volleyWarmup>0?'attack':e.volleyShots>0?'special':e.telegraph>0?'attack':e.slow>0?'hurt':'walk',direction:'down'},
    0,0,e.size*2.2,elapsed+(e.age||0)) || false;
  if(!spriteEnemy){
  if(e.kind==='bocht'){
@@ -1177,7 +1292,15 @@ for(const e of foes){
  if(e.kind==='boink'&&e.telegraph>0){cx.beginPath();cx.arc(0,0,e.size+12,0,TAU);cx.strokeStyle='#ffe197';cx.lineWidth=5;cx.setLineDash([6,6]);cx.stroke();cx.setLineDash([]);txt('BOINK!',0,-e.size-22,14,'center','#ffe6a7')}
  if(e.kind==='bocht'){cx.beginPath();cx.arc(0,0,e.size+5,0,TAU);cx.strokeStyle='#b4f3fa';cx.lineWidth=2;cx.stroke()}
  if(e.slow>0){cx.beginPath();cx.arc(0,0,e.size+8,0,TAU);cx.strokeStyle='#a7edff';cx.lineWidth=4;cx.stroke()}
- if(e.elite){txt('⚠ '+e.kind.toUpperCase(),0,-e.size-25,16,'center','#fff2ac')}
+ if(e.searching)txt('?',0,-e.size-49,30,'center','#fff2a3');
+ if(e.elite){
+   if(e.volleyWarmup>0){cx.save();cx.globalAlpha=Math.floor(e.volleyWarmup*16)%2?.96:.45;
+    circle(0,0,e.size+17,'#ff40578c');cx.strokeStyle='#ff5c5c';cx.lineWidth=6;
+    cx.beginPath();cx.arc(0,0,e.size+19,0,TAU);cx.stroke();cx.restore();
+    txt('RED WARNING '+e.volleyWarmup.toFixed(1)+'s',0,-e.size-35,17,'center','#fff1d3');
+   }else if(e.volleyShots>0)txt('PEW PEW PEW!',0,-e.size-34,17,'center','#fff1ac');
+   else txt('⚠ '+e.kind.toUpperCase(),0,-e.size-25,16,'center','#fff2ac');
+  }
  rect(-e.size,-e.size-11,e.size*2*clamp(e.hp/e.maxHp,0,1),4,'#d76c78');
  cx.restore();
 }
@@ -1269,6 +1392,8 @@ for(const p of players){
  if(p.inv>0&&Math.floor(elapsed*16)%2)continue;
  const moving=Math.hypot(joystickAxes[p.num].x,joystickAxes[p.num].y)>.1||
    (p.num===0?['w','a','s','d']:['arrowup','arrowdown','arrowleft','arrowright']).some(k=>keys.has(k));
+ const wiggle=winston?.shaking&&p.id==='rosie'&&p.hidden
+   ?Math.sin(elapsed*43)*13:0;
  const hop=moving?Math.sin(elapsed*15+p.num)*3:Math.sin(elapsed*2.7+p.num)*1.2;
  if(p.dash>0){cx.save();cx.globalAlpha=.36;circle(p.x-16,p.y+11,31,'#9be7ff');cx.restore();}
  circle(p.x,p.y+20,23,'#1b293a88');
@@ -1288,19 +1413,34 @@ for(const p of players){
   }
  const avatar=petImages[p.id];
  const spriteHero=window.Level32Sprites?.draw(cx,p.id,spritePose(p,moving),
-   p.x,p.y+hop,52,elapsed) || false;
+   p.x+wiggle,p.y+hop,52,elapsed) || false;
  if(!spriteHero&&avatar&&avatar.complete&&avatar.naturalWidth){
   // A readable, recognisable illustrated portrait for each actual furry friend.
   cx.save();cx.beginPath();cx.arc(p.x,p.y+hop,24,0,TAU);cx.clip();
   const scale=48/Math.min(avatar.naturalWidth,avatar.naturalHeight);
   const w=avatar.naturalWidth*scale,h=avatar.naturalHeight*scale;
-  cx.drawImage(avatar,p.x-w/2,p.y+hop-h/2,w,h);cx.restore();
+  cx.drawImage(avatar,p.x+wiggle-w/2,p.y+hop-h/2,w,h);cx.restore();
   cx.beginPath();cx.arc(p.x,p.y+hop,24,0,TAU);
   cx.strokeStyle=p.num===0?'#adf8db':'#ffc0c4';cx.lineWidth=3;cx.stroke();
  }else if(!spriteHero){circle(p.x,p.y,24,p.color);txt(p.emoji,p.x,p.y+16,37,'center')}
- txt('P'+(p.num+1),p.x,p.y-38,17,'center',p.num===0?'#a6ffe1':'#ffc7c3');
+ txt(p.hidden?'🌿 HIDDEN':'P'+(p.num+1),p.x,p.y-38,16,'center',p.hidden?'#dcffc9':p.num===0?'#a6ffe1':'#ffc7c3');
+ if(wiggle)txt('WIGGLE!',p.x+12,p.y+45,15,'center','#ffe3b5');
  // Health stays readable next to the character on phone and desktop.
  rect(p.x-28,p.y+29,56,7,'#152636');rect(p.x-27,p.y+30,54*clamp(p.hp/p.maxHp,0,1),5,p.hp/p.maxHp<.3?'#ff9995':'#9aebbb');
+}
+for(const p of players.filter(p=>p.alive&&p.hidden)){
+ const b=bushes[p.bushId];if(!b)continue;
+ cx.save();cx.globalAlpha=.86;
+ if(bushArt.complete&&bushArt.naturalWidth)cx.drawImage(bushArt,b.x-59,b.y-56,118,112);
+ else circle(b.x,b.y,49,'#3a7955cc');
+ cx.restore();txt('🌿 '+Math.floor(p.bushTime)+'s',b.x,b.y-61,15,'center','#ddffcc');
+}
+if(winston?.shaking&&!players.some(p=>p.id==='rosie')){
+ const b=bushes.find((b,i)=>players.some(p=>p.hidden&&p.bushId===i));
+ if(b){const jiggle=Math.sin(elapsed*46)*12;
+  window.Level32Sprites?.draw(cx,'rosie',{state:'hurt',direction:'down'},b.x+jiggle,b.y+9,46,elapsed);
+  txt('ROSIE · WIGGLE BOTTOM!',b.x,b.y-74,15,'center','#fff1b6');
+ }
 }
 for(const s of shots){txt(s.kind==='dragon'?'🐉':s.kind==='kong'?'🧊':'🔴',s.x,s.y+9,24,'center')}
 for(const h of hazards){
@@ -1332,6 +1472,7 @@ for(const h of hazards){
 if(boss&&boss.hp>0&&coneWindup>0){cx.save();cx.beginPath();cx.moveTo(boss.x,boss.y);cx.arc(boss.x,boss.y,275,coneAngle-.65,coneAngle+.65);cx.closePath();cx.fillStyle='#ff69735d';cx.fill();cx.strokeStyle='#ffeeb1';cx.lineWidth=5;cx.stroke();cx.restore()}
 for(const beam of beams){cx.save();cx.globalAlpha=Math.max(.1,beam.t/.28);cx.strokeStyle='#ff586a';cx.lineWidth=13;cx.shadowColor='#ff7373';cx.shadowBlur=17;cx.beginPath();cx.moveTo(beam.x1,beam.y1);cx.lineTo(beam.x2,beam.y2);cx.stroke();cx.strokeStyle='#fff2b5';cx.lineWidth=4;cx.stroke();cx.restore()}
 for(const f of fx){if(f.x<cam.x-60||f.x>cam.x+VIEWW+60||f.y<cam.y-60||f.y>cam.y+VIEWH+60)continue;txt(f.text,f.x,f.y,17,'center',f.col)}
+drawWorldBubbles();
 cx.restore();}
 function txt(t,x,y,size=20,align='left',color='#fff6de'){cx.textAlign=align;cx.font='bold '+size+'px system-ui, sans-serif';cx.fillStyle=color;if(!liteFx){cx.shadowColor='#28323b';cx.shadowBlur=3;}cx.fillText(t,x,y);cx.shadowBlur=0}
 function drawOffscreenArrows(){
@@ -1395,7 +1536,7 @@ $('start').addEventListener('click',start);$('overlay-start').addEventListener('
 });$('restart').addEventListener('click',start);$('pause').addEventListener('click',togglePause);$('mute').addEventListener('click',()=>{audioEnabled=!audioEnabled; if(audioCtx){audioEnabled?audioCtx.resume():audioCtx.suspend()} $('mute').textContent=audioEnabled?'🔊 MUSIC + SFX':'🔇 SOUND OFF'; if(audioEnabled) ensureAudio();});
 function tryDash(id){
  if(!['boss','explore'].includes(phase)||paused)return;
- const p=players[id];if(!p||!p.alive||p.dashCooldown>0)return;
+ const p=players[id];if(!p||!p.alive||p.hidden||p.dashCooldown>0)return;
  emit('DASH!',p.x,p.y-55,'#aaf5ff');p.dash=.18;p.dashCooldown=p.id==='ellie'?2.2:3.4;p.inv=Math.max(p.inv,.18);playSfx('dash');
 }
 // Device rotation is an opt-in enhancement. iOS/browser privacy restrictions can

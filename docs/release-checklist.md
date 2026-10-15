@@ -164,3 +164,12 @@ Historical checks above concerning **three guardian waves at each clue** no long
 - [x] GitHub Actions verified Daan heals Tolly at most twice, up to 5% per cast, capped at 43% HP (PR #15).
 - [ ] Owner validates Daan's appearance, boulder countdown, and green heal telegraph on physical devices.
 - [ ] Owner confirms Ellie/Winnifred upgrade fairness in an actual co-op session, and no perceived XP stall at level 10.
+
+
+## Day 7 — Bush stealth and Impossible machine-gun bursts
+
+- [ ] CI proves 0.5-second warning, both 12-banana machine-gun volleys, and cooldown after all shots.
+- [ ] CI proves 30-second secret, stealth disables attacks, mobs search with question marks and exit restores combat.
+- [ ] CI proves first/second boss-bush visits, Winston dialogue, Rosie wiggle, ten-second forced reveal.
+- [ ] CI proves all six relationship-specific co-op dialogue pairs and retains previous birthday invite/quests.
+- [ ] Owner confirms real-device attack pacing and bubble legibility; no stage overlaps or invitation regression.
