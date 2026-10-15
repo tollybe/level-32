@@ -9,7 +9,7 @@ const roster={rosie:{name:'Rosie',emoji:'🐕‍🦺',color:'#222a36',hp:130,spe
 let selected=['rosie','winnifred'],players=[],foes=[],shots=[],drops=[],fx=[],hazards=[],boss=null,phase='idle',paused=false,score=0,kills=0,level=1,xp=0,goal=35,spawnClock=0,surgeClock=33,elapsed=0,clues=0,fridgeVisible=false,fridge={x:2180,y:1440},cam={x:0,y:0},lastTime=0,raf=0,messageClock=0,attackClock=0,heldTouch={},joystickAxes=[{x:0,y:0},{x:0,y:0}],audioCtx=null,audioEnabled=true,musicTimer=null,musicStep=0,musicMode='idle',musicBar=0,musicNextBarAt=0,sloganClock=8,bossPhase=1,coneWarned=false;
 let cutsceneNext=null,sceneName=null,reviveSeconds=1.85,hudClock=0,sceneOpenedAt=0,perkOffer=null,perkReturnPhase='explore',scenePresentationToken=0,perksAwarded=0;
 let liteFx=typeof matchMedia==='function'&&matchMedia('(pointer:coarse)').matches;
-let duoActive=false,duoDefeated=false,laserUnlocked=false,beams=[],coneCooldown=6.8,coneWindup=0,coneAngle=0,bossPulseCooldown=4,bossPulseWindup=0,bananaWindup=0;
+let duoActive=false,duoDefeated=false,laserUnlocked=false,beams=[],bushEggSeen=false,bossBushVisits=0,bossBushOccupied=false,winston=null,winstonForcedReveal=0,pairBanterClock=12,worldBubbles=[],coneCooldown=6.8,coneWindup=0,coneAngle=0,bossPulseCooldown=4,bossPulseWindup=0,bananaWindup=0;
 let gate=null,gateCleared=[false,false,false],difficulty='challenge',daanActive=false,daanPulse=0,daanActionTimer=0,daanHealCooldown=0,daanHealWindup=0,daanHealsRemaining=0,daanHealFlash=0;
 const GATE_WAVES={challenge:[[3,3,2],[3,3,3],[4,3,3]],story:[[2,2,2],[2,2,2],[2,2,3]],extreme:[[5,5,5],[6,5,6],[6,7,7]]};
 const daanPortrait=new Image();daanPortrait.src='assets/daan.svg';
@@ -42,8 +42,10 @@ const scentTrail=[{x:440,y:500},{x:550,y:570},{x:660,y:620}];let scentStep=0;
 const laserNodes=[{x:1450,y:1210},{x:1555,y:1320},{x:1680,y:1435}];
 let laserChallenge={index:0,timer:0,zapCooldown:0};
 const laserSafe=()=>laserChallenge.timer%3.5>=1.55;
+const bushes=[{x:545,y:430},{x:970,y:740},{x:1445,y:1130},{x:2020,y:1520},{x:2365,y:1525}];
+const bushArt=new Image();bushArt.src='assets/sprites/bush.svg';
 const scenery=(()=>{let seed=9145;const r=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};return Array.from({length:450},()=>({x:r()*WIDTH,y:r()*HEIGHT,t:r(),s:10+r()*24}))})();
-const SCENE_ART={"clue1":"assets/scene-clue1.webp","clue2":"assets/scene-clue2.webp","clue3":"assets/scene-clue3.webp","intro":"assets/scene-intro.webp","phase2":"assets/scene-phase2.webp","phase3":"assets/scene-phase2.webp","victory":"assets/scene-victory.webp","defeat":"assets/scene-defeat.webp"};
+const SCENE_ART={"clue1":"assets/scene-clue1.webp","clue2":"assets/scene-clue2.webp","clue3":"assets/scene-clue3.webp","intro":"assets/scene-intro.webp","phase2":"assets/scene-phase2.webp","phase3":"assets/scene-phase2.webp","victory":"assets/scene-victory.webp","defeat":"assets/scene-defeat.webp","bushEgg":"assets/scene-clue1.webp"};
 // Decode art before revealing the overlay: avoid one-frame stale backgrounds.
 const sceneArtCache=Object.fromEntries(Object.entries(SCENE_ART).map(([key,url])=>{
  const img=new Image();img.src=url;return [key,img];
@@ -76,7 +78,8 @@ const SCENE_LINES={
  phase2:[['tolly','I HAVE BEEN TOO LENIENT.'],['ellie','That sounds like a cone-related sentence.'],['tolly','CONE OF SHAME: DEPLOYED.'],['rosie','I suddenly regret all of my life choices.']],
  phase3:[['tolly','YOU HAVE TRIGGERED MY FINAL FORM.'],['winnifred','A third course? How unusual.'],['tolly','THERE SHALL BE NO BANANA.']],
  victory:[['tolly','Fine. You may have the banana and cheese tax.'],['rosie','Excellent. Now about the birthday...'],['winnifred','The REAL quest is an invitation. How unusually civilised.']],
- defeat:[['tolly','Mwahahaha! The fridge remains mine!'],['ellie','Okay, but can we still go to the party?'],['tolly','...Obviously. This is an invitation, not an exam.']]
+ defeat:[['tolly','Mwahahaha! The fridge remains mine!'],['ellie','Okay, but can we still go to the party?'],['tolly','...Obviously. This is an invitation, not an exam.']],
+ bushEgg:[['rosie','I have been in this bush for THIRTY SECONDS.'],['millie','IS THE BUSH A BALL?!'],['winnifred','A most undignified hiding place.'],['ellie','Please come out. I have a very important lick.']]
 };
 const CLUE_SCENES=[
  {kind:'clue1',title:'CLUE 1 · THE MYSTERIOUS PAWPRINTS',dialogue:'* A trail of golden pawprints snakes through the garden. Something smells suspiciously delicious.'},
@@ -442,6 +445,7 @@ function continueScene(){
  $('scene-dialogues').hidden=true;
  $('pause').disabled=false;$('pause').textContent='Ⅱ PAWS';
  if(kind==='intro'){
+   bossBushVisits=0;bossBushOccupied=false;winston=null;winstonForcedReveal=0;
    const hp=(players.length===2?2040:1450)*(difficulty==='story'?.67:difficulty==='extreme'?EXTREME.bossHp:1);
    boss={x:fridge.x+45,y:fridge.y-80,hp,maxHp:hp,size:49,speed:difficulty==='story'?96:difficulty==='extreme'?137*EXTREME.bossSpeed:145,attack:1.1,hitFlash:0,rage:false};
    hazards=[];foes=foes.slice(-5);bossPhase=1;coneWarned=false;coneCooldown=6.6;coneWindup=0;bossPulseCooldown=1.65;bossPulseWindup=0;bananaWindup=0;daanActive=false;daanPulse=4;daanActionTimer=0;daanHealCooldown=0;daanHealWindup=0;daanHealsRemaining=0;daanHealFlash=0;
@@ -480,10 +484,11 @@ const ambientBanter=[
  'MILLIE: Did someone say throw? ...AAAAAH, IT MOVED!'
 ];
 function say(t,duration=3){$('game-message').textContent=t;messageClock=duration}
-function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5,spriteFacing:'down',spriteMoving:false,spriteAttackAt:-1,perkGlow:0,perkRarity:''}}
+function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5,spriteFacing:'down',spriteMoving:false,spriteAttackAt:-1,perkGlow:0,perkRarity:'',hidden:false,bushTime:0,bushId:-1}}
 function start(){
  ++scenePresentationToken;perkOffer=null;perksAwarded=0;$('perk-panel').hidden=true;
  $('scene-control-help').hidden=true;$('ending-invite').hidden=true;cancelAnimationFrame(raf);
+ bushEggSeen=false;bossBushVisits=0;bossBushOccupied=false;winston=null;winstonForcedReveal=0;pairBanterClock=12;worldBubbles=[];
  joystickAxes.forEach(a=>{a.x=0;a.y=0});document.querySelectorAll('.joystick-knob').forEach(k=>k.style.transform='translate(0px,0px)');
  players=[player(selected[0],0)];if($('coop').checked)players.push(player(selected[1],1));
  const startHealth=DIFFICULTY_BALANCE[$('difficulty').value].startingHealth;
@@ -514,8 +519,8 @@ function spawnBleepling(){
   speed:c.speed+Math.min(31,elapsed*.14),attack:rnd(.3,.8),size:c.size,kind,damage:Math.ceil((c.damage+Math.floor(tier*.75))*difficultyBalance().mobDamage),age:0,telegraph:0,charge:-1,trailTimer:0,slow:0});
 }
 function emit(text,x,y,col='#ffe1aa'){if(fx.length<(liteFx?45:90))fx.push({text,x,y,col,t:1.1})}
-function nearest(origin,arr,r=Infinity){let item=null,bd=r;for(const o of arr){if(o.hp<=0||o.alive===false)continue;const d=dist(origin,o);if(d<bd){bd=d;item=o}}return item}
-function fire(p){const target=nearest(p,[...foes,...(boss?[boss]:[])],p.range);if(!target)return;p.spriteAttackAt=elapsed;if(p.weapon==='sausage'){for(const e of [...foes,...(boss?[boss]:[])])if(e.hp>0&&dist(p,e)<p.range){damage(e,p.damage+level*2,p);emit('⚔',e.x,e.y,'#fff0a7')}return}const angle=Math.atan2(target.y-p.y,target.x-p.x);shots.push({x:p.x,y:p.y,vx:Math.cos(angle)*410,vy:Math.sin(angle)*410,damage:p.damage+level*2,ttl:1.1,owner:p.num,kind:p.weapon,pierce:p.weapon==='dragon'?1:0,hitTargets:new Set()})}
+function nearest(origin,arr,r=Infinity){let item=null,bd=r;for(const o of arr){if(o.hp<=0||o.alive===false||o.hidden)continue;const d=dist(origin,o);if(d<bd){bd=d;item=o}}return item}
+function fire(p){if(p.hidden)return;const target=nearest(p,[...foes,...(boss?[boss]:[])],p.range);if(!target)return;p.spriteAttackAt=elapsed;if(p.weapon==='sausage'){for(const e of [...foes,...(boss?[boss]:[])])if(e.hp>0&&dist(p,e)<p.range){damage(e,p.damage+level*2,p);emit('⚔',e.x,e.y,'#fff0a7')}return}const angle=Math.atan2(target.y-p.y,target.x-p.x);shots.push({x:p.x,y:p.y,vx:Math.cos(angle)*410,vy:Math.sin(angle)*410,damage:p.damage+level*2,ttl:1.1,owner:p.num,kind:p.weapon,pierce:p.weapon==='dragon'?1:0,hitTargets:new Set()})}
 // XP remains standard for the first five levels in all difficulty modes.
 function gainXP(amount){
  xp+=amount*(level<=5?1:difficulty==='story'?1:difficulty==='extreme'?.60:.78);
@@ -633,7 +638,7 @@ function movePlayers(dt){
 }
 // Mission Two foreshadowing: the legendary laser pointer unlocks after clue three.
 function laserAttack(p){
- if(!laserUnlocked||!p.alive||phase!=='explore'&&phase!=='boss')return;
+ if(!laserUnlocked||!p.alive||p.hidden||phase!=='explore'&&phase!=='boss')return;
  const pool=[...foes,...(boss&&boss.hp>0?[boss]:[])].filter(e=>e.hp>0&&dist(p,e)<310);
  if(!pool.length)return;
  const target=nearest(p,pool,310);if(!target)return;
@@ -655,7 +660,7 @@ function updateRevives(dt){
  if(players.length<2)return;
  for(const down of players.filter(p=>!p.alive)){
   const helper=players.find(p=>p.alive && dist(p,down)<55);
-  if(!helper){down.reviveProgress=Math.max(0,(down.reviveProgress||0)-dt*.7);continue}
+  if(!helper||helper.hidden){down.reviveProgress=Math.max(0,(down.reviveProgress||0)-dt*.7);continue}
   down.reviveProgress=Math.min(reviveSeconds,(down.reviveProgress||0)+dt);
   if(down.reviveProgress<reviveSeconds)continue;
   down.alive=true;down.hp=Math.ceil(down.maxHp*.42);down.inv=2.25;
@@ -667,7 +672,7 @@ function updateRevives(dt){
 }
 function updateEllieAuras(dt){
  for(const ellie of players){
-  if(ellie.id!=='ellie'||!ellie.alive) continue;
+  if(ellie.id!=='ellie'||!ellie.alive||ellie.hidden) continue;
   ellie.hp=Math.min(ellie.maxHp,ellie.hp+ellie.selfRegen*dt); // self-sustain between pulses
   ellie.healFlash=Math.max(0,ellie.healFlash-dt);
   ellie.healClock-=dt;
