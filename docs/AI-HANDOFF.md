@@ -1,3 +1,5 @@
+> **Day 8 WIP:** Snack Power is a slim per-pet bar directly under the HP bar, charging fast from excess chocolate and very slowly from mob hits or Ellie healing. Next eligible action triggers that pet's signature bonus. Sakura Breeze XP magnet is locked until exactly kill 100 (guaranteed at the milestone), with rare subsequent spawns. No user-visible mechanics explainer or new controls. Review docs/iteration-7.md; automated CI and phone review pending.
+
 > **Day 7C merged into main via PR #18 (green CI):** Tree trunk collision with see-through canopies (players clearer than mobs), Millie's separate double dash charges, and a visible shared XP bar. See docs/iteration-7.md. Mobile owner review remains pending.
 
 > **Day 7B merged to `main` (PR #17, green CI):** PR follow-up adds Tolly's names for all pets, a Rosie/Daan text duet, independent Boink/Bocht bursts with random 1–4s post-recovery, strict no-fire bush stealth, first-hit mob-only crit after leaving cover, and reduced-damage banana 'OW!' knockback through foliage. See `docs/iteration-7.md`; Full Chromium regression passed; owner real-device approval still pending.

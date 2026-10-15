@@ -199,3 +199,11 @@ Historical checks above concerning **three guardian waves at each clue** no long
 - [ ] Host confirms party schedule, co-op chat pacing, and mobile UX before public release.
 
 - [ ] CI: **Add both missions to calendar** downloads the same two-event ICS from both the game and the invitation, with updated Mission One hours and unchanged laser-tag time.
+
+## Day 8 — Snack Power & Sakura Breeze
+
+- [ ] CI: overflowing chocolate fills the small below-HP meter; visible linear fill verified at 0/50/100 and healing is preserved.
+- [ ] CI: hits and actual teammate healing grow charge slowly with the hit-rate limit.
+- [ ] CI: all four role-specific full-charge benefits trigger correctly without manual inventory or extra buttons.
+- [ ] CI: Sakura Breeze cannot appear before 100 kills, is guaranteed at 100, rare afterward, and attracts stars only.
+- [ ] Owner: physical phone test for meter visibility, magnet timing, effect pacing, and fair co-op behavior.

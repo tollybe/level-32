@@ -657,7 +657,58 @@ const ambientBanter=[
  'MILLIE: Did someone say throw? ...AAAAAH, IT MOVED!'
 ];
 function say(t,duration=3){$('game-message').textContent=t;messageClock=duration}
-function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,dashCharges:id==='millie'?2:1,dashRecharge:[],healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5,spriteFacing:'down',spriteMoving:false,spriteAttackAt:-1,perkGlow:0,perkRarity:'',hidden:false,bushTime:0,bushId:-1,ambushReady:0}}
+// Snack Power: spare chocolate charges fastest; hits and real healing charge
+// slowly. Full meters automatically empower one action without extra controls.
+const SNACK_MAX=100;
+function chargeSnack(p,amount){
+ if(!p?.alive||!(amount>0))return 0;
+ const prior=p.snackCharge||0;
+ p.snackCharge=Math.min(SNACK_MAX,prior+amount);
+ if(prior<SNACK_MAX&&p.snackCharge===SNACK_MAX){
+  emit('🍫 '+p.name.toUpperCase()+' · SNACK READY!',p.x,p.y-58,'#ffe9ad');
+  playSfx('heal');
+ }
+ return p.snackCharge-prior;
+}
+function useSnack(p){
+ if(!p||p.snackCharge<SNACK_MAX)return false;
+ p.snackCharge=0;
+ const names={rosie:'DRAGON CHORUS!',millie:'ZOOM-BALL!',
+  winnifred:'ROYAL SAUSAGE SWIPE!',ellie:'BIG HEALING LICKS!'};
+ emit('✨ '+names[p.id],p.x,p.y-54,'#ffe3a5');
+ p.perkGlow=Math.max(p.perkGlow,.85);
+ playSfx('special');return true;
+}
+function collectDrop(p,d){
+ if(d.kind==='xp'){
+  gainXP(12);score+=5;emit('+XP',p.x,p.y,'#a9f4d1');
+ }else if(d.kind==='magnet'){
+  p.magnetTime=Math.max(p.magnetTime,4.2);
+  emit('🌸 SAKURA BREEZE!',p.x,p.y-43,'#ffe7d3');playSfx('special');
+ }else if(d.kind==='heal'){
+  const healed=Math.max(0,Math.min(21,p.maxHp-p.hp)),excess=21-healed;
+  p.hp+=healed;
+  if(excess>0)chargeSnack(p,excess*2);
+  emit(excess>0?'🍫 +'+healed+' HP · +'+(excess*2)+' SNACK':'+21 HP',
+   p.x,p.y,'#a9ffc9');playSfx('heal');
+ }
+}
+function updateSnackMagnet(dt){
+ const active=players.filter(p=>p.alive&&!p.hidden&&p.magnetTime>0);
+ if(!active.length)return;
+ for(let i=drops.length-1;i>=0;i--){
+  const d=drops[i];if(d.kind!=='xp')continue;
+  const p=active.reduce((best,p)=>!best||dist(p,d)<dist(best,d)?p:best,null);
+  const len=dist(p,d);if(len>660)continue;
+  const step=Math.min(len,Math.max(200,len*2.2)*dt);
+  if(len>0){d.x+=(p.x-d.x)/len*step;d.y+=(p.y-d.y)/len*step}
+  if(dist(p,d)<31){
+   collectDrop(p,d);drops.splice(i,1);
+   if(phase==='upgrade')return;
+  }
+ }
+}
+function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,dashCharges:id==='millie'?2:1,dashRecharge:[],healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5,spriteFacing:'down',spriteMoving:false,spriteAttackAt:-1,perkGlow:0,perkRarity:'',hidden:false,bushTime:0,bushId:-1,ambushReady:0,snackCharge:0,snackNextHitAt:0,magnetTime:0}}
 function start(){
  ++scenePresentationToken;perkOffer=null;perksAwarded=0;$('perk-panel').hidden=true;
  $('scene-control-help').hidden=true;$('ending-invite').hidden=true;cancelAnimationFrame(raf);
@@ -694,7 +745,30 @@ function spawnBleepling(){
 }
 function emit(text,x,y,col='#ffe1aa'){if(fx.length<(liteFx?45:90))fx.push({text,x,y,col,t:1.1})}
 function nearest(origin,arr,r=Infinity){let item=null,bd=r;for(const o of arr){if(o.hp<=0||o.alive===false||o.hidden)continue;const d=dist(origin,o);if(d<bd){bd=d;item=o}}return item}
-function fire(p){if(p.hidden)return;const target=nearest(p,[...foes,...(boss?[boss]:[])],p.range);if(!target)return;p.spriteAttackAt=elapsed;if(p.weapon==='sausage'){for(const e of [...foes,...(boss?[boss]:[])])if(e.hp>0&&dist(p,e)<p.range){damage(e,p.damage+level*2,p);emit('⚔',e.x,e.y,'#fff0a7')}return}const angle=Math.atan2(target.y-p.y,target.x-p.x);shots.push({x:p.x,y:p.y,vx:Math.cos(angle)*410,vy:Math.sin(angle)*410,damage:p.damage+level*2,ttl:1.1,owner:p.num,kind:p.weapon,pierce:p.weapon==='dragon'?1:0,hitTargets:new Set()})}
+function fire(p){
+ if(p.hidden)return;
+ const range=p.weapon==='sausage'&&p.snackCharge>=SNACK_MAX?p.range+20:p.range;
+ const target=nearest(p,[...foes,...(boss?[boss]:[])],range);if(!target)return;
+ p.spriteAttackAt=elapsed;
+ if(p.weapon==='sausage'){
+  const charged=useSnack(p),hitRange=charged?p.range+20:p.range;
+  for(const e of [...foes,...(boss?[boss]:[])])
+   if(e.hp>0&&dist(p,e)<hitRange){
+    damage(e,(p.damage+level*2)*(charged?1.35:1),p);
+    emit(charged?'👑 ROYAL SWIPE!':'⚔',e.x,e.y,'#fff0a7');
+   }
+  return;
+ }
+ const charged=p.id!=='ellie'&&useSnack(p);
+ if(charged&&p.id==='millie'&&p.dashCharges<2){
+  p.dashCharges++;if(p.dashRecharge.length)p.dashRecharge.shift();
+ }
+ const mult=charged?(p.id==='rosie'?1.4:p.id==='millie'?1.5:1):1;
+ const angle=Math.atan2(target.y-p.y,target.x-p.x);
+ shots.push({x:p.x,y:p.y,vx:Math.cos(angle)*410,vy:Math.sin(angle)*410,
+  damage:(p.damage+level*2)*mult,ttl:1.1,owner:p.num,kind:p.weapon,
+  pierce:p.weapon==='dragon'?1:0,hitTargets:new Set()});
+}
 // XP remains standard for the first five levels in all difficulty modes.
 function gainXP(amount){
  xp+=amount*(level<=5?1:difficulty==='story'?1:difficulty==='extreme'?.60:.78);
@@ -757,6 +831,9 @@ function damage(enemy,amount,p){
   playSfx('special');
  }
  enemy.hp-=amount;
+ if(p?.alive&&enemy!==boss&&amount>0&&elapsed>=(p.snackNextHitAt||0)){
+  chargeSnack(p,.75);p.snackNextHitAt=elapsed+.35;
+ }
  if(enemy===boss){boss.hitFlash=.19;
    if(!boss.rage&&boss.hp>0&&boss.hp<=boss.maxHp*.33&&coneWarned){
    boss.rage=true;bossPhase=3;emit('FINAL FRIDGE FRENZY!',boss.x,boss.y-100,'#ffe0aa');
@@ -778,8 +855,23 @@ function damage(enemy,amount,p){
   }
   if(Math.random()<.17&&drops.length<35)drops.push({x:enemy.x,y:enemy.y,kind:'xp',r:13});
   if(Math.random()<.052&&drops.length<35)drops.push({x:enemy.x,y:enemy.y,kind:'heal',r:15});
+  maybeDropMagnet(enemy);
 
  }
+}
+// Sakura Breeze is a mid-run milestone. It NEVER drops before 100 kills.
+// Kill #100 guarantees the first blossom; later drops are rare and do not
+// duplicate an uncollected blossom. Keep room if the drop list is saturated.
+function maybeDropMagnet(enemy){
+ if(kills<100||drops.some(d=>d.kind==='magnet'))return false;
+ if(kills!==100&&Math.random()>=.018)return false;
+ if(drops.length>=35){
+  const index=drops.findIndex(d=>d.kind==='xp');
+  drops.splice(index<0?0:index,1);
+ }
+ drops.push({x:enemy.x,y:enemy.y,kind:'magnet',r:18});
+ if(kills===100)say('🌸 100 BLEEPLINGS BOINKED! A SAKURA BREEZE AWAKENS!',3.8);
+ return true;
 }
 function movePlayers(dt){
  players.forEach(p=>{
@@ -808,18 +900,21 @@ function movePlayers(dt){
   }
   p.perkGlow=Math.max(0,(p.perkGlow||0)-dt);p.inv=Math.max(0,p.inv-dt);p.dash=Math.max(0,p.dash-dt);
   p.dashCooldown=Math.max(0,p.dashCooldown-dt);
+  p.magnetTime=Math.max(0,p.magnetTime-dt);
   if(p.id==='millie'){
    p.dashRecharge=p.dashRecharge.map(t=>t-dt);
    for(let i=p.dashRecharge.length-1;i>=0;i--)if(p.dashRecharge[i]<=0){
     p.dashRecharge.splice(i,1);p.dashCharges=Math.min(2,p.dashCharges+1);
    }
   }
-  for(let i=drops.length-1;i>=0;i--){let d=drops[i];if(dist(p,d)<29){
-    if(d.kind==='xp'){gainXP(12);score+=5;emit('+XP',p.x,p.y,'#a9f4d1')}
-    else{p.hp=Math.min(p.maxHp,p.hp+21);emit('+21 HP',p.x,p.y,'#a9ffc9');playSfx('heal')}
-    drops.splice(i,1);
-  }}
+  for(let i=drops.length-1;i>=0;i--){
+   const d=drops[i];if(dist(p,d)<29){
+    collectDrop(p,d);drops.splice(i,1);
+    if(phase==='upgrade')break;
+   }
+  }
  });
+ if(phase!=='upgrade')updateSnackMagnet(dt);
 }
 // Mission Two foreshadowing: the legendary laser pointer unlocks after clue three.
 function laserAttack(p){
@@ -864,16 +959,20 @@ function updateEllieAuras(dt){
   if(ellie.healClock>0) continue;
   ellie.healClock+=ellie.healPulse;
   ellie.healFlash=.68;
-  let didHeal=false;
-  for(const ally of players){
-   if(!ally.alive||dist(ellie,ally)>ellie.auraRadius) continue;
-   const amount=Math.min(ally.maxHp-ally.hp,ally===ellie?13:10);
-   if(amount<=0) continue;
-   ally.hp=Math.min(ally.maxHp,ally.hp+amount);
-   emit('💚 +'+Math.ceil(amount)+' HP',ally.x,ally.y-26,'#9ef7ce');
+  const targets=players.filter(ally=>ally.alive&&dist(ellie,ally)<=ellie.auraRadius);
+  const powered=targets.some(ally=>ally.hp<ally.maxHp)&&
+   ellie.snackCharge>=SNACK_MAX&&useSnack(ellie);
+  let didHeal=false,healedOther=0;
+  for(const ally of targets){
+   const amount=Math.min(ally.maxHp-ally.hp,(ally===ellie?13:10)+(powered?12:0));
+   if(amount<=0)continue;
+   ally.hp+=amount;
+   if(ally!==ellie)healedOther+=amount;
+   emit((powered?'💖':'💚')+' +'+Math.ceil(amount)+' HP',ally.x,ally.y-26,'#9ef7ce');
    didHeal=true;
   }
-  if(didHeal) playSfx('heal');
+  if(healedOther>0)chargeSnack(ellie,healedOther*.45);
+  if(didHeal)playSfx('heal');
  }
 }
 // Swept segment-to-circle collisions prevent frame skips on mobile.
@@ -1509,6 +1608,11 @@ function syncHud(){
  const wardProgress=gate?'<div class="missionline">⚔ SCROLL '+(gate.index+1)+' · WAVE '+(gate.wave+1)+'/3 · '+foes.filter(e=>e.guardian&&e.hp>0).length+' guardians remain</div>':'';
  $('missions').innerHTML=wardProgress+'<div class="missionline '+(clues>=1?'done':'')+'">'+(clues>=1?'✓':'○')+' Find the first scroll</div><div class="missionline '+(clues>=2?'done':'')+'">'+(clues>=2?'✓':'○')+' Discover the sausage clue</div><div class="missionline '+(clues>=3?'done':'')+'">'+(clues>=3?'✓':'○')+' Reveal the fridge shrine</div><div class="missionline '+(phase==='boss'||phase==='ended'?'done':'')+'">'+(phase==='boss'||phase==='ended'?'✓':'○')+' Find Tolly</div><div class="missionline '+(phase==='ended'&&boss&&boss.hp<=0?'done':'')+'">'+(phase==='ended'&&boss&&boss.hp<=0?'✓':'○')+' Free the tasty treats & reveal Mission Two</div>';$('scoreline').textContent='Score: '+score+' · TEAM LV '+level+' · XP '+Math.floor(xp)+'/'+goal+' · NEXT PERK: '+(players[perksAwarded%players.length]?.name||'—');$('timerline').textContent='Time: '+Math.floor(elapsed/60)+':'+String(Math.floor(elapsed%60)).padStart(2,'0')+' · Snacklings boinked: '+kills;$('bestline').textContent='Personal best: '+(best||'—')}
 function rect(x,y,w,h,col){cx.fillStyle=col;cx.fillRect(x,y,w,h)}function circle(x,y,r,col){cx.fillStyle=col;cx.beginPath();cx.arc(x,y,r,0,TAU);cx.fill()}function line(x1,y1,x2,y2,col,width=2){cx.strokeStyle=col;cx.lineWidth=width;cx.beginPath();cx.moveTo(x1,y1);cx.lineTo(x2,y2);cx.stroke()}
+function snackMeterGeometry(p){
+ return {x:p.x-27,y:p.y+39,
+  width:54*clamp(p.snackCharge/SNACK_MAX,0,1),maxWidth:54,
+  hpBarY:p.y+30};
+}
 function drawQuestDressing(){
  // World-space illustration primitives: no changes to canonical character artwork.
  for(const [i,spot] of clueSpots.entries()){
@@ -1573,7 +1677,12 @@ rect(fridge.x-55,fridge.y-35,120,95,'#a37772');rect(fridge.x-48,fridge.y-95,100,
 if(phase==='explore'&&clues<3&&!duoActive&&(clues!==2||duoDefeated)){const s=clueSpots[clues];const glow=1+0.16*Math.sin(elapsed*4);circle(s.x,s.y,35*glow,'#ffdf7d49');circle(s.x,s.y,20,'#fff0b8');txt('📜',s.x,s.y+12,28,'center')}
 if(clues>=3){txt('❄️',fridge.x,fridge.y-103,36,'center');circle(fridge.x,fridge.y-140,12,'#f7e6a8')}
 // items
-for(const d of drops){txt(d.kind==='xp'?'✨':'🍫',d.x,d.y+8,22,'center')}
+for(const d of drops){
+ const icon=d.kind==='xp'?'✨':d.kind==='heal'?'🍫':'🌸';
+ if(d.kind==='magnet'){cx.save();cx.globalAlpha=.3+.12*Math.sin(elapsed*5);
+  circle(d.x,d.y,24,'#ffd0e8');cx.restore()}
+ txt(icon,d.x,d.y+8,d.kind==='magnet'?27:22,'center');
+}
 // The Bleepling Menace: original pastel silhouettes, easily distinguishable at game speed.
 for(const e of foes){
  if(e.x<cam.x-100||e.x>cam.x+VIEWW+100||e.y<cam.y-100||e.y>cam.y+VIEWH+100)continue;
@@ -1736,7 +1845,19 @@ for(const p of players){
  txt(p.hidden?'🌿 HIDDEN':'P'+(p.num+1),p.x,p.y-38,16,'center',p.hidden?'#dcffc9':p.num===0?'#a6ffe1':'#ffc7c3');
  if(wiggle)txt('WIGGLE!',p.x+12,p.y+45,15,'center','#ffe3b5');
  // Health stays readable next to the character on phone and desktop.
- rect(p.x-28,p.y+29,56,7,'#152636');rect(p.x-27,p.y+30,54*clamp(p.hp/p.maxHp,0,1),5,p.hp/p.maxHp<.3?'#ff9995':'#9aebbb');
+ rect(p.x-28,p.y+29,56,7,'#152636');
+ rect(p.x-27,p.y+30,54*clamp(p.hp/p.maxHp,0,1),5,p.hp/p.maxHp<.3?'#ff9995':'#9aebbb');
+ // A second, unobtrusive bar grows immediately beneath this pet's HP bar.
+ const snackBar=snackMeterGeometry(p);
+ rect(snackBar.x-1,snackBar.y-1,snackBar.maxWidth+2,5,'#292c40');
+ rect(snackBar.x,snackBar.y,snackBar.width,3,
+  p.snackCharge>=SNACK_MAX?'#fff0aa':'#eabb82');
+ if(p.snackCharge>=SNACK_MAX)txt('🍫 READY',p.x,p.y-55,13,'center','#ffe8ad');
+ if(p.magnetTime>0){
+  cx.save();cx.strokeStyle='#f6cada';cx.globalAlpha=.45+.22*Math.sin(elapsed*9);
+  cx.lineWidth=3;cx.beginPath();cx.arc(p.x,p.y,33,0,TAU);cx.stroke();cx.restore();
+  if(!liteFx)txt('🌸 '+Math.ceil(p.magnetTime)+'s',p.x,p.y+61,13,'center','#ffdfec');
+ }
 }
 for(const p of players.filter(p=>p.alive&&p.hidden)){
  const b=bushes[p.bushId];if(!b)continue;
