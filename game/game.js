@@ -80,18 +80,22 @@ function generateGarden(){
   size:7+random()*8,phase:random()*TAU
  });
 }
+function grassLean(g,squad=players){
+ let part=0;
+ for(const p of squad){
+  if(!p.alive||!p.spriteMoving)continue;
+  const d=dist(p,g);
+  if(d<60)part+=(g.x>=p.x?1:-1)*(1-d/60)*13;
+ }
+ return part;
+}
 function drawGrassMovement(){
  const calm=matchMedia('(prefers-reduced-motion: reduce)').matches;
  for(let i=0;i<grassTufts.length;i++){
   if(liteFx&&i%3!==0)continue;
   const g=grassTufts[i];
   if(g.x<cam.x-40||g.x>cam.x+VIEWW+40||g.y<cam.y-40||g.y>cam.y+VIEWH+40)continue;
-  let part=0;
-  for(const p of players){
-   if(!p.alive||!p.spriteMoving)continue;
-   const d=dist(p,g);
-   if(d<60)part+=(g.x>=p.x?1:-1)*(1-d/60)*13;
-  }
+  const part=grassLean(g);
   const breeze=calm?0:Math.sin(elapsed*1.65+g.phase)*2;
   cx.save();cx.strokeStyle=i%3===0?'#a1c69a':'#568d66';cx.lineWidth=2;cx.lineCap='round';
   for(let k=-1;k<=1;k++){
