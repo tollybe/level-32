@@ -1,4 +1,4 @@
-> **Day 7C in test:** Tree trunk collision with see-through canopies (players clearer than mobs), Millie's separate double dash charges, and a visible shared XP bar. See docs/iteration-7.md. Still pending CI and mobile review.
+> **Day 7C merged into main via PR #18 (green CI):** Tree trunk collision with see-through canopies (players clearer than mobs), Millie's separate double dash charges, and a visible shared XP bar. See docs/iteration-7.md. Mobile owner review remains pending.
 
 > **Day 7B merged to `main` (PR #17, green CI):** PR follow-up adds Tolly's names for all pets, a Rosie/Daan text duet, independent Boink/Bocht bursts with random 1–4s post-recovery, strict no-fire bush stealth, first-hit mob-only crit after leaving cover, and reduced-damage banana 'OW!' knockback through foliage. See `docs/iteration-7.md`; Full Chromium regression passed; owner real-device approval still pending.
 
