@@ -359,7 +359,7 @@ const ambientBanter=[
  'MILLIE: Did someone say throw? ...AAAAAH, IT MOVED!'
 ];
 function say(t,duration=3){$('game-message').textContent=t;messageClock=duration}
-function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5}}
+function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5,spriteFacing:'down',spriteMoving:false,spriteAttackAt:-1}}
 function start(){
  $('scene-control-help').hidden=true;$('ending-invite').hidden=true;cancelAnimationFrame(raf);
  joystickAxes.forEach(a=>{a.x=0;a.y=0});document.querySelectorAll('.joystick-knob').forEach(k=>k.style.transform='translate(0px,0px)');
@@ -391,7 +391,7 @@ function spawnBleepling(){
 }
 function emit(text,x,y,col='#ffe1aa'){if(fx.length<(liteFx?45:90))fx.push({text,x,y,col,t:1.1})}
 function nearest(origin,arr,r=Infinity){let item=null,bd=r;for(const o of arr){if(o.hp<=0||o.alive===false)continue;const d=dist(origin,o);if(d<bd){bd=d;item=o}}return item}
-function fire(p){const target=nearest(p,[...foes,...(boss?[boss]:[])],p.range);if(!target)return;if(p.weapon==='sausage'){for(const e of [...foes,...(boss?[boss]:[])])if(e.hp>0&&dist(p,e)<p.range){damage(e,p.damage+level*2,p);emit('⚔',e.x,e.y,'#fff0a7')}return}const angle=Math.atan2(target.y-p.y,target.x-p.x);shots.push({x:p.x,y:p.y,vx:Math.cos(angle)*410,vy:Math.sin(angle)*410,damage:p.damage+level*2,ttl:1.1,owner:p.num,kind:p.weapon,pierce:p.weapon==='dragon'?1:0,hitTargets:new Set()})}
+function fire(p){const target=nearest(p,[...foes,...(boss?[boss]:[])],p.range);if(!target)return;p.spriteAttackAt=elapsed;if(p.weapon==='sausage'){for(const e of [...foes,...(boss?[boss]:[])])if(e.hp>0&&dist(p,e)<p.range){damage(e,p.damage+level*2,p);emit('⚔',e.x,e.y,'#fff0a7')}return}const angle=Math.atan2(target.y-p.y,target.x-p.x);shots.push({x:p.x,y:p.y,vx:Math.cos(angle)*410,vy:Math.sin(angle)*410,damage:p.damage+level*2,ttl:1.1,owner:p.num,kind:p.weapon,pierce:p.weapon==='dragon'?1:0,hitTargets:new Set()})}
 function damage(enemy,amount,p){
  if(phase==='ended'||phase==='cutscene'||enemy.hp<=0)return;
  enemy.hp-=amount;
@@ -427,6 +427,10 @@ function movePlayers(dt){
   let k=p.num===0?['a','d','w','s']:['arrowleft','arrowright','arrowup','arrowdown'];
   let dx=Number(keys.has(k[1]))-Number(keys.has(k[0])),dy=Number(keys.has(k[3]))-Number(keys.has(k[2]));
   if(Math.hypot(joystickAxes[p.num].x,joystickAxes[p.num].y)>.08){dx=joystickAxes[p.num].x;dy=joystickAxes[p.num].y;}
+   // Presentation-only facing: never affect movement, combat, or hitboxes.
+   p.spriteMoving=Math.hypot(dx,dy)>.08;
+   if(p.spriteMoving)p.spriteFacing=Math.abs(dx)>Math.abs(dy)
+     ?(dx>0?'right':'left'):(dy>0?'down':'up');
   // Keyboard diagonal is normalized, but a partially tilted thumbstick stays
   // proportional instead of snapping to maximum running speed.
   let l=Math.max(1,Math.hypot(dx,dy));
@@ -844,6 +848,13 @@ function drawQuestDressing(){
  const f=fridge;if(f.x>=cam.x-250&&f.x<=cam.x+VIEWW+250&&f.y>=cam.y-250&&f.y<=cam.y+VIEWH+250){txt('NO BANANA',f.x,f.y-205,19,'center','#fff4ba');
  for(const a of [-1,1]){txt('🏮',f.x+a*139,f.y-52,39,'center');txt('🎀',f.x+a*112,f.y+68,24,'center')}}
 }
+function spritePose(p,moving){
+ const state=!p.alive?'knockout':p.dash>0?'dash':
+   p.healFlash>0?'special':p.inv>.05?'hurt':
+   p.spriteAttackAt>=0&&elapsed-p.spriteAttackAt<.18?'attack':
+   moving?'walk':'idle';
+ return {state,direction:p.spriteFacing||'down'};
+}
 function world(){rect(0,0,VIEWW,VIEWH,'#69816d');cx.save();cx.translate(-cam.x,-cam.y);
 // tiled moss and Japanese garden paths
 for(let x=Math.max(0,Math.floor(cam.x/150)*150);x<Math.min(WIDTH,cam.x+VIEWW+150);x+=150)for(let y=Math.max(0,Math.floor(cam.y/150)*150);y<Math.min(HEIGHT,cam.y+VIEWH+150);y+=150){rect(x,y,149,149,(Math.floor(x/150)+Math.floor(y/150))%2?'#78917a':'#718b72');circle(x+35,y+58,20,'#7d987c')}
@@ -921,12 +932,16 @@ if(boss&&boss.hp>0){
  circle(boss.x,boss.y+23,57,'#402f3a99');
  circle(boss.x,boss.y+wobble,52,boss.hitFlash>0?'#fff0d1':'#e4b9bd');
  const portrait=$('boss-card').querySelector('img');
- if(portrait.complete&&portrait.naturalWidth){
+ const spriteBoss=window.Level32Sprites?.draw(cx,'tolly',
+   {state:boss.hitFlash>0?'hurt':boss.rage?'special':
+     bossPulseWindup>0||bananaWindup>0||coneWindup>0?'attack':'idle',
+    direction:'down'},boss.x,boss.y+wobble,96,elapsed) || false;
+ if(!spriteBoss&&portrait.complete&&portrait.naturalWidth){
    const crop=Math.min(portrait.naturalWidth,portrait.naturalHeight);
    cx.save();cx.translate(boss.x,boss.y+wobble);cx.rotate(Math.sin(elapsed*3)*.055);
    cx.beginPath();cx.arc(0,0,46,0,TAU);cx.clip();
    cx.drawImage(portrait,(portrait.naturalWidth-crop)/2,(portrait.naturalHeight-crop)/2,crop,crop,-48,-48,96,96);cx.restore();
- }else txt('🧑',boss.x,boss.y+21,52,'center');
+ }else if(!spriteBoss)txt('🧑',boss.x,boss.y+21,52,'center');
  cx.save();cx.strokeStyle=boss.hitFlash>0?'#fff2ca':boss.rage?'#ff6886':bossPhase===2?'#ff959c':'#f8dea4';cx.lineWidth=5;cx.beginPath();cx.arc(boss.x,boss.y,49,0,TAU);cx.stroke();cx.restore();
  txt('👑',boss.x,boss.y-41+wobble,34,'center');txt('TOLLY · NO MORE BANANA',boss.x,boss.y-70,15,'center','#fff5ca');
  if(bananaWindup>0){
@@ -959,7 +974,7 @@ for(const p of players){
  cx.restore();
 }
 for(const p of players){
- if(!p.alive){circle(p.x,p.y,23,'#4c5968');txt('💤',p.x,p.y+11,26,'center');txt('REVIVE P'+(p.num+1),p.x,p.y-32,16,'center','#fff4cd');cx.beginPath();cx.arc(p.x,p.y,30,-Math.PI/2,-Math.PI/2+TAU*(p.reviveProgress||0)/reviveSeconds);cx.strokeStyle='#9cffcb';cx.lineWidth=5;cx.stroke();continue}
+ if(!p.alive){if(!window.Level32Sprites?.draw(cx,p.id,spritePose(p,false),p.x,p.y,54,elapsed))circle(p.x,p.y,23,'#4c5968');txt('💤',p.x,p.y+11,26,'center');txt('REVIVE P'+(p.num+1),p.x,p.y-32,16,'center','#fff4cd');cx.beginPath();cx.arc(p.x,p.y,30,-Math.PI/2,-Math.PI/2+TAU*(p.reviveProgress||0)/reviveSeconds);cx.strokeStyle='#9cffcb';cx.lineWidth=5;cx.stroke();continue}
  if(p.inv>0&&Math.floor(elapsed*16)%2)continue;
  const moving=Math.hypot(joystickAxes[p.num].x,joystickAxes[p.num].y)>.1||
    (p.num===0?['w','a','s','d']:['arrowup','arrowdown','arrowleft','arrowright']).some(k=>keys.has(k));
@@ -967,7 +982,9 @@ for(const p of players){
  if(p.dash>0){cx.save();cx.globalAlpha=.36;circle(p.x-16,p.y+11,31,'#9be7ff');cx.restore();}
  circle(p.x,p.y+20,23,'#1b293a88');
  const avatar=petImages[p.id];
- if(avatar&&avatar.complete&&avatar.naturalWidth){
+ const spriteHero=window.Level32Sprites?.draw(cx,p.id,spritePose(p,moving),
+   p.x,p.y+hop,52,elapsed) || false;
+ if(!spriteHero&&avatar&&avatar.complete&&avatar.naturalWidth){
   // A readable, recognisable illustrated portrait for each actual furry friend.
   cx.save();cx.beginPath();cx.arc(p.x,p.y+hop,24,0,TAU);cx.clip();
   const scale=48/Math.min(avatar.naturalWidth,avatar.naturalHeight);
@@ -975,7 +992,7 @@ for(const p of players){
   cx.drawImage(avatar,p.x-w/2,p.y+hop-h/2,w,h);cx.restore();
   cx.beginPath();cx.arc(p.x,p.y+hop,24,0,TAU);
   cx.strokeStyle=p.num===0?'#adf8db':'#ffc0c4';cx.lineWidth=3;cx.stroke();
- }else{circle(p.x,p.y,24,p.color);txt(p.emoji,p.x,p.y+16,37,'center')}
+ }else if(!spriteHero){circle(p.x,p.y,24,p.color);txt(p.emoji,p.x,p.y+16,37,'center')}
  txt('P'+(p.num+1),p.x,p.y-38,17,'center',p.num===0?'#a6ffe1':'#ffc7c3');
  // Health stays readable next to the character on phone and desktop.
  rect(p.x-28,p.y+29,56,7,'#152636');rect(p.x-27,p.y+30,54*clamp(p.hp/p.maxHp,0,1),5,p.hp/p.maxHp<.3?'#ff9995':'#9aebbb');

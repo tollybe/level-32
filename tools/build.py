@@ -31,8 +31,10 @@ ITERATIONS = 250_000
 def game_as_single_html() -> str:
     html = (GAME / "index.html").read_text(encoding="utf-8")
     css = (GAME / "style.css").read_text(encoding="utf-8")
+    sprites = (GAME / "sprite-renderer.js").read_text(encoding="utf-8")
     js = (GAME / "game.js").read_text(encoding="utf-8")
     html = html.replace('<link rel="stylesheet" href="style.css">', '<style>\n' + css + '\n</style>')
+    html = html.replace('<script src="sprite-renderer.js" defer></script>', '<script>\n' + sprites + '\n</script>')
     html = html.replace('<script src="game.js" defer></script>', '<script>\n' + js + '\n</script>')
 
     def image_data(match):

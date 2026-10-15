@@ -23,6 +23,8 @@ jobs:
           python -m pip install cryptography playwright
           python -m playwright install --with-deps chromium
       - name: Check JavaScript syntax
-        run: node --check game/game.js
+        run: |
+          node --check game/sprite-renderer.js
+          node --check game/game.js
       - name: "Browser smoke: desktop, portrait, landscape and Extreme"
         run: python tests/smoke.py
