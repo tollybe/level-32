@@ -72,3 +72,9 @@ The ground gains 180 little grass tufts that part when a moving player brushes p
 - **Mission One is now 18:15–20:15 on Friday 13 November 2026**, at Broodnodig. The public birthday invitation, game hint, README, handoff guide and downloadable `game/birthday.ics` are updated. **Laser tag remains 20:40**, with its calendar entry unchanged. No other date, price or address is changed.
 - Browser regression verifies that each of six pairings unlocks three distinct scenes in order, that turn-taking draws one line at a time, that the XP elements stay spatially separated even on simulated phones, and that calendar and invitation times match.
 - Owner acceptance: judge dialogue pacing and legibility during actual co-op gameplay, and check the updated WhatsApp details before inviting guests.
+
+## Day 7D follow-up — Add both missions to calendar
+
+- Added a prominent **Add both missions to calendar** link on the separate invitation and the main game's party-details panel. Both download the same existing `game/birthday.ics` file, which contains **two** independent calendar events; guests open/import it to add them to their own calendar app. This is not an automatic calendar-account write.
+- Event 1: Broodnodig, Friday 13 November 2026, 18:15–20:15. Event 2: Lasergames Utrecht, starting 20:40 (no unconfirmed end time invented).
+- CI asserts that the public invite and game link to that same calendar file and the ICS has exactly two events with the correct start/end fields.
