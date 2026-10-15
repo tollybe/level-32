@@ -1,6 +1,6 @@
 # Hackathon Day 5 — Chibi Renaissance (PLANNED ONLY)
 
-**Status: NOT IMPLEMENTED. Blocked on Day 4 completion and acceptance.**
+**Status: NOT IMPLEMENTED. Blocked on Day 4 + Day 4.5 acceptance (see `iteration-4-5.md`).**
 
 ## North star
 Convert the round gameplay representations into faithful chibi overworld sprites while maintaining the recognizable canonical characters and the purpose of the game: invite friends to the birthday. Portrait art remains used in dialogue, selection and dramatic scenes.
