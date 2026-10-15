@@ -1070,6 +1070,12 @@ if(boss&&boss.hp>0){
       boss.rage?'special':'walk',direction:facing},
     boss.x,boss.y+wobble-8,139,elapsed) || false;
  if(!spriteBoss)circle(boss.x,boss.y+wobble,52,boss.hitFlash>0?'#fff0d1':'#e4b9bd');
+ if(bossPhase>=2){
+  cx.save();cx.strokeStyle=bossPhase===3?'#ffd57f':'#ff8cbd';
+  cx.lineWidth=bossPhase===3?6:3;cx.globalAlpha=.5+.2*Math.sin(elapsed*7);
+  cx.beginPath();cx.arc(boss.x,boss.y+wobble,63+Math.sin(elapsed*7)*4,0,TAU);cx.stroke();
+  cx.restore();
+ }
  if(!spriteBoss&&portrait.complete&&portrait.naturalWidth){
    const crop=Math.min(portrait.naturalWidth,portrait.naturalHeight);
    cx.save();cx.translate(boss.x,boss.y+wobble);cx.rotate(Math.sin(elapsed*3)*.055);
@@ -1116,6 +1122,20 @@ for(const p of players){
  const hop=moving?Math.sin(elapsed*15+p.num)*3:Math.sin(elapsed*2.7+p.num)*1.2;
  if(p.dash>0){cx.save();cx.globalAlpha=.36;circle(p.x-16,p.y+11,31,'#9be7ff');cx.restore();}
  circle(p.x,p.y+20,23,'#1b293a88');
+  // Super-mode glow when a perk is chosen; rare Legendary glow persists.
+  if(p.perkGlow>0||p.perkRarity==='legendary'){
+    const v=p.perkRarity==='legendary'?'#ffd775':p.perkRarity==='epic'?'#d6acff':'#b6ffdd';
+    const radius=28+Math.sin(elapsed*9+p.num)*4;
+    cx.save();cx.globalAlpha=p.perkGlow>0?.9:.52;cx.strokeStyle=v;
+    cx.lineWidth=p.perkRarity==='legendary'?5:3;
+    cx.beginPath();cx.arc(p.x,p.y,radius,0,TAU);cx.stroke();
+    if(!liteFx&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+      for(let j=0;j<4;j++){
+        const angle=elapsed*3+j*TAU/4;
+        circle(p.x+Math.cos(angle)*(radius+6),p.y+Math.sin(angle)*(radius+6),3,v);
+      }
+    cx.restore();
+  }
  const avatar=petImages[p.id];
  const spriteHero=window.Level32Sprites?.draw(cx,p.id,spritePose(p,moving),
    p.x,p.y+hop,52,elapsed) || false;
