@@ -64,3 +64,17 @@ The ground gains 180 little grass tufts that part when a moving player brushes p
 - Owner playtest: mobile movement, canopy art and XP readability, tree traversal feel, and invitation regression. All character designs and birthday event details remain unchanged.
 
 **Day 7C status:** Merged into `main` via PR #18 (15 October 2026). Full JavaScript syntax and Chromium desktop/portrait/landscape/Extreme gameplay CI passed, including collision/steering, dash charges and accessible XP meter. Owner phone playtest and final birthday guest release remain pending.
+
+## Day 7D — Conversations, readable XP and invitation timing
+
+- All six co-op pairs now have three **different** small dialogue scenes that advance from one encounter to the next instead of repeating the same two lines. A conversation reveals one bubble at a time (roughly every 2.75 seconds), then waits before triggering again. Walking into cover, death or leaving co-op cancels pending lines; starting a fresh game resets the sequence. Rosie and Winnifred's second meeting reverses the boop; Ellie and Millie's zoomie conversation escalates into the 'you're forgetting me!' joke.
+- The shared team XP HUD has two clearly separated headline values (TEAM LV and current XP), a progress track, then a dedicated bottom line for NEXT PERK. CSS grid prevents labels touching or wrapping into each other; mobile and desktop browser checks verify separate bounding boxes. XP calculations and P1/P2 perk distribution remain unchanged.
+- **Mission One is now 18:15–20:15 on Friday 13 November 2026**, at Broodnodig. The public birthday invitation, game hint, README, handoff guide and downloadable `game/birthday.ics` are updated. **Laser tag remains 20:40**, with its calendar entry unchanged. No other date, price or address is changed.
+- Browser regression verifies that each of six pairings unlocks three distinct scenes in order, that turn-taking draws one line at a time, that the XP elements stay spatially separated even on simulated phones, and that calendar and invitation times match.
+- Owner acceptance: judge dialogue pacing and legibility during actual co-op gameplay, and check the updated WhatsApp details before inviting guests.
+
+## Day 7D follow-up — Add both missions to calendar
+
+- Added a prominent **Add both missions to calendar** link on the separate invitation and the main game's party-details panel. Both download the same existing `game/birthday.ics` file, which contains **two** independent calendar events; guests open/import it to add them to their own calendar app. This is not an automatic calendar-account write.
+- Event 1: Broodnodig, Friday 13 November 2026, 18:15–20:15. Event 2: Lasergames Utrecht, starting 20:40 (no unconfirmed end time invented).
+- CI asserts that the public invite and game link to that same calendar file and the ICS has exactly two events with the correct start/end fields.

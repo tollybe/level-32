@@ -21,7 +21,7 @@ The project is still a **playtest**, not an invitation release. The public page 
 ## Hard requirements
 - Keep canonical portraits of Rosie, Millie, Winnifred, Ellie and Tolly immutable.
 - Do **not** fake Daan's physical likeness: existing `assets/daan.svg` is only a provisional emblem.
-- Confirm invitation dates and venue addresses; the 20:30–20:40 transfer remains tight and needs host planning.
+- Confirm invitation dates and venue addresses; the 20:15–20:40 transfer should be coordinated and needs host planning.
 - Birthday details must always be accessible without winning. The game is never a gatekeeper.
 - Day 5 chibi sprite overhaul is not authorized until the user accepts Day 4.7.
 

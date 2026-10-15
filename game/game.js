@@ -661,7 +661,7 @@ function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+
 function start(){
  ++scenePresentationToken;perkOffer=null;perksAwarded=0;$('perk-panel').hidden=true;
  $('scene-control-help').hidden=true;$('ending-invite').hidden=true;cancelAnimationFrame(raf);
- bushEggSeen=false;bossBushVisits=0;bossBushOccupied=false;winston=null;winstonForcedReveal=0;pairBanterClock=12;worldBubbles=[];bossNicknameClock=13;bossNicknameIndex=0;
+ bushEggSeen=false;bossBushVisits=0;bossBushOccupied=false;winston=null;winstonForcedReveal=0;pairBanterClock=12;pairConversation=null;pairBanterVisits={};worldBubbles=[];bossNicknameClock=13;bossNicknameIndex=0;
  joystickAxes.forEach(a=>{a.x=0;a.y=0});document.querySelectorAll('.joystick-knob').forEach(k=>k.style.transform='translate(0px,0px)');
  players=[player(selected[0],0)];if($('coop').checked)players.push(player(selected[1],1));
  const startHealth=DIFFICULTY_BALANCE[$('difficulty').value].startingHealth;
@@ -945,24 +945,68 @@ function updateDuoVolley(e,dt){
   say('⚠ '+e.kind.toUpperCase()+': RED WARNING! MACHINE-GUN BANANAS!',1.4);
  }
 }
+// Two distinct scenes per pair. Turns play one at a time so characters
+// actually converse instead of rendering overlapping bubbles simultaneously.
 const PAIR_BANTER={
- 'rosie|winnifred':[['rosie','...Are we friends?'],['winnifred','From a respectable distance, perhaps.']],
- 'millie|rosie':[['millie','ROSIE! BALL! PLAY!'],['rosie','Tuesday and Thursday. Every week. A little quiet, please?']],
- 'ellie|rosie':[['ellie','I must lick the puppy.'],['rosie','You are my puppy, Ellie. Fine, one lick.']],
- 'millie|winnifred':[['millie','HELLO CAT! PLAY?'],['winnifred','Kindly keep your enthusiasm over there.']],
- 'ellie|winnifred':[['ellie','I shall guard this area.'],['winnifred','Then I shall avoid that area.']],
- 'ellie|millie':[['millie','RUUUUN!'],['ellie','ZOOMIES FOREVER!']]
+ 'rosie|winnifred':[
+  [['rosie','Boop!'],['winnifred','>:('],['rosie','...Worth it.']],
+  [['winnifred','Boop! >:)'],['rosie','Hehehehe! Again!'],['winnifred','One must keep the puppy guessing.']],
+  [['rosie','Are we friends now?'],['winnifred','We are... cautiously boop-acquainted.'],['rosie','BOOP!']]
+ ],
+ 'ellie|millie':[
+  [['ellie','Zoom?'],['millie','ZOOOOM!!'],['ellie','Ball?'],['millie','Okay, but ZOOOOOOM!']],
+  [['ellie','Only if you go first!'],['millie','ALRIGHT! WHEEEEE!'],['ellie','Wait, you\'re forgetting me!'],['millie','NEVER! COME ON!']],
+  [['millie','Race you to the next tree!'],['ellie','I already won.'],['millie','WHAT? REMATCH!']]
+ ],
+ 'millie|rosie':[
+  [['millie','ROSIE! BALL! PLAY!'],['rosie','It is not Tuesday. Or Thursday.'],['millie','Every day could be Tuesday!']],
+  [['rosie','I am an only child, you know.'],['millie','Then I\'ll be your bonus sister!'],['rosie','...Just one round.'],['millie','TEN ROUNDS!']],
+  [['millie','Is it playtime now?'],['rosie','After a nap.'],['millie','Can I nap with the ball?']]
+ ],
+ 'ellie|rosie':[
+  [['ellie','Must. Lick. Rosie.'],['rosie','Ellie Bellie, personal space!'],['ellie','Just one lick?'],['rosie','...Fine.']],
+  [['rosie','Who\'s my little puppy?'],['ellie','ME! Also you need another lick.'],['rosie','I walked right into that.']],
+  [['ellie','Guardian inspection!'],['rosie','Inspection approved.'],['ellie','BOOP and lick!']]
+ ],
+ 'millie|winnifred':[
+  [['millie','HELLO CAT! FRIEND? PLAY?'],['winnifred','Kindly remain over there, madam.'],['millie','I can play over there VERY FAST!']],
+  [['winnifred','Your enthusiasm shakes my crown.'],['millie','Want me to fetch it?'],['winnifred','Absolutely not.']],
+  [['millie','Look! I can sit still!'],['winnifred','Remarkable.'],['millie','...FOR TWO SECONDS!']]
+ ],
+ 'ellie|winnifred':[
+  [['ellie','I shall guard this area.'],['winnifred','Then I shall sensibly avoid it.'],['ellie','That means my guarding works!']],
+  [['winnifred','Perhaps we need a treaty.'],['ellie','No surprise licking?'],['winnifred','Precisely.']],
+  [['ellie','I have secured the perimeter!'],['winnifred','Good. We shall admire each other from here.'],['ellie','Marvelous! I shall guard the biscuit tin next.']]
+ ]
 };
+let pairConversation=null,pairBanterVisits={};
 function bubble(speaker,line,ttl=3.8){
  worldBubbles.push({speaker,line,ttl});if(worldBubbles.length>8)worldBubbles.shift();
 }
 function updatePairBanter(dt){
- if(players.length!==2||players.some(p=>!p.alive||p.hidden))return;
+ if(players.length!==2||players.some(p=>!p.alive||p.hidden)){
+  pairConversation=null;return;
+ }
+ if(pairConversation){
+  pairConversation.timer-=dt;
+  if(pairConversation.timer>0)return;
+  const next=pairConversation.lines[pairConversation.index++];
+  if(next)bubble(next[0],next[1],2.65);
+  if(pairConversation.index>=pairConversation.lines.length){
+   pairConversation=null;pairBanterClock=14;
+  }else pairConversation.timer=2.75;
+  return;
+ }
  pairBanterClock-=dt;
  if(pairBanterClock>0||dist(players[0],players[1])>165)return;
- const lines=PAIR_BANTER[players.map(p=>p.id).sort().join('|')];
- if(lines)for(const [speaker,line] of lines)bubble(speaker,line,4.5);
- pairBanterClock=19;
+ const key=players.map(p=>p.id).sort().join('|');
+ const scenes=PAIR_BANTER[key];if(!scenes)return;
+ const visit=pairBanterVisits[key]||0;
+ pairBanterVisits[key]=visit+1;
+ const lines=scenes[visit%scenes.length];
+ bubble(lines[0][0],lines[0][1],2.65);
+ pairConversation={lines,index:1,timer:2.75};
+ pairBanterClock=14;
 }
 function updateBushes(dt){
  const reveal=winstonForcedReveal>0;winstonForcedReveal=Math.max(0,winstonForcedReveal-dt);

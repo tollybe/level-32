@@ -5,6 +5,21 @@ ROOT=Path(__file__).resolve().parent.parent
 sys.path.insert(0,str(ROOT/'tools'))
 from build import game_as_single_html
 html=game_as_single_html()
+# Party mission times must agree in the invitation, game hint, and calendar.
+invite_text=(ROOT/'game/invitation.html').read_text(encoding='utf-8')
+calendar=(ROOT/'game/birthday.ics').read_text(encoding='utf-8')
+game_text=(ROOT/'game/index.html').read_text(encoding='utf-8')
+assert calendar.count('BEGIN:VEVENT')==2 and calendar.count('END:VEVENT')==2
+assert invite_text.count('href="birthday.ics" download="level32-birthday.ics"')==1
+assert game_text.count('href="birthday.ics" download="level32-birthday.ics"')==1
+assert 'MISSION ONE · 18:15–20:15' in invite_text
+assert 'Mission One begins at 18:15' in game_text
+assert 'DTSTART;TZID=Europe/Amsterdam:20261113T181500' in calendar
+assert 'DTEND;TZID=Europe/Amsterdam:20261113T201500' in calendar
+assert 'MISSION TWO · 20:40' in invite_text
+assert 'DTSTART;TZID=Europe/Amsterdam:20261113T204000' in calendar
+assert '183000' not in calendar and '203000' not in calendar
+
 hook='''window.__rosieTest={
  start(){start();cancelAnimationFrame(raf);players.forEach(p=>p.inv=9999);spawnClock=9999;surgeClock=9999;return this.state()},
  place(i){players[0].x=clueSpots[i].x;players[0].y=clueSpots[i].y;update(.016);return this.state()},
@@ -267,14 +282,34 @@ hook='''window.__rosieTest={
   return {first,second,shakes,exposed,textOK};
  },
  pairDialogueProbe(){
-  const saved={players,worldBubbles:worldBubbles.slice(),pairBanterClock};
+  const saved={players,worldBubbles:worldBubbles.slice(),pairBanterClock,
+   pairConversation,pairBanterVisits:{...pairBanterVisits}};
   const keys=Object.keys(PAIR_BANTER),details=[];
   for(const key of keys){
    players=key.split('|').map((id,i)=>player(id,i));
-   players[0].x=players[1].x;players[0].y=players[1].y;worldBubbles=[];pairBanterClock=0;
-   updatePairBanter(.1);details.push({key,lines:worldBubbles.length});
+   players[0].x=players[1].x;players[0].y=players[1].y;
+   worldBubbles=[];pairBanterClock=0;pairConversation=null;pairBanterVisits={};
+   const encounters=[],sequential=[];
+   for(let visit=0;visit<3;visit++){
+    worldBubbles=[];pairBanterClock=0;
+    const prior=worldBubbles.length;
+    updatePairBanter(.1);
+    const first=worldBubbles[worldBubbles.length-1]?.line;
+    const initialSingle=worldBubbles.length===prior+1;
+    let ordered=true,steps=0;
+    while(pairConversation&&steps++<12){
+     const before=worldBubbles.length;
+     updatePairBanter(2.8);
+     ordered=ordered&&worldBubbles.length===before+1;
+    }
+    sequential.push(initialSingle&&ordered&&!pairConversation);
+    encounters.push({first,lines:worldBubbles.slice(prior).map(x=>x.line)});
+   }
+   details.push({key,encounters,visits:pairBanterVisits[key],sequential:sequential.every(Boolean)});
   }
-  players=saved.players;worldBubbles=saved.worldBubbles;pairBanterClock=saved.pairBanterClock;
+  players=saved.players;worldBubbles=saved.worldBubbles;
+  pairBanterClock=saved.pairBanterClock;pairConversation=saved.pairConversation;
+  pairBanterVisits=saved.pairBanterVisits;
   return details;
  },
  gardenProbe(){
@@ -460,6 +495,16 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
         assert (dash['before'],dash['first'],dash['second'],dash['third'],
           dash['clocks'],dash['recharged'])==(2,1,0,0,2,2),dash
         assert dash['normalFirst'] and dash['normalSecond'],dash
+        bounds=page.evaluate("""()=>{
+          const q=id=>document.getElementById(id).getBoundingClientRect();
+          const level=q('team-level-label'),amount=q('team-xp-text'),perk=q('team-perk-label'),
+            track=q('team-xp-progress');
+          return {headerSeparate:level.right+4<=amount.left,
+            perkOwnRow:perk.top>=track.bottom,
+            fitting:amount.right<=q('team-xp-overlay').right-2,
+            height:track.height};
+        }""")
+        assert bounds['headerSeparate'] and bounds['perkOwnRow'] and bounds['fitting'] and bounds['height']>=5,bounds
         xpbar=page.evaluate('window.__rosieTest.teamXPBarProbe()')
         assert xpbar['visible'] and abs(xpbar['progress']-50)<.01,xpbar
         assert xpbar['label']=='TEAM LV 2' and xpbar['perk']=='NEXT PERK LV 5',xpbar
@@ -482,8 +527,28 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
         stealth=page.evaluate('window.__rosieTest.bushStealthProbe()')
         assert all(stealth.values()),stealth
         pairs=page.evaluate('window.__rosieTest.pairDialogueProbe()')
-        assert len(pairs)==6 and all(pair['lines']==2 for pair in pairs),pairs
-        print('Bush concealment, 30s scene, search and all six pair dialogues: PASS')
+        assert len(pairs)==6 and all(pair['visits']==3 and pair['sequential']
+          and len({visit['first'] for visit in pair['encounters']})==3
+          and all(len(visit['lines'])>=3 for visit in pair['encounters'])
+          for pair in pairs),pairs
+        rw=next(pair for pair in pairs if pair['key']=='rosie|winnifred')
+        assert rw['encounters'][0]['lines'][:2]==['Boop!','>:('],rw
+        assert rw['encounters'][1]['lines'][:2]==['Boop! >:)','Hehehehe! Again!'],rw
+        em=next(pair for pair in pairs if pair['key']=='ellie|millie')
+        assert em['encounters'][0]['lines'][:3]==['Zoom?','ZOOOOM!!','Ball?'],em
+        assert 'forgetting me' in ' '.join(em['encounters'][1]['lines']),em
+        print('Six hero pairings, three evolving scenes each, sequential readable bubbles: PASS')
+    xp_layout=page.evaluate("""()=>{
+       const box=id=>document.getElementById(id).getBoundingClientRect();
+       const left=box('team-level-label'),right=box('team-xp-text'),
+        progress=box('team-xp-progress'),perk=box('team-perk-label'),
+        container=box('team-xp-overlay');
+       return {levelAndXPSeparate:left.right+4<=right.left,
+        perkOnOwnRow:perk.top>=progress.bottom,
+        contentInside:right.right<=container.right-2,
+        progressVisible:progress.width>30&&progress.height>=5};
+    }""")
+    assert all(xp_layout.values()),xp_layout
     assert page.locator('.hero-stats').count()==4
     for card in page.locator('.hero').all():
         assert card.locator('.hero-stats').is_visible(), 'Stats must be displayed without hover'
@@ -650,6 +715,10 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     assert len(s['dialogueImages'])>=2 and all(im.startswith('data:image/webp') for im in s['dialogueImages'])
     print('victory and invitation: PASS')
     # Screenshot optional; uncomment if visual debugging is useful.
+    both=page.locator('#birthday-mission .calendar-both')
+    assert both.count()==1 and both.get_attribute('href')=='birthday.ics'
+    assert both.get_attribute('download')=='level32-birthday.ics'
+    assert 'BOTH MISSIONS' in both.inner_text()
     assert page.locator('#party-details').get_attribute('target')=='_blank'
     assert page.locator('#party-details').get_attribute('href').endswith('invitation.html')
     assert page.locator('.footer-invite').get_attribute('href').endswith('invitation.html')

@@ -42,7 +42,7 @@ Mobile has two independent virtual thumbsticks and dash buttons; in the current 
 
 **Friday, 13 November 2026 · Utrecht**
 
-**Mission One (18:30–20:30):** Broodnodig, Paardenveld 5, 3511 RD Utrecht — chocolate balls, crafts, photos and food. **Dogs are welcome for this first half**, then may relax at the host's home during laser tag; arrange **earlier drop-off** in the WhatsApp group because the transfer is tight. Keep chocolate out of reach of dogs.
+**Mission One (18:15–20:15):** Broodnodig, Paardenveld 5, 3511 RD Utrecht — chocolate balls, crafts, photos and food. **Dogs are welcome for this first half**, then may relax at the host's home during laser tag; arrange **earlier drop-off** in the WhatsApp group because the transfer is tight. Keep chocolate out of reach of dogs.
 
 **Mission Two (20:40):** Lasergames Utrecht, Biltstraat 4, 3572 BA Utrecht — two rounds at €28.50 per person; action-character outfits encouraged. RSVPs and other logistics stay in the existing WhatsApp group.
 

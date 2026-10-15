@@ -190,3 +190,12 @@ Historical checks above concerning **three guardian waves at each clue** no long
 - [x] Chromium CI passed in PR #18: Millie can dash twice quickly, never three times without recharge; other pets keep single dash.
 - [x] Chromium CI passed in PR #18: team XP meter has correct visible fill, label and accessibility progress.
 - [ ] Owner checks phone/tree behavior and preserves invitation.
+
+## Day 7D — Chatty pets, XP clarity, schedule correction
+
+- [ ] Green browser CI: each pair has multiple sequential dialogue scenes that change on subsequent encounters.
+- [ ] Green desktop and phone browser CI: TEAM LV, numerical XP and NEXT PERK appear on separate uncluttered lines.
+- [ ] Green regression: invitation, calendar ICS, game and README agree on Mission One **18:15–20:15**, while laser tag stays **20:40**.
+- [ ] Host confirms party schedule, co-op chat pacing, and mobile UX before public release.
+
+- [ ] CI: **Add both missions to calendar** downloads the same two-event ICS from both the game and the invitation, with updated Mission One hours and unchanged laser-tag time.
