@@ -47,3 +47,9 @@ Banter triggers when both heroes are alive, visible and within 165 world units. 
 - **Ambush crit**: after hiding for at least 0.3s, stepping out arms a 2.1-second window for a **single 2× critical hit** against an *ordinary mob*. Tolly and elite minibosses are immune. The bonus is consumed only when an eligible mob is hit; Rosie's second-target pierce modifier remains intact. Re-entering cover resets the bonus.
 - **Banana hits through foliage**: an elite Boink/Bocht banana may strike a bush containing a player. Foliage absorbs 75% of that projectile's damage, while the player gets knocked outside the bush, gains 0.9s post-hit invulnerability, and exclaims **"OW!"**. Knockout by banana cancels the pending ambush crit. A single projectile can hit only one hiding player.
 - **Acceptance:** automated tests now verify separate and sometimes overlapping bursts, cooldown bounds, all twelve bananas per enemy, firing suppression on entry, mob-only crit (including boss/elite immunity), reduced damage and displacement, plus the names and duet. The full existing Story/Adventure/Extreme and co-op journey must pass before merge. Real-device feel, readability and audio remain for owner approval.
+
+## Garden atmosphere
+
+Each new run places up to nine decorative, non-colliding cherry trees at randomized safe positions. The placement logic leaves generous clearance around the main winding path, hiding bushes, clues, laser terminals and shrine, and spreads the trees apart. A new original cherry-tree SVG supplies the artwork. Gentle falling petals are animated in normal graphics mode, reduced in Lite FX, and disabled with reduced motion.
+
+The ground gains 180 little grass tufts that part when a moving player brushes past. Grass has no collision and appears at reduced density in Lite FX. Automated checks regenerate the world repeatedly and verify positioning and proximity response. Real-device review remains pending.
