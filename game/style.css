@@ -133,3 +133,38 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:3px solid #9cf
 /* Result invitation belongs above the artwork, so it is never buried below long dialogue. */
 .ending-invite{display:flex;width:min(100%,470px);margin:10px auto 14px;min-height:48px;background:#baf2d6;color:#1a3c30;border:2px solid #65947b;font-size:1rem}
 .ending-invite[hidden]{display:none!important}
+
+
+/* Day 4: explicit preflight controls, high-contrast mission calls, and a friendly combo chase. */
+.control-reminder{padding:12px 14px;margin:0 0 10px;border:2px solid #b4f2d9;background:#183a39;color:#faffdf;border-radius:10px;font-size:clamp(.82rem,1.8vw,1rem);font-weight:900;text-align:center;letter-spacing:.025em}
+.quest-toast{position:absolute;top:11%;left:6%;right:6%;z-index:2;pointer-events:none;display:flex;flex-direction:column;gap:6px;text-align:center;align-items:center;padding:18px 24px;border:3px solid #fce19a;border-radius:12px;background:linear-gradient(135deg,#192739f2,#59405bf2);box-shadow:0 9px 0 #151928ac,0 13px 24px #0006;color:#fff1c8;text-shadow:2px 2px #201b34}
+.quest-toast[hidden]{display:none!important}
+.quest-toast strong{font-size:clamp(1.15rem,2.4vw,1.9rem);line-height:1.15;letter-spacing:.08em}
+.quest-toast span{font-size:clamp(.86rem,1.8vw,1.08rem);color:#c9ffdb;font-weight:800}
+.combo-status{font-weight:900;color:#ffdf98!important}
+.control-briefing{position:fixed;inset:0;z-index:1001;display:grid;place-items:center;padding:16px;background:#0b1422ed;overflow-y:auto;overscroll-behavior:contain}
+.control-briefing[hidden]{display:none!important}
+.briefing-card{width:min(760px,100%);max-height:min(94dvh,940px);overflow-y:auto;padding:clamp(18px,3vw,34px);border:4px double #f5daa2;border-radius:17px;background:linear-gradient(155deg,#26384c,#222338);box-shadow:0 20px 80px #000b;color:#fcf0d4}
+.briefing-card .eyebrow{color:#aaf0d2}
+.briefing-card h2{margin:8px 0 6px;color:#ffe4a4;font-size:clamp(1.65rem,5vw,2.5rem);line-height:1.06}
+.briefing-card>p{margin:6px 0 14px}
+.briefing-team{padding:10px 13px;background:#354558;border:1px solid #8b94a4;border-radius:8px;font-size:.94rem;font-weight:800}
+.briefing-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px;margin:13px 0}
+.briefing-grid:has(.p2[hidden]){grid-template-columns:1fr}
+.briefing-player{padding:17px;border-radius:12px;background:#172b36;border:2px solid #8be8c9;font-weight:700;text-align:center}
+.briefing-player.p2{border-color:#ffc2c0;background:#352a42}
+.briefing-player[hidden]{display:none!important}
+.briefing-player>strong{font-size:1.13rem;color:#fff2c0}
+.briefing-player .keys{display:flex;justify-content:center;gap:8px;margin:13px 0}
+.briefing-player kbd{display:inline-flex;align-items:center;justify-content:center;min-width:37px;min-height:38px;padding:4px 7px;border-radius:7px;border:2px solid #f8dfa9;background:#ffe6ad;color:#362b35;box-shadow:0 3px #a98862;font-family:ui-monospace,monospace;font-size:1.07rem;font-weight:1000}
+.briefing-player p{margin:8px 0}
+.briefing-hint{padding:11px 12px;background:#1c4850;border-left:5px solid #a8f4df;border-radius:5px;font-weight:750}
+.briefing-hint[hidden],#briefing-p1-dash-extra[hidden]{display:none!important}
+.briefing-quest{display:flex;flex-direction:column;gap:5px;padding:13px 16px;border:2px solid #efd392;border-radius:9px;background:#62425045}
+.briefing-quest strong{color:#ffe8ad;letter-spacing:.08em}
+.briefing-mode{margin:12px 0;font-weight:900;color:#b0f5d2}
+.briefing-buttons{display:flex;align-items:stretch;gap:12px;flex-wrap:wrap;margin:14px 0}
+.briefing-buttons .btn{flex:1;min-width:180px;font-size:.9rem}
+.briefing-help{font-size:.8rem;color:#bed1da}
+.briefing-invite{color:#b8f4df;font-size:.83rem;font-weight:800}
+@media(max-width:590px){.briefing-grid{grid-template-columns:1fr}.briefing-buttons{flex-direction:column}.briefing-buttons .btn{width:100%}.control-briefing{padding:9px}.briefing-card{padding:15px}.briefing-player{padding:12px}.briefing-player .keys{margin:8px 0}.briefing-team{font-size:.8rem}.quest-toast{top:7%;left:3%;right:3%;padding:12px 9px}.quest-toast strong{font-size:1rem}.quest-toast span{font-size:.78rem}}
