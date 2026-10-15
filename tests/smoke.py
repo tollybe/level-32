@@ -54,6 +54,9 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge'):
     assert page.locator('#ending-invite').is_hidden()
     s=page.evaluate('window.__rosieTest.start()')
     assert page.locator('#pause').inner_text().endswith('PAWS')
+    assert page.locator('#mobile-health .mobile-health-card').count()>=1
+    assert 'HP' in page.locator('#mobile-health').inner_text()
+    assert 'QUEST' in page.locator('#mobile-quest').inner_text()
     assert page.locator('#paws-panel').is_hidden()
     page.locator('#pause').click()
     assert page.locator('#paws-panel').is_visible()
@@ -78,6 +81,8 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge'):
     print('clue1 cutscene and canonical portraits: PASS')
     assert page.locator('#scene-dialogues .scene-line:not([hidden])').count()==1
     assert page.locator('#scene-counter').inner_text()=='1 / 3'
+    assert page.locator('#scene-dialogues').is_visible()
+    assert page.locator('#scene-dialogues .scene-line:not([hidden])').is_visible()
     page.locator('#overlay-start').click()
     assert page.locator('#scene-counter').inner_text()=='2 / 3'
     assert page.locator('#scene-dialogues .scene-line:not([hidden])').count()==1
