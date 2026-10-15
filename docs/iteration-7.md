@@ -91,3 +91,5 @@ The ground gains 180 little grass tufts that part when a moving player brushes p
 - Tests: overflow vs partial chocolate; 0, 50 and 100% meter width and placement below HP; hit-rate throttling; all four signature abilities; genuine Ellie healing; the 99/100/101-kill boundary; subsequent chance; magnet selectivity and no star pulling while hidden. Existing quest, cutscene, story/Adventure/Impossible, birthday invitation and offline build flows must remain green.
 
 **Owner acceptance outstanding:** snack-meter visibility on phones, full-charge combat feedback, the 100-kill timing in a real run, whether Sakura Breeze is rewarding but not excessive, and all prior release gates.
+
+**Day 8 status:** PR #21 merged into `main` with green JavaScript syntax and full Chromium desktop/mobile/Extreme smoke tests on 15 October 2026. The below-HP Snack Power bar was tested at empty/half/full, with all four synergies and the magnet's 99/100/101-kill gate. Physical phone and host approval remain outstanding.
