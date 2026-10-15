@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="144" height="190" viewBox="0 0 144 190" role="img" aria-label="Flowering cherry blossom garden tree sprite">
+<defs>
+  <radialGradient id="pink"><stop stop-color="#ffe7ef"/><stop offset=".62" stop-color="#f6b3c7"/><stop offset="1" stop-color="#de8eaa"/></radialGradient>
+  <linearGradient id="wood" x1="0" x2="1"><stop stop-color="#6f5150"/><stop offset=".58" stop-color="#9b7169"/><stop offset="1" stop-color="#624a50"/></linearGradient>
+</defs>
+<ellipse cx="76" cy="178" rx="44" ry="10" fill="#233c37" opacity=".28"/>
+<path d="M66 173Q76 139 72 105L50 78L60 73L82 99L102 77L112 80L86 116Q82 143 86 173Z" fill="url(#wood)" stroke="#60494d" stroke-width="3"/>
+<path d="M74 169Q78 139 78 119M77 111L58 88" fill="none" stroke="#c9a19a" stroke-width="3" stroke-linecap="round"/>
+<g fill="url(#pink)" stroke="#d68da9" stroke-width="1.5">
+<circle cx="34" cy="83" r="30"/><circle cx="57" cy="57" r="33"/><circle cx="86" cy="49" r="33"/>
+<circle cx="114" cy="75" r="29"/><circle cx="104" cy="103" r="29"/><circle cx="59" cy="106" r="34"/>
+<circle cx="29" cy="105" r="17"/>
+</g>
+<g fill="#fff0f3" opacity=".9"><circle cx="34" cy="64" r="7"/><circle cx="77" cy="34" r="9"/><circle cx="109" cy="68" r="6"/><circle cx="65" cy="91" r="8"/><circle cx="92" cy="106" r="5"/><circle cx="43" cy="109" r="4"/></g>
+<g fill="#e7a6c2"><circle cx="47" cy="41" r="4"/><circle cx="112" cy="90" r="5"/><circle cx="29" cy="95" r="3"/><circle cx="89" cy="60" r="5"/></g>
+<g fill="#fff6cf"><circle cx="48" cy="42" r="2"/><circle cx="90" cy="61" r="2"/><circle cx="112" cy="91" r="2"/></g>
+</svg>
