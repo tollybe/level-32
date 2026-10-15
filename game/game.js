@@ -1985,7 +1985,7 @@ spriteButton.addEventListener('click',()=>{
  updateSpriteToggle();
 });
 updateSpriteToggle();
-$('start').addEventListener('click',start);$('overlay-start').addEventListener('click',()=>{
+$('start').addEventListener('click',()=>{start();enterPhonePlay()});$('overlay-start').addEventListener('click',()=>{
  if(phase==='cutscene'){if(performance.now()-sceneOpenedAt>350)continueScene();}
  else start();
 });$('restart').addEventListener('click',start);$('pause').addEventListener('click',togglePause);$('mute').addEventListener('click',()=>{audioEnabled=!audioEnabled; if(audioCtx){audioEnabled?audioCtx.resume():audioCtx.suspend()} $('mute').textContent=audioEnabled?'🔊 MUSIC + SFX':'🔇 SOUND OFF'; if(audioEnabled) ensureAudio();});
@@ -2004,18 +2004,58 @@ function tryDash(id){
  }
  p.dash=.2;p.inv=Math.max(p.inv,.2);playSfx('dash');
 }
-// Device rotation is an opt-in enhancement. iOS/browser privacy restrictions can
-// reject landscape locks; the responsive web layout still works without them.
-$('focus-play').addEventListener('click',async()=>{
- const status=$('focus-status');
- try{
-  if(document.fullscreenElement){await document.exitFullscreen();status.textContent='Wide play closed.';return}
-  if(!$('game-section').requestFullscreen)throw Error('Fullscreen not supported here');
-  await $('game-section').requestFullscreen();
-  try{if(screen.orientation&&screen.orientation.lock)await screen.orientation.lock('landscape')}
-  catch{status.textContent='Fullscreen opened. Rotate your phone sideways if it did not turn automatically.';return}
-  status.textContent='Wide play enabled. Rotate your phone if needed.';
- }catch{status.textContent='Your browser cannot open landscape fullscreen. Rotate your phone manually; the controls will adapt.'}
+// Phone game mode: native fullscreen if available; fixed-viewport fallback
+// for iOS Safari and browsers that do not allow element fullscreen.
+// This starts only after the guest presses Play, never on the invitation page.
+function phoneControlsAvailable(){
+ return matchMedia('(pointer:coarse)').matches&&
+   Math.min(screen.width||innerWidth,screen.height||innerHeight)<=940;
+}
+function setPhonePlay(enabled){
+ document.body.classList.toggle('phone-play',enabled);
+ document.documentElement.classList.toggle('phone-play-root',enabled);
+ $('focus-play').textContent=enabled?'⛶ EXIT WIDE PLAY':'⛶ WIDE PLAY';
+ $('focus-status').textContent=enabled
+  ?'Phone game fills the screen. Rotate to landscape for a wider view; EXIT returns to the page.'
+  :'';
+}
+function enterPhonePlay(){
+ if(!phoneControlsAvailable())return;
+ setPhonePlay(true);
+ // Fullscreen APIs must be invoked during the tap itself. Do not await layout.
+ const host=$('game-section');
+ if(host.requestFullscreen&&!document.fullscreenElement){
+  try{
+   const pending=host.requestFullscreen({navigationUI:'hide'});
+   Promise.resolve(pending).then(()=>{
+    if(screen.orientation?.lock)return screen.orientation.lock('landscape').catch(()=>{});
+   }).catch(()=>{}); // CSS still occupies 100dvh if denied.
+  }catch{} // iOS Safari often lacks generic element fullscreen.
+ }
+}
+function leavePhonePlay(){
+ if(document.fullscreenElement){
+  const result=document.exitFullscreen();
+  if(result?.catch)result.catch(()=>{});
+ }
+ setPhonePlay(false);
+}
+$('phone-exit').addEventListener('click',leavePhonePlay);
+$('phone-pause').addEventListener('click',togglePause);
+$('focus-play').addEventListener('click',()=>{
+ if(document.body.classList.contains('phone-play')){leavePhonePlay();return}
+ if(phoneControlsAvailable()){enterPhonePlay();return}
+ // Preserve the existing opt-in wide play for keyboard/desktop users.
+ const host=$('game-section');
+ if(document.fullscreenElement){document.exitFullscreen().catch(()=>{});return}
+ if(host.requestFullscreen)host.requestFullscreen().catch(()=>{
+  $('focus-status').textContent='Fullscreen is unavailable in this browser.';
+ });
+});
+// Esc/OS back leaving native fullscreen also exits CSS fallback; Safari
+// remains accessible through the explicit EXIT button above.
+document.addEventListener('fullscreenchange',()=>{
+ if(!document.fullscreenElement&&document.body.classList.contains('phone-play'))setPhonePlay(false);
 });
 document.addEventListener('visibilitychange',()=>{
  if(document.hidden&&!paused&&(phase==='explore'||phase==='boss'))togglePause();
