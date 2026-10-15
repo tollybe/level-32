@@ -168,3 +168,26 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:3px solid #9cf
 .briefing-help{font-size:.8rem;color:#bed1da}
 .briefing-invite{color:#b8f4df;font-size:.83rem;font-weight:800}
 @media(max-width:590px){.briefing-grid{grid-template-columns:1fr}.briefing-buttons{flex-direction:column}.briefing-buttons .btn{width:100%}.control-briefing{padding:9px}.briefing-card{padding:15px}.briefing-player{padding:12px}.briefing-player .keys{margin:8px 0}.briefing-team{font-size:.8rem}.quest-toast{top:7%;left:3%;right:3%;padding:12px 9px}.quest-toast strong{font-size:1rem}.quest-toast span{font-size:.78rem}}
+
+
+/* Day 4 boss theatrics: no character art changes; a CSS aura frames Tolly's canonical portrait. */
+.phase-transformation{position:relative;isolation:isolate;overflow:hidden;min-height:225px;width:min(100%,560px);margin:12px auto;padding:16px;border:3px solid #e7cf9a;border-radius:15px;background:radial-gradient(ellipse at center,#dc9bf2 1%,#6c3b88 38%,#21172e 78%);display:grid;justify-items:center;align-content:center;gap:8px;color:#fff7d8;box-shadow:0 4px 35px #b34fd677}
+.phase-transformation[hidden]{display:none!important}
+.transformation-aura,.transformation-rays{pointer-events:none;position:absolute;inset:-65%;border-radius:50%;z-index:-1}
+.transformation-aura{background:conic-gradient(from 0deg,transparent 0 8%,#ffdb5a55 9% 11%,transparent 13% 24%,#ff76d577 25% 27%,transparent 29% 47%,#e4ffe588 49% 50%,transparent 51% 70%,#f5c64b88 71% 72%,transparent 74%);animation:tollyAura 2s linear infinite}
+.transformation-rays{border:18px double #fdf1ae77;box-shadow:inset 0 0 0 13px #974fd555,0 0 90px #f0a3ff;animation:tollyCharge .8s ease-in-out infinite alternate}
+.transformation-portrait{display:flex;justify-content:center;align-items:center;width:110px;height:110px;border-radius:50%;border:4px solid #fff2ac;background:#f0e1d2;overflow:hidden;box-shadow:0 0 35px #fffac2,0 0 65px #ea77f4;animation:tollyRise 1.25s ease-in-out infinite alternate}
+.transformation-portrait img{display:block;width:100%;height:100%;object-fit:contain}
+.transformation-label{font-family:ui-monospace,Consolas,monospace;letter-spacing:.025em;font-size:clamp(1.15rem,3.5vw,2.1rem);font-weight:1000;text-shadow:3px 3px #391a51,0 0 15px #f7d779}
+.transformation-caption{font-size:clamp(.82rem,2vw,1rem);font-weight:800}
+.phase-transformation.mythic{background:radial-gradient(ellipse at center,#abf9ef 1%,#205871 42%,#0b1726 82%);border-color:#8bfff1;box-shadow:0 0 48px #65e0ec88}
+.phase-transformation.mythic .transformation-aura{filter:hue-rotate(105deg)}
+.phase-transformation.mythic .transformation-portrait{border-color:#91ffeb;box-shadow:0 0 45px #8cfbf1,0 0 75px #71b7ff}
+.bossbar.mythic{background:#172c40;border-color:#7bf3e8}
+.bossbar.mythic .meter.red>span{background:linear-gradient(90deg,#4fd8ff,#9affdf)}
+.score-rules{font-size:.8rem;color:#c4eadf!important;font-weight:800}
+@keyframes tollyAura{to{transform:rotate(360deg)}}
+@keyframes tollyCharge{to{transform:scale(1.1);opacity:.42}}
+@keyframes tollyRise{to{transform:translateY(-8px) scale(1.06)}}
+@media(max-width:550px){.phase-transformation{min-height:168px;padding:8px}.transformation-portrait{width:82px;height:82px}.transformation-caption{font-size:.73rem}}
+@media(prefers-reduced-motion:reduce){.transformation-aura,.transformation-rays,.transformation-portrait{animation:none!important}}
