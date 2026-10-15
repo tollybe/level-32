@@ -633,6 +633,10 @@ hook='''window.__rosieTest={
     const stick=rect(document.querySelector('[data-joystick="0"]')),
       dash=rect(document.querySelector('[data-dash="0"]'));
     return {leftRight:stick.right+5<dash.left,visible:within(stick)&&within(dash),
+      stickNearLeft:stick.left>=0&&stick.left<=46,
+      dashNearRight:innerWidth-dash.right>=0&&innerWidth-dash.right<=46,
+      stickNearBottom:innerHeight-stick.bottom>=0&&innerHeight-stick.bottom<=56,
+      dashNearBottom:innerHeight-dash.bottom>=0&&innerHeight-dash.bottom<=56,
       secondHidden:getComputedStyle(document.querySelector('.touch-player:nth-child(2)')).display==='none'};
    };
    const first=solo();
@@ -646,6 +650,9 @@ hook='''window.__rosieTest={
    const opposite={
     topBottom:p2.stick.bottom+25<p1.stick.top,
     p1LeftRight:p1.stick.right<p1.dash.left,
+    p1DashNearRight:innerWidth-p1.dash.right>=0&&innerWidth-p1.dash.right<=46,
+    p1StickNearLeft:p1.stick.left>=0&&p1.stick.left<=46,
+    p1DashNearBottom:innerHeight-p1.dash.bottom>=0&&innerHeight-p1.dash.bottom<=56,
     p2LeftRight:p2.dash.right<p2.stick.left,
     controlsFit:[p1.stick,p1.dash,p2.stick,p2.dash].every(within),
     flipped:getComputedStyle(document.querySelector('.touch-player:nth-child(2)')).transform.startsWith('matrix(-1'),
@@ -823,6 +830,19 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
         assert all(face['first'].values()),face
         assert all(face['opposite'].values()),face
         assert all(face['scene'].values()),face
+        # Simulate auto-rotation *without reloading the page*: fixed thumb
+        # buttons must follow the new lower corners in the same game session.
+        if mode=='challenge' and not solo:
+            rotated={'width':screen[1], 'height':screen[0]}
+            page.set_viewport_size(rotated)
+            other=page.evaluate('window.__rosieTest.mobileFacingAndSceneProbe()')
+            assert all(other['first'].values()),other
+            assert all(other['opposite'].values()),other
+            assert all(other['scene'].values()),other
+            page.set_viewport_size({'width':screen[0], 'height':screen[1]})
+            restored=page.evaluate('window.__rosieTest.mobileFacingAndSceneProbe()')
+            assert all(restored['first'].values()) and all(restored['opposite'].values()),restored
+        print('Mobile right-thumb Dash corner placement, live rotation and co-op layout: PASS')
         print('Mobile-only left-stick/right-dash, opposite-edge co-op and non-scrolling frozen cutscene: PASS')
         print('Full-screen phone stage, solo joystick, 10% rotated HUD panels and compact upgrades: PASS')
     prompt=page.evaluate('window.__rosieTest.scrollReturnProbe()')
