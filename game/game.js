@@ -855,10 +855,23 @@ function damage(enemy,amount,p){
   }
   if(Math.random()<.17&&drops.length<35)drops.push({x:enemy.x,y:enemy.y,kind:'xp',r:13});
   if(Math.random()<.052&&drops.length<35)drops.push({x:enemy.x,y:enemy.y,kind:'heal',r:15});
-  if(Math.random()<.018&&drops.length<35&&!drops.some(d=>d.kind==='magnet'))
-   drops.push({x:enemy.x,y:enemy.y,kind:'magnet',r:18});
+  maybeDropMagnet(enemy);
 
  }
+}
+// Sakura Breeze is a mid-run milestone. It NEVER drops before 100 kills.
+// Kill #100 guarantees the first blossom; later drops are rare and do not
+// duplicate an uncollected blossom. Keep room if the drop list is saturated.
+function maybeDropMagnet(enemy){
+ if(kills<100||drops.some(d=>d.kind==='magnet'))return false;
+ if(kills!==100&&Math.random()>=.018)return false;
+ if(drops.length>=35){
+  const index=drops.findIndex(d=>d.kind==='xp');
+  drops.splice(index<0?0:index,1);
+ }
+ drops.push({x:enemy.x,y:enemy.y,kind:'magnet',r:18});
+ if(kills===100)say('🌸 100 BLEEPLINGS BOINKED! A SAKURA BREEZE AWAKENS!',3.8);
+ return true;
 }
 function movePlayers(dt){
  players.forEach(p=>{
