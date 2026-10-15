@@ -1,5 +1,5 @@
 # AI HANDOFF — LEVEL 32 / Rosie Survivors
-Updated: 15 October 2026 after Day 4.7 automated-stability pass. **Read this first in new AI chats.** Source of truth is the latest `main` + any open pull request; this file records intended design and known acceptance gaps, not a claim that a release is finished.
+Updated: 15 October 2026 after real two-player playtest feedback and Day 4.8 implementation. **Read this first in new AI chats.** Source of truth is the latest `main` + any open pull request; this file records intended design and known acceptance gaps, not a claim that a release is finished.
 
 ## Project and event
 - Public GitHub: `tollybe/level-32`. Public game: https://tollybe.github.io/level-32/game/ . Standalone invitation: https://tollybe.github.io/level-32/game/invitation.html . Root `/` is a playful password gate forwarding to public `/game/`; not real authentication.
@@ -38,6 +38,13 @@ Updated: 15 October 2026 after Day 4.7 automated-stability pass. **Read this fir
 - Day 4.7 branch `iteration-4-7-stability-browser-tests` repairs GitHub Actions YAML parser error, expands Chromium solo/duo/mobile tests, fixes fullscreen boss HP and invitation CTA, and adds `docs/PLAYTEST.md`. Inspect whether this PR is merged before working further.
 - Automated Chromium checks passed for the expanded suite on this branch. **Do not confuse simulated mobile viewport tests with real physical phone acceptance.**
 - Current unfinished owner dependencies: real iPhone/Android portrait/landscape two-thumb test, approved Daan **static portrait**, party transfer logistics 20:30→20:40, and formal go/no-go for Day 5.
+
+## Real two-player phone feedback — Day 4.8 (15 October 2026)
+- The user and Daan actually played together on a phone. Feedback: Tolly too easy, Daan needs an actual character, movement/battle visuals too static, occasional lag, cutscene pages feel too easy to skip into active combat, and P1 Shift/DASH affordance unclear.
+- PR #8 branch `iteration-4-8-boss-mobile-cutscene-polish` attempts these changes: stronger cooperative Tolly scaling with last-quarter frenzy, portrait-preserving bounces/hit reactions/dash visuals, a **temporary full-body Daan support actor** bearing the **existing non-likeness emblem**, lower-cost Lite FX default on touch, visible cooldown/Shift/Enter labels, `C` to advance dialogue and deliberate cutscene input. Details and acceptance gates in `docs/iteration-4-8.md`.
+- **Daan's actual approved likeness is still NOT supplied.** Never misrepresent the interim Daan actor as his true appearance; ask user for a reference photo or approved character description prior to custom art.
+- This feedback is more recent/important than outdated original Day 4 battle expectations; user explicitly has **not released** the invitation. Day 5 separate chibi sheets remain blocked pending acceptance.
+- Verify PR #8 / CI and whether merged before applying further edits. Do not assume branch is deployed to main.
 
 ## Mandatory validation and unfinished dependencies
 - JS syntax/DOM IDs and browser smoke; real Android/iPhone portrait + landscape, two independent simultaneous touch pointers, fullscreen restrictions, PAWS/re-entry, safe laser windows; solo/co-op each difficulty; Tolly stationary exploit; Daan warning clarity; original asset hashes.

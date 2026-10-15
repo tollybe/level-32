@@ -148,3 +148,10 @@ The original three-waves-per-scroll design is **historical**, not the latest rul
 - Use [the real-phone playtest checklist](docs/PLAYTEST.md) before any real release. Passing desktop/headless tests does **not** validate a real touch device, Safari screen orientation, or game balance.
 - See [the up-to-date AI context handoff](docs/AI-HANDOFF.md) and [Day 4.7 release criteria](docs/iteration-4-7.md).
 - No approved Daan portrait yet; the placeholder SVG is temporary. Day 5 sprite development **still not started**.
+
+
+### Day 4.8 — Real two-player phone feedback (under review)
+
+The host and Daan played together and reported easy Tolly combat, insufficient character animation, occasional phone lag, confusing scene-to-combat transitions and hard-to-find Shift DASH controls. The Day 4.8 branch makes Tolly harder in co-op, adds a last-quarter telegraphed frenzy, gives canonical portrait discs gentle movement/dash animation, and adds a provisional *on-field* Daan support actor. It does NOT create/claim an approved likeness of Daan, and introduces **no Day 5 sprites**. Dialogue advances with `C` (not movement keys), retains touch NEXT/SKIP controls, and grants brief safety after scenes. DASH labels and cooldowns are more prominent. Lite FX defaults on for touch to reduce rendering overhead.
+
+See [Day 4.8 details](docs/iteration-4-8.md) and [AI handoff](docs/AI-HANDOFF.md). This is an iterative playtest, not guest release. Real-device FPS/boss balance and Daan's approved portrait are outstanding.

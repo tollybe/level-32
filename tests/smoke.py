@@ -39,7 +39,7 @@ hook='''window.__rosieTest={
  killBoss(){damage(boss,boss.hp+9999,players[0]);return this.state()},
  lose(){resetEnd(false);return this.state()},
  getEnemyList(){return [...new Set(foes.map(e=>e.kind))]},
- state(){return {phase,clues,duoActive,duoDefeated,laserUnlocked,laserIndex:laserChallenge.index,scentStep,score,kills,coneWindup,elapsed,hp:players.map(p=>p.hp),sceneName,cutsceneNext,bossHp:boss?.hp||0,daanActive,guardWave:gate?.wave??null,guardians:foes.filter(e=>e.guardian&&e.hp>0).length,cleared:gateCleared.slice(),mode:difficulty,overlay:!$('overlay').classList.contains('hidden'),imgSrc:$('overlay-art').getAttribute('src').slice(0,90),dialogueImages:[...$('scene-dialogues').querySelectorAll('img')].map(im=>im.getAttribute('src').slice(0,80)),missionUnlock:$('mission-unlock').classList.contains('show'),objectText:$('objective-label').textContent}}
+ state(){return {phase,clues,duoActive,duoDefeated,laserUnlocked,laserIndex:laserChallenge.index,scentStep,score,kills,coneWindup,elapsed,hp:players.map(p=>p.hp),sceneName,cutsceneNext,bossHp:boss?.hp||0,daanActive,bossRage:boss?.rage||false,bossMaxHp:boss?.maxHp||0,liteFx,guardWave:gate?.wave??null,guardians:foes.filter(e=>e.guardian&&e.hp>0).length,cleared:gateCleared.slice(),mode:difficulty,overlay:!$('overlay').classList.contains('hidden'),imgSrc:$('overlay-art').getAttribute('src').slice(0,90),dialogueImages:[...$('scene-dialogues').querySelectorAll('img')].map(im=>im.getAttribute('src').slice(0,80)),missionUnlock:$('mission-unlock').classList.contains('show'),objectText:$('objective-label').textContent}}
 };'''
 pos=html.rfind('})();')
 assert pos>0
@@ -65,6 +65,10 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     assert page.locator('#ending-invite').is_hidden()
     s=page.evaluate('window.__rosieTest.start()')
     assert page.locator('#pause').inner_text().endswith('PAWS')
+    assert page.locator('#fx-toggle').count()==1
+    assert page.locator('#dash-status .dash-pill').count()==(1 if solo else 2)
+    assert 'SHIFT' in page.locator('#dash-status').inner_text()
+    assert page.locator('#scene-control-help').count()==1
     assert page.locator('#mobile-health .mobile-health-card').count()>=1
     assert 'HP' in page.locator('#mobile-health').inner_text()
     assert 'QUEST' in page.locator('#mobile-quest').inner_text()
@@ -98,9 +102,12 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     print('clue1 cutscene and canonical portraits: PASS')
     assert page.locator('#scene-dialogues .scene-line:not([hidden])').count()==1
     assert page.locator('#scene-counter').inner_text()=='1 / 3'
+    assert page.locator('#scene-control-help').is_visible()
+    page.keyboard.press('ArrowRight')
+    assert page.locator('#scene-counter').inner_text()=='1 / 3'
     assert page.locator('#scene-dialogues').is_visible()
     assert page.locator('#scene-dialogues .scene-line:not([hidden])').is_visible()
-    page.locator('#overlay-start').click()
+    page.keyboard.press('c')
     assert page.locator('#scene-counter').inner_text()=='2 / 3'
     assert page.locator('#scene-dialogues .scene-line:not([hidden])').count()==1
     page.locator('#scene-skip').click()
@@ -132,6 +139,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     print('fridge reveal: PASS')
     s=page.evaluate('window.__rosieTest.continue()')
     assert s['phase']=='boss'
+    assert s['bossMaxHp']>=(1400 if not solo else 900) if mode!='story' else s['bossMaxHp']>400,s
     camp=page.evaluate('window.__rosieTest.bossCampCheck()')
     assert camp['pushed'] and camp['hpAfter'] < camp['hpBefore'] and camp['bossAfter']>0, camp
     print('Tolly standing-on-boss regression: PASS')
