@@ -834,15 +834,15 @@ function syncHud(){updateObjective();let h='';for(const p of players){h+='<p><st
  $('missions').innerHTML=wardProgress+'<div class="missionline '+(clues>=1?'done':'')+'">'+(clues>=1?'✓':'○')+' Find the first scroll</div><div class="missionline '+(clues>=2?'done':'')+'">'+(clues>=2?'✓':'○')+' Discover the sausage clue</div><div class="missionline '+(clues>=3?'done':'')+'">'+(clues>=3?'✓':'○')+' Reveal the fridge shrine</div><div class="missionline '+(phase==='boss'||phase==='ended'?'done':'')+'">'+(phase==='boss'||phase==='ended'?'✓':'○')+' Find Tolly</div><div class="missionline '+(phase==='ended'&&boss&&boss.hp<=0?'done':'')+'">'+(phase==='ended'&&boss&&boss.hp<=0?'✓':'○')+' Free the tasty treats & reveal Mission Two</div>';$('scoreline').textContent='Score: '+score+' · Level: '+level;$('timerline').textContent='Time: '+Math.floor(elapsed/60)+':'+String(Math.floor(elapsed%60)).padStart(2,'0')+' · Snacklings boinked: '+kills;$('bestline').textContent='Personal best: '+(best||'—')}
 function rect(x,y,w,h,col){cx.fillStyle=col;cx.fillRect(x,y,w,h)}function circle(x,y,r,col){cx.fillStyle=col;cx.beginPath();cx.arc(x,y,r,0,TAU);cx.fill()}function line(x1,y1,x2,y2,col,width=2){cx.strokeStyle=col;cx.lineWidth=width;cx.beginPath();cx.moveTo(x1,y1);cx.lineTo(x2,y2);cx.stroke()}
 // RuneScape-inspired overhead combat HP: green active health against dark-red lost HP.
-function drawOverheadHp(x,y,hp,maxHp,width=67){
+function drawOverheadHp(x,y,hp,maxHp,width=67,mythic=false){
  if(!maxHp||maxHp<=0)return;
  const ratio=clamp(hp/maxHp,0,1),w=Math.round(width),h=9,left=Math.round(x-w/2),top=Math.round(y);
- const fill=ratio>.55?'#5de48d':ratio>.25?'#ffd26a':'#f86d72';
+ const fill=mythic?'#72f6e9':ratio>.55?'#5de48d':ratio>.25?'#ffd26a':'#f86d72';
  cx.save();
  cx.shadowColor='#000b';cx.shadowBlur=4;
  rect(left-2,top-2,w+4,h+4,'#161e2b');
  cx.shadowBlur=0;
- rect(left,top,w,h,'#823747');
+ rect(left,top,w,h,mythic?'#20446a':'#823747');
  if(ratio>0)rect(left+1,top+1,Math.max(1,Math.round((w-2)*ratio)),h-2,fill);
  cx.strokeStyle='#f4e9c4';cx.lineWidth=1;cx.strokeRect(left-.5,top-.5,w+1,h+1);
  cx.restore();
@@ -897,6 +897,7 @@ for(const e of foes){
 }
 // birthday boss
 if(boss&&boss.hp>0){
+ if(bossPhase===3){circle(boss.x,boss.y,69,'#82ffe633');circle(boss.x,boss.y,60,'#5be3e344')}
  circle(boss.x,boss.y+23,57,'#402f3a99');circle(boss.x,boss.y,52,'#e4b9bd');
  const portrait=$('boss-card').querySelector('img');
  if(portrait.complete&&portrait.naturalWidth){
@@ -904,10 +905,10 @@ if(boss&&boss.hp>0){
    cx.save();cx.beginPath();cx.arc(boss.x,boss.y,46,0,TAU);cx.clip();
    cx.drawImage(portrait,(portrait.naturalWidth-crop)/2,(portrait.naturalHeight-crop)/2,crop,crop,boss.x-48,boss.y-48,96,96);cx.restore();
  }else txt('🧑',boss.x,boss.y+21,52,'center');
- cx.save();cx.strokeStyle=bossPhase===2?'#ff959c':'#f8dea4';cx.lineWidth=5;cx.beginPath();cx.arc(boss.x,boss.y,49,0,TAU);cx.stroke();cx.restore();
+ cx.save();cx.strokeStyle=bossPhase===3?'#79ffeb':bossPhase===2?'#ff959c':'#f8dea4';cx.lineWidth=5;cx.beginPath();cx.arc(boss.x,boss.y,49,0,TAU);cx.stroke();cx.restore();
  txt('👑',boss.x,boss.y-41,34,'center');
  txt('TOLLY · NO MORE BANANA',boss.x,boss.y-71,15,'center','#fff5ca');
- drawOverheadHp(boss.x,boss.y-99,boss.hp,boss.maxHp,126);
+ drawOverheadHp(boss.x,boss.y-99,boss.hp,boss.maxHp,126,bossPhase===3);
  if(bananaWindup>0){
   cx.save();cx.strokeStyle='#ffa94f';cx.fillStyle='#ffb45122';cx.lineWidth=4;
   cx.beginPath();cx.arc(boss.x,boss.y,115,0,TAU);cx.fill();cx.stroke();cx.restore();
@@ -918,6 +919,26 @@ if(boss&&boss.hp>0){
   cx.beginPath();cx.arc(boss.x,boss.y,150,0,TAU);cx.fill();cx.stroke();cx.restore();
   txt('⚠ MOVE AWAY!',boss.x,boss.y-164,21,'center','#fff8c8');
  }
+}
+// Daan's chalk-circle attack is telegraphed, not a surprise hit.
+if(daan&&daan.hp>0){
+ cx.save();
+ circle(daan.x,daan.y+14,33,'#20353e99');
+ circle(daan.x,daan.y,daan.size,'#8bd6c9');
+ circle(daan.x-9,daan.y-6,5,'#1a3a3b');circle(daan.x+9,daan.y-6,5,'#1a3a3b');
+ txt('🧗',daan.x,daan.y+15,29,'center');
+ txt('DAAN · THE CLIMBER',daan.x,daan.y-64,15,'center','#d4fff6');
+ drawOverheadHp(daan.x,daan.y-52,daan.hp,daan.maxHp,84,true);
+ if(daan.telegraph>0){
+  cx.save();cx.setLineDash([13,8]);cx.lineWidth=6;cx.strokeStyle='#ecfff2';cx.fillStyle='#dbfff344';
+  cx.beginPath();cx.arc(daan.targetX,daan.targetY,108,0,TAU);cx.fill();cx.stroke();cx.restore();
+  txt('⚠ DAAN LANDING!',daan.targetX,daan.targetY-120,19,'center','#e7fff0');
+ }
+ cx.restore();
+}
+if(boss&&bossPhase===3&&mythicArcWindup>0){
+ cx.save();cx.beginPath();cx.moveTo(boss.x,boss.y);cx.arc(boss.x,boss.y,300,mythicAngle-.52,mythicAngle+.52);cx.closePath();
+ cx.fillStyle='#40fce344';cx.fill();cx.strokeStyle='#aaffef';cx.lineWidth=5;cx.stroke();cx.restore();
 }
 // A readable AoE circle, not just a hidden buff. Allies must be inside the ring to heal.
 for(const p of players){
