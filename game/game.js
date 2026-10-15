@@ -6,7 +6,7 @@ const WIDTH=2600,HEIGHT=1900, VIEWW=960,VIEWH=600, TAU=Math.PI*2, keys=new Set()
 // No server or shared scores required; all audio is original WebAudio synthesis.
 const petImages=Object.fromEntries(Array.from(document.querySelectorAll('#heroes .hero'),el=>[el.dataset.hero,el.querySelector('.portrait img')]));
 const roster={rosie:{name:'Rosie',emoji:'🐕‍🦺',color:'#222a36',hp:130,speed:220,range:225,rate:.56,damage:17,weapon:'dragon'},millie:{name:'Millie',emoji:'🐕',color:'#31323d',hp:135,speed:205,range:220,rate:.62,damage:14,weapon:'ball'},winnifred:{name:'Winnifred',emoji:'🐈',color:'#e4d4bc',hp:128,speed:240,range:153,rate:.41,damage:25,weapon:'sausage'},ellie:{name:'Ellie',emoji:'🐶',color:'#121823',hp:150,speed:250,range:175,rate:.86,damage:9,weapon:'kong',auraRadius:135,healPulse:2.7,selfRegen:1.4}};
-let selected=['rosie','winnifred'],players=[],foes=[],shots=[],drops=[],fx=[],hazards=[],boss=null,phase='idle',paused=false,score=0,kills=0,level=1,xp=0,goal=35,spawnClock=0,surgeClock=33,elapsed=0,clues=0,fridgeVisible=false,fridge={x:2180,y:1440},cam={x:0,y:0},lastTime=0,raf=0,messageClock=0,attackClock=0,heldTouch={},audioCtx=null,audioEnabled=true,musicTimer=null,musicStep=0,musicMode='idle',musicBar=0,musicNextBarAt=0,sloganClock=8,bossPhase=1,coneWarned=false;
+let selected=['rosie','winnifred'],players=[],foes=[],shots=[],drops=[],fx=[],hazards=[],boss=null,phase='idle',paused=false,score=0,kills=0,level=1,xp=0,goal=35,spawnClock=0,surgeClock=33,elapsed=0,clues=0,fridgeVisible=false,fridge={x:2180,y:1440},cam={x:0,y:0},lastTime=0,raf=0,messageClock=0,attackClock=0,heldTouch={},joystickAxes=[{x:0,y:0},{x:0,y:0}],audioCtx=null,audioEnabled=true,musicTimer=null,musicStep=0,musicMode='idle',musicBar=0,musicNextBarAt=0,sloganClock=8,bossPhase=1,coneWarned=false;
 let cutsceneNext=null,sceneName=null,reviveSeconds=1.85,hudClock=0;
 let duoActive=false,duoDefeated=false,laserUnlocked=false,beams=[],coneCooldown=6.8,coneWindup=0,coneAngle=0,bossPulseCooldown=4,bossPulseWindup=0,bananaWindup=0;
 let gate=null,gateCleared=[false,false,false],difficulty='challenge',daanActive=false,daanPulse=0;
@@ -24,6 +24,7 @@ const ENEMY_TYPES={
 let best=0;try{best=Number(localStorage.getItem('rosie-survivors-best'))||0}catch{};
 const rnd=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const clueSpots=[{x:730,y:660},{x:1240,y:1060},{x:1690,y:1420}];
+const scentTrail=[{x:440,y:500},{x:550,y:570},{x:660,y:620}];let scentStep=0;
 const scenery=(()=>{let seed=9145;const r=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};return Array.from({length:450},()=>({x:r()*WIDTH,y:r()*HEIGHT,t:r(),s:10+r()*24}))})();
 const SCENE_ART={"clue1":"assets/scene-clue1.webp","clue2":"assets/scene-clue2.webp","clue3":"assets/scene-clue3.webp","intro":"assets/scene-intro.webp","phase2":"assets/scene-phase2.webp","victory":"assets/scene-victory.webp","defeat":"assets/scene-defeat.webp"};
 // Never generate alternate faces for the pets: scene portraits reuse the actual
@@ -258,6 +259,9 @@ function showScene(kind,title,dialogue){
  $('overlay-start').dataset.continueLabel='▶ '+(kind==='intro'?'FACE TOLLY':kind==='phase2'?'CONTINUE THE BATTLE':kind==='clue2'?'FACE BOINK & BOCHT':'CONTINUE EXPLORING');
  $('overlay-start').textContent=(SCENE_LINES[kind]||[]).length>1?'▶ NEXT LINE':$('overlay-start').dataset.continueLabel;
  $('scene-skip').hidden=false;
+ // New readers on a phone should see the first spoken line, not only the art.
+ const visibleLine=$('scene-dialogues').querySelector('.scene-line:not([hidden])');
+ if(visibleLine)visibleLine.scrollIntoView({block:'nearest',behavior:'instant'});
 }
 // Quest wards require three short, visible guardian waves at every scroll.
 function spawnGuardianWave(){
@@ -273,7 +277,7 @@ function spawnGuardianWave(){
    kind,guardian:true,age:0,telegraph:0,charge:-1,trailTimer:0,slow:0});
  }
  gate.remainingDelay=3.3;
- say('⚠ SCROLL '+(gate.index+1)+': DEFENCE WAVE '+(gate.wave+1)+' / 3! Defeat its guardians!',3.5);
+ say(gate.index===1?'🌭 SAUSAGE AMBUSH · Round '+(gate.wave+1)+'/3! Boink and dodge!':'⚠ FRIDGE SECURITY · WAVE '+(gate.wave+1)+'/3!',3.5);
  playSfx('wave');
 }
 function beginGuardian(index){gate={index,wave:0,remainingDelay:0};spawnGuardianWave();}
@@ -343,8 +347,9 @@ function say(t,duration=3){$('game-message').textContent=t;messageClock=duration
 function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5}}
 function start(){
  $('ending-invite').hidden=true;cancelAnimationFrame(raf);
+ joystickAxes.forEach(a=>{a.x=0;a.y=0});document.querySelectorAll('.joystick-knob').forEach(k=>k.style.transform='translate(0px,0px)');
  players=[player(selected[0],0)];if($('coop').checked)players.push(player(selected[1],1));
- foes=[];shots=[];drops=[];fx=[];hazards=[];beams=[];difficulty=$('difficulty').value;gate=null;gateCleared=[false,false,false];duoActive=false;duoDefeated=false;laserUnlocked=false;coneCooldown=6.8;coneWindup=0;bossPulseCooldown=4;bossPulseWindup=0;bananaWindup=0;daanActive=false;daanPulse=0;phase='explore';paused=false;boss=null;cutsceneNext=null;sceneName=null;musicStep=0;musicMode='idle';musicBar=0;musicNextBarAt=0;
+ foes=[];shots=[];drops=[];fx=[];hazards=[];beams=[];difficulty=$('difficulty').value;gate=null;gateCleared=[false,false,false];scentStep=0;duoActive=false;duoDefeated=false;laserUnlocked=false;coneCooldown=6.8;coneWindup=0;bossPulseCooldown=4;bossPulseWindup=0;bananaWindup=0;daanActive=false;daanPulse=0;phase='explore';paused=false;boss=null;cutsceneNext=null;sceneName=null;musicStep=0;musicMode='idle';musicBar=0;musicNextBarAt=0;
  elapsed=0;score=0;kills=0;level=1;xp=0;goal=35;clues=0;fridgeVisible=false;
  spawnClock=.55;surgeClock=33;attackClock=0;hudClock=0;keys.clear();ensureAudio();
  $('scene-skip').hidden=true;$('share-result').classList.remove('show');$('mission-unlock').classList.remove('show');$('scene-dialogues').hidden=true;$('share-status').textContent='';$('overlay').classList.remove('cinematic');$('overlay').classList.add('hidden');$('pause').disabled=false;$('pause').textContent='Ⅱ PAWS';
@@ -400,6 +405,7 @@ function movePlayers(dt){
   if(!p.alive)return;
   let k=p.num===0?['a','d','w','s']:['arrowleft','arrowright','arrowup','arrowdown'];
   let dx=Number(keys.has(k[1]))-Number(keys.has(k[0])),dy=Number(keys.has(k[3]))-Number(keys.has(k[2]));
+  if(Math.hypot(joystickAxes[p.num].x,joystickAxes[p.num].y)>.08){dx=joystickAxes[p.num].x;dy=joystickAxes[p.num].y;}
   let l=Math.hypot(dx,dy)||1;
   p.slowTime=Math.max(0,(p.slowTime||0)-dt);const footing=p.slowTime>0?.63:1;
   p.x=clamp(p.x+dx/l*p.speed*footing*dt*(p.dash>0?2.3:1),24,WIDTH-24);
@@ -559,12 +565,21 @@ function update(dt){
  if(players.every(p=>!p.alive)){resetEnd(false);return}
  updateGuardian(dt);
  if(phase==='explore'){
+   // Quest 1 is a short tracking mission rather than a repeat of guardian-wave combat.
+   if(clues===0&&!gateCleared[0]){
+     const paw=scentTrail[scentStep];
+     if(paw&&players.some(p=>p.alive&&dist(p,paw)<78)){
+       scentStep++;playSfx('clue');score+=25;
+       say(scentStep===1?'ROSIE: I smell... banana?':scentStep===2?'MILLIE: BALL! AAAAAH! THE LEAVES MOVED!':'ELLIE: It is a pawprint trail. Guys, please keep up!',3.5);
+     }
+     if(scentStep>=scentTrail.length){gateCleared[0]=true;say('🐾 TRAIL FOUND! The first scroll is now readable!',4)}
+   }
    const i=clues;
    if(i<3&&!duoActive&&(i!==2||duoDefeated)){
     const spot=clueSpots[i];
     if(players.some(p=>p.alive&&dist(p,spot)<68)){
      if(!gateCleared[i]){
-      if(!gate)beginGuardian(i);
+      if(i!==0&&!gate)beginGuardian(i);
       return;
      }
      clues++;score+=100;playSfx('clue');gate=null;
@@ -705,7 +720,8 @@ function currentObjective(){
   return {...clueSpots[gate.index],name:'SCROLL '+(gate.index+1)+' · WAVE '+(gate.wave+1)+'/3',
    hint:remaining?'Defeat '+remaining+' scroll guardian'+(remaining===1?'':'s')+'!':'Next wave incoming — stay alert!'};
  }
- if(clues<3)return {...clueSpots[clues],name:'CLUE '+(clues+1)+' / 3',hint:gateCleared[clues]?'The ward is broken! Return and read the scroll.':['Reach the first guarded scroll','Find the defended sausage clue','Face the final scroll guardians'][clues]};
+ if(clues===0&&!gateCleared[0])return {...scentTrail[Math.min(scentStep,scentTrail.length-1)],name:'FOLLOW THE SCENT · '+scentStep+'/3',hint:'Follow the golden pawprints — investigate the next scent marker!'};
+ if(clues<3)return {...clueSpots[clues],name:'CLUE '+(clues+1)+' / 3',hint:gateCleared[clues]?'The trail or ward is cleared! Return and read the scroll.':['Track the scent trail','Find the defended sausage clue','Face the final scroll guardians'][clues]};
  return {...fridge,name:'FRIDGE SHRINE',hint:'The fridge is waiting — find Tolly!'};
 }
 function updateObjective(){
@@ -734,7 +750,24 @@ function drawObjectiveMarker(){
  circle(0,0,28,'#382c39ee');cx.fillStyle='#ffe190';cx.beginPath();cx.moveTo(22,0);cx.lineTo(-12,-15);cx.lineTo(-12,15);cx.closePath();cx.fill();cx.restore();
  txt(duoActive?'🫧':clues<3?'📜':'❄',x,y+37,19,'center','#ffe9b4');
 }
-function syncHud(){updateObjective();let h='';for(const p of players){h+='<p><strong>P'+(p.num+1)+' '+p.name+'</strong> · '+Math.ceil(p.hp)+' / '+p.maxHp+' HP'+(p.id==='ellie'?' · 💚 Lick Aura':'')+'</p><div class="meter"><span style="width:'+100*clamp(p.hp/p.maxHp,0,1)+'%"></span></div>'}$('playerhud').innerHTML=h||'Choose your heroes!';const wardProgress=gate?'<div class="missionline">⚔ SCROLL '+(gate.index+1)+' · WAVE '+(gate.wave+1)+'/3 · '+foes.filter(e=>e.guardian&&e.hp>0).length+' guardians remain</div>':'';
+function syncHud(){updateObjective();let h='';for(const p of players){h+='<p><strong>P'+(p.num+1)+' '+p.name+'</strong> · '+Math.ceil(p.hp)+' / '+p.maxHp+' HP'+(p.id==='ellie'?' · 💚 Lick Aura':'')+'</p><div class="meter"><span style="width:'+100*clamp(p.hp/p.maxHp,0,1)+'%"></span></div>'}$('playerhud').innerHTML=h||'Choose your heroes!';
+ const health=$('mobile-health');
+ if(health){health.replaceChildren();for(const p of players){
+  const card=document.createElement('div');card.className='mobile-health-card';
+  const label=document.createElement('strong');label.textContent='P'+(p.num+1)+' · '+p.name+' · '+Math.ceil(p.hp)+'/'+p.maxHp+' HP';
+  const track=document.createElement('div');track.className='meter';
+  const fill=document.createElement('span');fill.style.width=(100*clamp(p.hp/p.maxHp,0,1))+'%';
+  track.append(fill);card.append(label,track);health.append(card);
+ }}
+ const mobileQuest=$('mobile-quest');
+ if(mobileQuest){
+  const target=currentObjective();
+  const status=document.createElement('strong');status.textContent=target?'QUEST · '+target.name:phase==='boss'?'QUEST · DEFEAT TOLLY':phase==='ended'?'QUEST COMPLETE':'QUEST · READY';
+  const hint=document.createElement('span');
+  hint.textContent=gate?'Defeat three guardian waves to unlock the story scene. '+(gate.wave+1)+'/3 underway.':target?target.hint:phase==='boss'?'Dodge Tolly and rescue the snacks!':'Open the invitation whenever you like.';
+  mobileQuest.replaceChildren(status,hint);
+ }
+ const wardProgress=gate?'<div class="missionline">⚔ SCROLL '+(gate.index+1)+' · WAVE '+(gate.wave+1)+'/3 · '+foes.filter(e=>e.guardian&&e.hp>0).length+' guardians remain</div>':'';
  $('missions').innerHTML=wardProgress+'<div class="missionline '+(clues>=1?'done':'')+'">'+(clues>=1?'✓':'○')+' Find the first scroll</div><div class="missionline '+(clues>=2?'done':'')+'">'+(clues>=2?'✓':'○')+' Discover the sausage clue</div><div class="missionline '+(clues>=3?'done':'')+'">'+(clues>=3?'✓':'○')+' Reveal the fridge shrine</div><div class="missionline '+(phase==='boss'||phase==='ended'?'done':'')+'">'+(phase==='boss'||phase==='ended'?'✓':'○')+' Find Tolly</div><div class="missionline '+(phase==='ended'&&boss&&boss.hp<=0?'done':'')+'">'+(phase==='ended'&&boss&&boss.hp<=0?'✓':'○')+' Free the tasty treats & reveal Mission Two</div>';$('scoreline').textContent='Score: '+score+' · Level: '+level;$('timerline').textContent='Time: '+Math.floor(elapsed/60)+':'+String(Math.floor(elapsed%60)).padStart(2,'0')+' · Snacklings boinked: '+kills;$('bestline').textContent='Personal best: '+(best||'—')}
 function rect(x,y,w,h,col){cx.fillStyle=col;cx.fillRect(x,y,w,h)}function circle(x,y,r,col){cx.fillStyle=col;cx.beginPath();cx.arc(x,y,r,0,TAU);cx.fill()}function line(x1,y1,x2,y2,col,width=2){cx.strokeStyle=col;cx.lineWidth=width;cx.beginPath();cx.moveTo(x1,y1);cx.lineTo(x2,y2);cx.stroke()}
 function drawQuestDressing(){
@@ -749,10 +782,11 @@ function drawQuestDressing(){
   if(i===1){txt('🌭',spot.x+108,spot.y+32,26,'center');txt('🎾',spot.x-112,spot.y-18,22,'center')}
   if(i===2){line(spot.x-103,spot.y-75,spot.x+100,spot.y+73,'#ff8186',3);txt('⚡',spot.x+112,spot.y-40,24,'center')}
  }
+ if(clues===0&&!gateCleared[0])for(let i=scentStep;i<scentTrail.length;i++){const s=scentTrail[i];circle(s.x,s.y,29,i===scentStep?'#fff09a99':'#f4db8b33');txt('🐾',s.x,s.y+12,28,'center')}
  const f=fridge;txt('NO BANANA',f.x,f.y-205,19,'center','#fff4ba');
  for(const a of [-1,1]){txt('🏮',f.x+a*139,f.y-52,39,'center');txt('🎀',f.x+a*112,f.y+68,24,'center')}
 }
-function world(){rect(0,0,VIEWW,VIEWH,'#69816d');cx.save();cx.translate(-cam.x,-cam.y);drawQuestDressing();
+function world(){rect(0,0,VIEWW,VIEWH,'#69816d');cx.save();cx.translate(-cam.x,-cam.y);
 // tiled moss and Japanese garden paths
 for(let x=0;x<WIDTH;x+=150)for(let y=0;y<HEIGHT;y+=150){rect(x,y,149,149,(Math.floor(x/150)+Math.floor(y/150))%2?'#78917a':'#718b72');circle(x+35,y+58,20,'#7d987c')}
 // mountain/stream ribbon
@@ -762,6 +796,7 @@ cx.strokeStyle='#b6ab90';cx.lineWidth=95;cx.lineCap='round';cx.beginPath();cx.mo
 // water bridge
 rect(360,900,230,55,'#8e4d4e');for(let i=0;i<6;i++)rect(373+i*39,900,12,55,'#d28b71');line(365,885,585,885,'#7d4247',10);
 for(const ob of scenery){if(ob.t<.40){circle(ob.x,ob.y,ob.s,'#315c4c');circle(ob.x+9,ob.y-9,ob.s*.78,ob.t<.20?'#e9a4b5':'#e3c0be');circle(ob.x-12,ob.y-5,ob.s*.63,'#f7c1c6')}else if(ob.t<.68){circle(ob.x,ob.y,ob.s*.4,'#e8d99e');circle(ob.x+10,ob.y+6,ob.s*.23,'#edd5a5')}else{circle(ob.x,ob.y,ob.s*.35,'#527d5b');circle(ob.x-9,ob.y,ob.s*.35,'#4d7559')}}
+drawQuestDressing();
 // stone lanterns
 for(const [x,y] of [[480,390],[870,920],[1440,1250],[2070,1340]]){rect(x-6,y,13,35,'#77737a');rect(x-16,y-10,33,15,'#444750');rect(x-9,y-23,20,18,'#f1d58f');circle(x,y-17,6,'#fff3bb')}
 // Torii gate next to fridge
@@ -914,7 +949,21 @@ window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();
  if(k==='escape')togglePause();keys.add(k);
 });window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));window.addEventListener('blur',()=>keys.clear());
 for(const b of document.querySelectorAll('[data-dash]'))b.addEventListener('pointerdown',e=>{e.preventDefault();tryDash(Number(b.dataset.dash));});
- for(const b of document.querySelectorAll('[data-k]')){const k=b.dataset.k;b.addEventListener('pointerdown',e=>{e.preventDefault();keys.add(k);b.setPointerCapture(e.pointerId)});for(const ev of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,()=>keys.delete(k))}
+for(const pad of document.querySelectorAll('[data-joystick]')){
+ const axis=joystickAxes[Number(pad.dataset.joystick)],knob=pad.querySelector('.joystick-knob');
+ let active=null;
+ function position(e){
+  const box=pad.getBoundingClientRect(),cx=box.left+box.width/2,cy=box.top+box.height/2;
+  const radius=box.width*.36,dx=e.clientX-cx,dy=e.clientY-cy,m=Math.hypot(dx,dy),ratio=m>radius?radius/m:1;
+  axis.x=dx*ratio/radius;axis.y=dy*ratio/radius;
+  knob.style.transform='translate('+Math.round(dx*ratio)+'px,'+Math.round(dy*ratio)+'px)';
+ }
+ function release(e){if(active!==null&&(e.pointerId===active||!e.pointerId)){active=null;axis.x=axis.y=0;knob.style.transform='translate(0px,0px)'}}
+ pad.addEventListener('pointerdown',e=>{if(active!==null)return;e.preventDefault();active=e.pointerId;pad.setPointerCapture(active);position(e)});
+ pad.addEventListener('pointermove',e=>{if(active!==e.pointerId)return;e.preventDefault();position(e)});
+ for(const ev of ['pointerup','pointercancel','lostpointercapture'])pad.addEventListener(ev,release);
+ }
+ window.addEventListener('blur',()=>{joystickAxes.forEach(a=>{a.x=a.y=0});document.querySelectorAll('.joystick-knob').forEach(k=>k.style.transform='translate(0px,0px)')})
 // idle garden behind the opening card
 players=[player('rosie',0),player('winnifred',1)];render();syncHud();
 })();

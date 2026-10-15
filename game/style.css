@@ -143,3 +143,48 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:3px solid #9cf
 .paws-panel strong{font-size:clamp(1.15rem,3vw,2rem);color:#f5d68f;letter-spacing:.08em}
 .paws-panel p{max-width:400px;margin:7px auto;font-size:clamp(.8rem,2vw,1rem);line-height:1.5}
 @media(prefers-reduced-motion:reduce){.paws-panel,.scene-line{animation:none!important;transition:none!important}}
+
+/* Mobile-first combat status: important information lives above the play field,
+   rather than in the sidebar several screens below. */
+.mobile-game-status{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:8px 0 10px}
+.mobile-health,.mobile-quest{padding:9px 11px;background:#152638;border:1px solid #86949d;border-radius:10px;min-width:0}
+.mobile-health-card{margin:0 0 5px}
+.mobile-health-card strong,.mobile-quest strong{display:block;color:#ffedb5;font-size:.79rem;line-height:1.3}
+.mobile-health-card .meter{height:13px;margin:5px 0 7px}
+.mobile-quest span{display:block;color:#e8f1ec;font-size:.76rem;line-height:1.35;margin-top:4px}
+@media(max-width:620px){
+ .mobile-game-status{grid-template-columns:1fr;gap:6px}
+ .mobile-health{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .mobile-health-card strong{font-size:.76rem}
+ .mobile-quest{padding:8px 10px}
+ .overlay.cinematic .overlay-inner{display:flex;flex-direction:column;gap:5px;max-height:94dvh;overflow-y:auto;padding:11px}
+ .overlay.cinematic #scene-dialogues{order:2;flex-shrink:0}
+ .overlay.cinematic .overlay-art{order:1;max-height:18dvh;width:auto;max-width:90%;margin:2px auto;object-fit:contain}
+ .overlay.cinematic #overlay-kicker{order:0}
+ .overlay.cinematic .overlay-inner h3{order:0;font-size:1.1rem;margin:0}
+ .overlay.cinematic .overlay-inner>p{order:3;font-size:.82rem;margin:2px 0}
+ .overlay.cinematic #scene-counter{order:2}
+ .overlay.cinematic #overlay-start{order:4;min-height:47px}
+ .overlay.cinematic #scene-skip{order:5}
+ .overlay.cinematic #ending-invite{order:0}
+ .overlay.cinematic #mission-unlock{order:3}
+ .overlay.cinematic #share-result,.overlay.cinematic #share-status{order:6}
+ .overlay.cinematic .soundtip{order:7}
+ .scene-line{min-height:72px}
+}
+
+/* Touch gamepad controls; axes are independent per player and retain analog speed. */
+.mobile-keys{align-items:center}
+.mobile-keys .touch-player{flex:1;display:flex;align-items:center;flex-direction:column;gap:4px;min-width:0}
+.joystick{width:116px;height:116px;max-width:38vw;aspect-ratio:1;border-radius:50%;position:relative;touch-action:none;user-select:none;background:radial-gradient(circle,#586476,#233b51);border:3px solid #c7ac8b;box-shadow:inset 0 0 0 12px #ffffff0c,0 4px 10px #0006}
+.joystick-knob{position:absolute;left:calc(50% - 26px);top:calc(50% - 26px);width:52px;height:52px;border:3px solid #fff0c7;border-radius:50%;background:#ddbd85;box-shadow:0 2px 8px #0008;pointer-events:none}
+.mobile-keys .touch-dash{max-width:150px;margin-top:6px}
+@media(max-width:940px) and (orientation:landscape) and (pointer:coarse){
+ .mobile-game-status{grid-template-columns:1fr 1fr}
+ .mobile-keys{display:flex;position:sticky;bottom:3px;z-index:8;background:#172437db;padding:3px 14px;border-radius:12px;margin-top:5px}
+ .mobile-keys .touch-player{flex-direction:row;justify-content:space-around}
+ .joystick{width:min(105px,24vh);height:min(105px,24vh)}
+ .joystick-knob{width:44px;height:44px;left:calc(50% - 22px);top:calc(50% - 22px)}
+ .mobile-keys .touch-dash{width:85px;font-size:.74rem;min-height:45px;margin:0}
+ .game-frame{min-height:0}
+}
