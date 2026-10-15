@@ -16,6 +16,17 @@ const daanPortrait=new Image();daanPortrait.src='assets/daan.svg';
 // Day 4 uses a distinct static art asset, never a chibi sprite. The graphic is a
 // clearly labeled interim insignia pending approval of Daan's actual likeness.
 const EXTREME={guardianHp:1.65,guardianSpeed:1.17,guardianDamage:1.28,ambientDamage:1.35,bossHp:1.65,bossSpeed:1.22};
+// Threat knobs keep level one through five accessible across all four heroes.
+const DIFFICULTY_BALANCE={
+ story:{startingHealth:1.25,guardianHp:.67,guardianSpeed:.83,guardianDamage:.52,
+  mobDamage:.55,ambientInterval:2.45,ambientCap:12,earlySpawnGrace:6},
+ challenge:{startingHealth:1,guardianHp:1.2,guardianSpeed:1.04,guardianDamage:1,
+  mobDamage:1,ambientInterval:1,ambientCap:62,earlySpawnGrace:0},
+ extreme:{startingHealth:1,guardianHp:EXTREME.guardianHp,guardianSpeed:EXTREME.guardianSpeed,
+  guardianDamage:EXTREME.guardianDamage,mobDamage:EXTREME.ambientDamage,
+  ambientInterval:.78,ambientCap:62,earlySpawnGrace:0}
+};
+const difficultyBalance=()=>DIFFICULTY_BALANCE[difficulty];
 const ENEMY_TYPES={
  bleepling:{hp:42,speed:117,damage:13,size:21,score:12,xp:7},
  boink:{hp:60,speed:114,damage:12,size:26,score:20,xp:9},
@@ -333,10 +344,10 @@ function spawnGuardianWave(){
  for(let i=0;i<count;i++){
   const kind=(i===0&&gate.wave===2)?'chunkling':(i%3===0?'boink':i%3===1?'bleepling':'bocht');
   const c=ENEMY_TYPES[kind],a=TAU*(i+.3+gate.wave*.27)/count,radius=190+(i%2)*38;
-  const hp=Math.round(c.hp*(difficulty==='story'?.84:difficulty==='extreme'?EXTREME.guardianHp:1.2));
+  const tuning=difficultyBalance(),hp=Math.round(c.hp*tuning.guardianHp);
   foes.push({x:clamp(origin.x+Math.cos(a)*radius,30,WIDTH-30),y:clamp(origin.y+Math.sin(a)*radius,30,HEIGHT-30),
-   hp,maxHp:hp,speed:c.speed*(difficulty==='story'?.9:difficulty==='extreme'?EXTREME.guardianSpeed:1.04),
-   damage:Math.round(c.damage*(difficulty==='story'?.7:difficulty==='extreme'?EXTREME.guardianDamage:1)),size:c.size,attack:.85,
+   hp,maxHp:hp,speed:c.speed*tuning.guardianSpeed,
+   damage:Math.round(c.damage*tuning.guardianDamage),size:c.size,attack:.85,
    kind,guardian:true,age:0,telegraph:0,charge:-1,trailTimer:0,slow:0});
  }
  gate.remainingDelay=3.3;
@@ -427,6 +438,8 @@ function start(){
  $('scene-control-help').hidden=true;$('ending-invite').hidden=true;cancelAnimationFrame(raf);
  joystickAxes.forEach(a=>{a.x=0;a.y=0});document.querySelectorAll('.joystick-knob').forEach(k=>k.style.transform='translate(0px,0px)');
  players=[player(selected[0],0)];if($('coop').checked)players.push(player(selected[1],1));
+ const startHealth=DIFFICULTY_BALANCE[$('difficulty').value].startingHealth;
+ players.forEach(p=>{p.maxHp=Math.round(p.maxHp*startHealth);p.hp=p.maxHp;});
  foes=[];shots=[];drops=[];fx=[];hazards=[];beams=[];difficulty=$('difficulty').value;gate=null;gateCleared=[false,false,false];scentStep=0;duoActive=false;duoDefeated=false;laserUnlocked=false;coneCooldown=6.8;coneWindup=0;bossPulseCooldown=4;bossPulseWindup=0;bananaWindup=0;daanActive=false;daanPulse=0;daanActionTimer=0;laserChallenge={index:0,timer:0,zapCooldown:0};phase='explore';paused=false;boss=null;cutsceneNext=null;sceneName=null;musicStep=0;musicMode='idle';musicBar=0;musicNextBarAt=0;
  elapsed=0;score=0;kills=0;level=1;xp=0;goal=35;clues=0;fridgeVisible=false;
  spawnClock=.55;surgeClock=33;attackClock=0;hudClock=0;keys.clear();ensureAudio();
@@ -450,7 +463,7 @@ function spawnBleepling(){
  const c=ENEMY_TYPES[kind],hp=Math.round(c.hp+tier*(kind==='chunkling'?11:6));
  foes.push({x:clamp(focus.x+Math.cos(angle)*radius,35,WIDTH-35),
   y:clamp(focus.y+Math.sin(angle)*radius,35,HEIGHT-35),hp,maxHp:hp,
-  speed:c.speed+Math.min(31,elapsed*.14),attack:rnd(.3,.8),size:c.size,kind,damage:Math.ceil((c.damage+Math.floor(tier*.75))*(difficulty==='story'?.7:difficulty==='extreme'?EXTREME.ambientDamage:1)),age:0,telegraph:0,charge:-1,trailTimer:0,slow:0});
+  speed:c.speed+Math.min(31,elapsed*.14),attack:rnd(.3,.8),size:c.size,kind,damage:Math.ceil((c.damage+Math.floor(tier*.75))*difficultyBalance().mobDamage),age:0,telegraph:0,charge:-1,trailTimer:0,slow:0});
 }
 function emit(text,x,y,col='#ffe1aa'){if(fx.length<(liteFx?45:90))fx.push({text,x,y,col,t:1.1})}
 function nearest(origin,arr,r=Infinity){let item=null,bd=r;for(const o of arr){if(o.hp<=0||o.alive===false)continue;const d=dist(origin,o);if(d<bd){bd=d;item=o}}return item}
@@ -689,13 +702,13 @@ function update(dt){
  updateRevives(dt);
  updateEllieAuras(dt);
  spawnClock-=dt;
- if(spawnClock<=0&&foes.length<(gate?23:duoActive?20:phase==='boss'?48:62)){
+ if(spawnClock<=0&&elapsed>=difficultyBalance().earlySpawnGrace&&foes.length<(gate?23:duoActive?20:phase==='boss'?48:difficultyBalance().ambientCap)){
    const n=gate?1:duoActive?1:phase==='boss'?(difficulty==='story'?1:difficulty==='extreme'?3:2):elapsed>75?3:elapsed>18?2:1;
    for(let j=0;j<n&&foes.length<65;j++)spawnBleepling();
-   spawnClock=Math.max(.42,.93-elapsed*.0035)*(difficulty==='story'?1.65:difficulty==='extreme'?.78:1)*(gate?1.5:1)*(phase==='boss'?.9:1);
+   spawnClock=Math.max(.42,.93-elapsed*.0035)*difficultyBalance().ambientInterval*(gate?1.5:1)*(phase==='boss'?.9:1);
  }
  surgeClock-=dt;
- if(surgeClock<=0&&!duoActive&&!gate&&foes.length<60){
+ if(surgeClock<=0&&!duoActive&&!gate&&difficulty!=='story'&&foes.length<60){
     let n=phase==='boss'?7:5;
     for(let j=0;j<n&&foes.length<65;j++)spawnBleepling();
     say('🫧 BLEEPLING STAMPEDE! '+n+' extra bleps!',3.5); playSfx('wave');
