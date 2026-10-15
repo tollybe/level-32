@@ -23,3 +23,16 @@
 - [ ] Daan still needs an approved real likeness; existing animated emblem-face actor remains provisional.
 
 The word “Legendary has no perks” was interpreted as **no debuff**; this matches the requested rarity as an exceptionally valuable choice. Revisit if the user intended a different mechanic.
+
+## Day 6B — Owner playtest fixes (15 October 2026)
+
+- **Character stats visible without hover:** All four hero cards now permanently show Damage, Health and Speed out of five. Hover/focus expands the role explanation; this works even on touch-only devices. CSS/rendered visibility, not merely DOM existence, is covered in browser smoke tests.
+- **First dialogue no longer flashes old artwork:** Clue and boss story art are preloaded/decoded. The full-screen cinematic only becomes visible after the new frame and speaker dialogue are ready. A monotonically increasing scene token rejects late image loads after restart/skip, and the game is frozen throughout.
+- **Story 4/10 becomes newcomer-friendly:** Every hero starts with 25% more HP, guardian HP/speed/damage are softer, ambient spawn spacing is increased with a six-second grace and reduced cap, and the random surprise stampede is disabled. Adventure 7/10 and Extreme 10/10 remain progressively harder.
+- **Tougher elite Boink/Bocht:** Special clue-two duo HP now scales at 0.9× Story, 2.4× Adventure, 3.2× Extreme of their pre-existing 3× elite HP baseline. They remain physically separate; ordinary ambient Boink/Bocht retain their current balancing.
+- **Extreme 10/10 banana volley:** Boink telegraphs a four-banana world-axis **+** pattern, while Bocht telegraphs four diagonal **X** bananas; 0.78-second windups, 11 damage per banana, staggered cooldowns and existing player invulnerability permit dodging. This mechanic is not active on Story or Adventure, and banana hazards clear on final duo defeat.
+- **Legendary-feeling boss music:** The existing original battle melodies receive drums, an ascending ostinato, additional bass, brass responses and detuned string harmonies, with distinct phases and a visible Now Playing label. This is *inspired by the energy* of classic monster-battling RPGs; no copyrighted Pokémon melody or audio recording is included.
+- **Regression tests:** A 12-entry matrix (4 pets × 3 difficulty modes) verifies actual player starting HP, guardian health/damage/count, special duo HP and Exclusive-Extreme +/X shot-vector geometry. Separate browser checks test visible/focus/hover stats and that clue art is loaded before the cinematic opens.
+- **Still needs owner review:** New music through real speakers, beginner playtest without developer invincibility, 7/10 mini-boss challenge, the readability of +/X warning zones, physical phone animation performance, and Daan's approved actual likeness.
+
+**Release status:** Work-in-progress playtest until green CI and real-device feedback. Original portrait/image hashes, guest invitation access, and birthday location/timing information are unchanged.
