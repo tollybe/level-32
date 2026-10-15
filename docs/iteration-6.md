@@ -1,6 +1,6 @@
 # Hackathon Day 6 — Dialogue, Character Balance and Legendary Progression
 
-**Status:** Implementation candidate for automated regression and owner playtest. Not a guest release.
+**Status:** Merged to `main` in PR #12 (15 October 2026), GitHub Actions Chromium CI passed. Awaiting real-phone owner playtest; not a guest release.
 
 ## Requested changes and implementation
 
@@ -15,7 +15,7 @@
 
 ## Acceptance and safety
 
-- [ ] Confirm Chromium CI passes including new checks for cutscene scroll, level-5 offer, XP multiplier and phase-three Daan.
+- [x] Chromium CI passed, including new checks for cutscene scroll, level-5 offer, XP multiplier and phase-three Daan.
 - [ ] Host approves actual iPhone/Android UI for hover/tap cards, perk dialog, co-op, and readable telegraphs/aura.
 - [ ] Host approves 7/10 duo and boss HP timings, and balances all four heroes on real gameplay runs.
 - [ ] Test the four new music modes on actual device speakers/headphones at reasonable loudness; all should be original and distinct.
