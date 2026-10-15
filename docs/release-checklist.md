@@ -108,7 +108,7 @@ Historical checks above concerning **three guardian waves at each clue** no long
 
 - [x] Opt-in rendering flag defaults OFF; no invented sprite/portrait assets ship.
 - [x] Preview uses strict 64/96-pixel sheets, cardinal directions, original physics anchors, and unmodified canonical portrait fallback.
-- [ ] CI green: JavaScript syntax, standalone exporter, and synthetic-browser sprite frame/facing/flag checks.
+- [x] CI green (15 October 2026, PR #9): JavaScript syntax, standalone exporter, and synthetic-browser sprite frame/facing/flag checks.
 - [ ] Owner-approved faithful pet/Tolly sheets; Daan's real artwork still required.
 - [ ] Physical-device review and owner acceptance of Day 4.8 and of rendered artwork before general activation.
 - [ ] Verify sprite sheet exports, loading and failed-asset fallback with real approved files.
