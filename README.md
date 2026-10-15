@@ -117,3 +117,10 @@ Day 4 applies the [Iteration 4 roadmap](docs/iteration-4.md), motivated by playt
 **Verification:** the JavaScript parses; scripted gameplay simulation covered all three guardian gates, an attempted quest skip and Tolly's stationary-player exploit. Browser smoke coverage exists in `tests/smoke.py` but still needs execution in Chromium and hands-on playtesting before claiming a measured 7/10. See the [release checklist](docs/release-checklist.md).
 
 **Artist constraint:** no existing files in `game/assets/` were changed.
+
+
+### Day 4 extension: Extreme and Daan
+- Extreme (10/10 target) adds denser guardian waves, stronger foes, faster Tolly and extra pressure.
+- In Extreme, Daan arrives in Tolly's second phase as a static-asset encounter, warning of a dodgable shockwave.
+- **Daan asset is provisional:** `game/assets/daan.svg` is a labeled emblem pending an approved likeness; it is not a chibi sprite. All original character portraits remain untouched.
+- See `docs/iteration-5.md` for Day 5, **documentation only**. Day 5 implementation is blocked on Day 4 testing and asset approval.
