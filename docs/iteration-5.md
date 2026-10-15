@@ -1,6 +1,6 @@
 # Hackathon Day 5 — Chibi Renaissance
 
-**Status: Phase 5B implemented on a review branch: eight owner-approved sprite sheets are included, with original portrait fallback and a CHIBI/CLASSIC game toggle. This is still a playtest project, NOT the birthday-invitation release. Physical-device acceptance is outstanding.**
+**Status: Day 5B merged into `main` via PR #10 on 15 October 2026, after green Chromium CI. Eight approved sheets ship with a CHIBI/CLASSIC toggle and original portrait fallback. This remains a playtest, NOT the birthday-invitation release. Physical-device acceptance is outstanding.**
 
 **15 October 2026:** The owner explicitly authorised beginning Day 5 after the Day 4.8 merge. This supersedes the older *do not start any Day 5 code* scheduling restriction **for this infrastructure slice only**. It does NOT waive the outstanding physical-device acceptance checks, the requirement to approve every derived likeness, or Daan's approved character-art dependency.
 
@@ -47,7 +47,7 @@ Use nearest-neighbor *only for sprite sheets*. Regular portrait/cutscene images 
 - [x] Canonical five portrait blob SHAs unchanged after sprite branch changes (separate new files under `game/assets/sprites/`).
 - [x] Reversible renderer with portrait fallback and separate physics, controls and animation states.
 - [x] Chromium tests passed in PR #9 (15 October 2026), including the sprite test and existing quest/character/win/lose/invitation coverage.
-- [ ] Approved sheets look crisp at phone scale and don't obstruct HP, boss hazards, timed lasers, PAWS or scene dialogue.
+- [ ] In-person phone-scale visual acceptance remains outstanding (Chromium emulation and real sprite decoding passed in PR #10).
 - [ ] Both the original `/game/` page and independently shareable `game/invitation.html` remain available from start, play, win and loss.
 - [ ] Calendar file import tested on common phone platforms.
 - [x] Owner approved the designs and requested continued sprite integration. Chibi mode is default-on for the iterative *playtest* only, with classic toggle; public guest release is not authorised.
