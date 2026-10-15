@@ -21,5 +21,5 @@ jobs:
           python -m playwright install --with-deps chromium
       - name: Check JavaScript syntax
         run: node --check game/game.js
-      - name: Browser smoke: desktop, portrait, landscape and Extreme
+      - name: "Browser smoke: desktop, portrait, landscape and Extreme"
         run: python tests/smoke.py
