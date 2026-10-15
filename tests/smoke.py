@@ -75,6 +75,39 @@ hook='''window.__rosieTest={
   return modes;
  },
  heroBalance(){return Object.fromEntries(Object.entries(roster).map(([key,v])=>[key,Math.round(v.damage/v.rate)]))},
+ combatMatrix(){
+   const previous={selected:selected.slice(),mode:$('difficulty').value,coop:$('coop').checked};
+   const results=[];
+   for(const mode of ['story','challenge','extreme']){
+    $('difficulty').value=mode;$('coop').checked=false;
+    for(const hero of Object.keys(roster)){
+     selected=[hero,hero];start();cancelAnimationFrame(raf);
+     const p=players[0];
+     beginGuardian(0);
+     const guardians=foes.filter(e=>e.guardian);
+     foes=[];gate=null;spawnDuo();
+     const elites=foes.filter(e=>e.elite);
+     // Force the same scripted attack phase; only Extreme should fire.
+     for(const e of elites){e.volleyWarmup=.04;updateDuoVolley(e,.05)}
+     const banana=hazards.filter(h=>h.kind==='duo-banana');
+     const signature=banana.map(h=>({source:h.source,vx:h.vx,vy:h.vy}));
+     results.push({mode,hero,heroHp:p.maxHp,baseHp:roster[hero].hp,
+       guardians:guardians.length,guardianHp:guardians[0].maxHp,
+       guardianDamage:guardians[0].damage,
+       eliteHp:elites.map(e=>e.maxHp),banana:signature,
+       startingLevel:level});
+    }
+   }
+   selected=previous.selected;$('difficulty').value=previous.mode;
+   $('coop').checked=previous.coop;start();cancelAnimationFrame(raf);
+   players.forEach(p=>p.inv=9999);spawnClock=9999;surgeClock=9999;
+   return results;
+ },
+ sceneVisibleAndReady(){const art=$('overlay-art'),overlay=$('overlay');
+   return !overlay.classList.contains('hidden')&&art.complete&&art.naturalWidth>0 &&
+     !art.classList.contains('scene-art-pending')},
+ soundtrackConfig(){return {modes:Object.keys(battleScores),legendaryBpm:battleScores.boss3.bpm,
+   tiers:DIFFICULTY_BALANCE}},
  getEnemyList(){return [...new Set(foes.map(e=>e.kind))]},
  state(){return {phase,clues,duoActive,duoDefeated,laserUnlocked,laserIndex:laserChallenge.index,scentStep,score,kills,coneWindup,elapsed,hp:players.map(p=>p.hp),sceneName,cutsceneNext,bossHp:boss?.hp||0,daanActive,bossRage:boss?.rage||false,bossMaxHp:boss?.maxHp||0,liteFx,guardWave:gate?.wave??null,guardians:foes.filter(e=>e.guardian&&e.hp>0).length,cleared:gateCleared.slice(),mode:difficulty,overlay:!$('overlay').classList.contains('hidden'),imgSrc:$('overlay-art').getAttribute('src').slice(0,90),dialogueImages:[...$('scene-dialogues').querySelectorAll('img')].map(im=>im.getAttribute('src').slice(0,80)),missionUnlock:$('mission-unlock').classList.contains('show'),objectText:$('objective-label').textContent}}
 };'''
@@ -142,9 +175,42 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     assert page.locator('.select-invite').get_attribute('target')=='_blank'
     assert page.locator('.hero-invite-line a').get_attribute('target')=='_blank'
     assert page.locator('#ending-invite').is_hidden()
+    if not mobile and mode=='challenge' and not solo:
+        matrix=page.evaluate('window.__rosieTest.combatMatrix()')
+        assert len(matrix)==12,matrix
+        for hero in ['rosie','millie','winnifred','ellie']:
+            tiers=[next(row for row in matrix if row['hero']==hero and row['mode']==m)
+              for m in ('story','challenge','extreme')]
+            story,adventure,extreme=tiers
+            assert story['heroHp']>adventure['heroHp']==extreme['heroHp'],tiers
+            assert story['startingLevel']==adventure['startingLevel']==extreme['startingLevel']==1,tiers
+            assert story['guardianHp']<adventure['guardianHp']<extreme['guardianHp'],tiers
+            assert story['guardianDamage']<adventure['guardianDamage']<extreme['guardianDamage'],tiers
+            assert story['guardians']<adventure['guardians']<extreme['guardians'],tiers
+            assert all(x<y<z for x,y,z in zip(story['eliteHp'],adventure['eliteHp'],extreme['eliteHp'])),tiers
+            assert not story['banana'] and not adventure['banana'],tiers
+            pattern=extreme['banana']
+            assert len(pattern)==8,pattern
+            for shot in pattern:
+                vx,vy=abs(shot['vx']),abs(shot['vy'])
+                if shot['source']=='boink': assert min(vx,vy)<1e-6,shot
+                else: assert abs(vx-vy)<1e-6,shot
+        print('12-character-mode balance matrix and Extreme-only +/X bananas: PASS')
+    soundtrack=page.evaluate('window.__rosieTest.soundtrackConfig()')
+    assert set(['duo','boss1','boss2','boss3']).issubset(soundtrack['modes']),soundtrack
+    assert soundtrack['legendaryBpm']>=170,soundtrack
     s=page.evaluate('window.__rosieTest.start()')
     assert page.locator('.hero-stats').count()==4
+    for card in page.locator('.hero').all():
+        assert card.locator('.hero-stats').is_visible(), 'Stats must be displayed without hover'
+        assert card.locator('.stat-line').count()==3
     assert 'FIGHTER STATS' in page.locator('.hero-stats').first.inner_text()
+    if not mobile:
+        page.locator('[data-hero="rosie"]').hover()
+        assert page.locator('[data-hero="rosie"] .stats-summary').is_visible()
+    else:
+        page.locator('[data-hero="rosie"]').focus()
+        assert page.locator('[data-hero="rosie"] .stats-summary').is_visible()
     ratios=page.evaluate('window.__rosieTest.heroBalance()')
     assert ratios['winnifred']>ratios['rosie'] and ratios['millie']>ratios['ellie'],ratios
     levels=page.evaluate('window.__rosieTest.xpProbe()')
@@ -195,6 +261,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     s=page.evaluate('window.__rosieTest.place(0)')
     assert abs(page.evaluate('window.scrollY')-scroll_before)<2, 'First cinematic must not jump document'
     assert s['phase']=='cutscene' and s['clues']==1 and s['cleared'][0], s
+    page.wait_for_function("window.__rosieTest.sceneVisibleAndReady()",timeout=15000)
     assert s['sceneName']=='clue1' and s['imgSrc'].startswith('data:image/webp'),s
     assert len(s['dialogueImages'])==3,s
     frozen=page.evaluate('window.__rosieTest.state()')
@@ -219,6 +286,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     assert s['phase']=='explore' and s['clues']==1 and s['guardians']>0
     s=page.evaluate('window.__rosieTest.clearGuards()')
     assert s['phase']=='cutscene' and s['clues']==2
+    page.wait_for_function("window.__rosieTest.sceneVisibleAndReady()",timeout=15000)
     assert s['sceneName']=='clue2' and s['imgSrc'].startswith('data:image/webp')
     s=page.evaluate('window.__rosieTest.continue()')
     assert s['duoActive'] and s['phase']=='explore',s
@@ -235,6 +303,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     s=page.evaluate('window.__rosieTest.solveLaser()')
     assert s['cleared'][2] and s['laserIndex']==3,s
     s=page.evaluate('window.__rosieTest.place(2)')
+    page.wait_for_function("window.__rosieTest.sceneVisibleAndReady()",timeout=15000)
     assert s['phase']=='cutscene' and s['clues']==3 and s['sceneName']=='clue3' and s['imgSrc'].startswith('data:image/webp'),s
     s=page.evaluate('window.__rosieTest.continue()')
     assert s['laserUnlocked'] and s['phase']=='explore'
