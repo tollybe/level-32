@@ -39,13 +39,13 @@ hook='''window.__rosieTest={
  killBoss(){damage(boss,boss.hp+9999,players[0]);return this.state()},
  lose(){resetEnd(false);return this.state()},
  dragonPierceCheck(){
-  const saved={foes,shots,boss,phase,fx};
+  const saved={foes,shots,boss,phase,fx,ambush:players[0].ambushReady};players[0].ambushReady=0;
   const targets=[320,365,410].map(x=>({x,y:200,hp:200,maxHp:200,size:12,kind:'bleepling'}));
   const shot={x:290,y:200,vx:3000,vy:0,ttl:1,kind:'dragon',damage:17,owner:0,pierce:1,hitTargets:new Set()};
   foes=targets;shots=[shot];boss=null;phase='explore';fx=[];
   advanceProjectiles(.045);
   const value={hp:targets.map(t=>t.hp),hits:shot.hitTargets.size,left:shots.length};
-  foes=saved.foes;shots=saved.shots;boss=saved.boss;phase=saved.phase;fx=saved.fx;
+  foes=saved.foes;shots=saved.shots;boss=saved.boss;phase=saved.phase;fx=saved.fx;players[0].ambushReady=saved.ambush;
   return value;
  },
  triggerDaanSpite(){
@@ -223,7 +223,7 @@ hook='''window.__rosieTest={
  },
  bushStealthProbe(){
   const was={phase,gate,foes:foes.slice(),boss,bushEggSeen,
-   pos:players.map(p=>({x:p.x,y:p.y,hidden:p.hidden,bushTime:p.bushTime,bushId:p.bushId}))};
+   pos:players.map(p=>({x:p.x,y:p.y,hidden:p.hidden,bushTime:p.bushTime,bushId:p.bushId,ambushReady:p.ambushReady}))};
   const b=bushes[0];phase='explore';gate=null;boss=null;foes=[];
   players.forEach(p=>{p.x=b.x;p.y=b.y;p.inv=9999});
   updateBushes(.1);
