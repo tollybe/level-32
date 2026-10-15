@@ -150,7 +150,7 @@ The original three-waves-per-scroll design is **historical**, not the latest rul
 - No approved Daan portrait yet; the placeholder SVG is temporary. Day 5 sprite development **still not started**.
 
 
-### Day 4.8 — Real two-player phone feedback (under review)
+### Day 4.8 — Real two-player phone feedback (merged; owner re-test pending)
 
 The host and Daan played together and reported easy Tolly combat, insufficient character animation, occasional phone lag, confusing scene-to-combat transitions and hard-to-find Shift DASH controls. The Day 4.8 branch makes Tolly harder in co-op, adds a last-quarter telegraphed frenzy, gives canonical portrait discs gentle movement/dash animation, and adds a provisional *on-field* Daan support actor. It does NOT create/claim an approved likeness of Daan, and introduces **no Day 5 sprites**. Dialogue advances with `C` (not movement keys), retains touch NEXT/SKIP controls, and grants brief safety after scenes. DASH labels and cooldowns are more prominent. Lite FX defaults on for touch to reduce rendering overhead.
 
