@@ -8,10 +8,10 @@ html=game_as_single_html()
 # Party mission times must agree in the invitation, game hint, and calendar.
 invite_text=(ROOT/'game/invitation.html').read_text(encoding='utf-8')
 calendar=(ROOT/'game/birthday.ics').read_text(encoding='utf-8')
+game_text=(ROOT/'game/index.html').read_text(encoding='utf-8')
 assert calendar.count('BEGIN:VEVENT')==2 and calendar.count('END:VEVENT')==2
 assert invite_text.count('href="birthday.ics" download="level32-birthday.ics"')==1
 assert game_text.count('href="birthday.ics" download="level32-birthday.ics"')==1
-game_text=(ROOT/'game/index.html').read_text(encoding='utf-8')
 assert 'MISSION ONE · 18:15–20:15' in invite_text
 assert 'Mission One begins at 18:15' in game_text
 assert 'DTSTART;TZID=Europe/Amsterdam:20261113T181500' in calendar
