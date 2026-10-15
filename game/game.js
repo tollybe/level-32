@@ -10,7 +10,7 @@ let selected=['rosie','winnifred'],players=[],foes=[],shots=[],drops=[],fx=[],ha
 let cutsceneNext=null,sceneName=null,reviveSeconds=1.85,hudClock=0,sceneOpenedAt=0,perkOffer=null,perkReturnPhase='explore',scenePresentationToken=0,perksAwarded=0;
 let liteFx=typeof matchMedia==='function'&&matchMedia('(pointer:coarse)').matches;
 let duoActive=false,duoDefeated=false,laserUnlocked=false,beams=[],bushEggSeen=false,bossBushVisits=0,bossBushOccupied=false,winston=null,winstonForcedReveal=0,pairBanterClock=12,worldBubbles=[],coneCooldown=6.8,coneWindup=0,coneAngle=0,bossPulseCooldown=4,bossPulseWindup=0,bananaWindup=0;
-let gate=null,gateCleared=[false,false,false],difficulty='challenge',daanActive=false,daanPulse=0,daanActionTimer=0,daanHealCooldown=0,daanHealWindup=0,daanHealsRemaining=0,daanHealFlash=0;
+let bossNicknameClock=13,bossNicknameIndex=0,gate=null,gateCleared=[false,false,false],difficulty='challenge',daanActive=false,daanPulse=0,daanActionTimer=0,daanHealCooldown=0,daanHealWindup=0,daanHealsRemaining=0,daanHealFlash=0;
 const GATE_WAVES={challenge:[[3,3,2],[3,3,3],[4,3,3]],story:[[2,2,2],[2,2,2],[2,2,3]],extreme:[[5,5,5],[6,5,6],[6,7,7]]};
 const daanPortrait=new Image();daanPortrait.src='assets/daan.svg';
 // Day 4 uses a distinct static art asset, never a chibi sprite. The graphic is a
@@ -65,6 +65,15 @@ function presentSceneArt(kind,token){
 }
 // Never generate alternate faces for the pets: scene portraits reuse the actual
 // character-select images (and Tolly's existing portrait) for a consistent cast.
+// Tolly's names are character-specific, not generic labels.
+const TOLLY_NICKNAMES={
+ rosie:'Rosie the Dog',millie:'Silly Millie',
+ ellie:'Ellie Bellie',winnifred:'Princess Winnifred, floof of her name'
+};
+const ROSIE_THEME=[
+ ['rosie',"She's the rosiest of rosies, the tosiest of tosies..."],
+ ['daan',"The nosiest of nosies... IT'S ROSIE THE DOOOOOOG!"]
+];
 const EXTRA_BANTER={
  laser:[['winnifred','Pew. Pew. Pew.'],['rosie','AAAH! I HAVE BEEN SHOT!'],['millie','AAAAAH! ROSIE HAS BEEN SHOT!'],['ellie','Guys. She clearly meant the laser.'],['rosie','...Oh.'],['millie','...Oh. WAIT. IT MOVED! AAAAH!'],['winnifred','A pawsitively catastrophic misunderstanding.']],
  daan:[['tolly','DAAN! I REQUIRE REINFORCEMENTS!'],['millie','BALL?'],['ellie','That is not a ball, Millie.'],['millie','IT MOVED! AAAAAAH!'],['rosie','I will protect us! ...After the banana.'],['ellie','Guys! That is a terrible idea. WAIT FOR ME!']],
@@ -89,7 +98,12 @@ const CLUE_SCENES=[
 function renderSceneLines(kind){
  const host=$('scene-dialogues');host.replaceChildren();host.dataset.beat='0';
  const lines=[...(SCENE_LINES[kind]||[])];
- if(kind==='phase3'&&difficulty==='extreme'){lines.push(['daan','I have Tolly’s back! Dodge the boulder and watch the green healing beam!']);lines.push(...EXTRA_BANTER.daan)}
+ if(kind==='intro'){
+   const ids=[...new Set(players.map(p=>p.id))];
+   for(const id of ids)lines.push(['tolly',TOLLY_NICKNAMES[id]+'! You are NOT getting into this fridge!']);
+ }
+
+ if(kind==='phase3'&&difficulty==='extreme'){lines.push(['daan','I have Tolly’s back! Dodge the boulder and watch the green healing beam!']);lines.push(...EXTRA_BANTER.daan);lines.push(...ROSIE_THEME)}
  // Character-specific ending callbacks, always with the established portraits.
  if(kind==='victory'||kind==='defeat'){
   const lead=players[0],replies={rosie:'Can we discuss the banana situation on the way to the party?',
@@ -445,7 +459,7 @@ function continueScene(){
  $('scene-dialogues').hidden=true;
  $('pause').disabled=false;$('pause').textContent='Ⅱ PAWS';
  if(kind==='intro'){
-   bossBushVisits=0;bossBushOccupied=false;winston=null;winstonForcedReveal=0;
+   bossBushVisits=0;bossBushOccupied=false;winston=null;winstonForcedReveal=0;bossNicknameClock=8;bossNicknameIndex=0;
    const hp=(players.length===2?2040:1450)*(difficulty==='story'?.67:difficulty==='extreme'?EXTREME.bossHp:1);
    boss={x:fridge.x+45,y:fridge.y-80,hp,maxHp:hp,size:49,speed:difficulty==='story'?96:difficulty==='extreme'?137*EXTREME.bossSpeed:145,attack:1.1,hitFlash:0,rage:false};
    hazards=[];foes=foes.slice(-5);bossPhase=1;coneWarned=false;coneCooldown=6.6;coneWindup=0;bossPulseCooldown=1.65;bossPulseWindup=0;bananaWindup=0;daanActive=false;daanPulse=4;daanActionTimer=0;daanHealCooldown=0;daanHealWindup=0;daanHealsRemaining=0;daanHealFlash=0;
@@ -460,7 +474,7 @@ function continueScene(){
    bossPhase=3;boss.rage=true;playSfx('phase');
    players.filter(p=>p.alive).forEach(p=>p.inv=Math.max(p.inv,1.6));
    coneCooldown=2;bossPulseCooldown=1.2;
-   if(difficulty==='extreme'){daanActive=true;daanPulse=3;daanActionTimer=.7;daanHealCooldown=7;daanHealWindup=0;daanHealsRemaining=2;daanHealFlash=0;say('⚠ DAAN ARRIVES! WATCH THE BOULDER AND GREEN HEAL!',4)}
+   if(difficulty==='extreme'){daanActive=true;daanPulse=3;daanActionTimer=.7;daanHealCooldown=7;daanHealWindup=0;daanHealsRemaining=2;daanHealFlash=0;bubble('daan',"IT'S ROSIE THE DOOOOOG!",4);say('⚠ DAAN ARRIVES! WATCH THE BOULDER AND GREEN HEAL!',4)}
    else say('⚠ FINAL FRIDGE FRENZY!',4);
  }else if(kind==='clue2'){
    players.filter(p=>p.alive).forEach(p=>p.inv=Math.max(p.inv,1.2));
@@ -488,7 +502,7 @@ function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+
 function start(){
  ++scenePresentationToken;perkOffer=null;perksAwarded=0;$('perk-panel').hidden=true;
  $('scene-control-help').hidden=true;$('ending-invite').hidden=true;cancelAnimationFrame(raf);
- bushEggSeen=false;bossBushVisits=0;bossBushOccupied=false;winston=null;winstonForcedReveal=0;pairBanterClock=12;worldBubbles=[];
+ bushEggSeen=false;bossBushVisits=0;bossBushOccupied=false;winston=null;winstonForcedReveal=0;pairBanterClock=12;worldBubbles=[];bossNicknameClock=13;bossNicknameIndex=0;
  joystickAxes.forEach(a=>{a.x=0;a.y=0});document.querySelectorAll('.joystick-knob').forEach(k=>k.style.transform='translate(0px,0px)');
  players=[player(selected[0],0)];if($('coop').checked)players.push(player(selected[1],1));
  const startHealth=DIFFICULTY_BALANCE[$('difficulty').value].startingHealth;
@@ -835,9 +849,22 @@ function updateBushes(dt){
   boss.attack=Math.max(.8,boss.attack);
  }
 }
+function updateBossNicknames(dt){
+ if(phase!=='boss'||!boss||boss.hp<=0||winston&&!winston.complete)return;
+ bossNicknameClock-=dt;
+ if(bossNicknameClock>0)return;
+ const live=players.filter(p=>p.alive&&!p.hidden);
+ if(live.length){
+  const p=live[bossNicknameIndex%live.length];
+  bubble('tolly',TOLLY_NICKNAMES[p.id]+'! Keep away from my snacks!',3.6);
+  bossNicknameIndex++;
+ }
+ bossNicknameClock=15;
+}
 function drawWorldBubbles(){
  for(const b of worldBubbles){
-  const p=b.speaker==='tolly'?boss:players.find(p=>p.id===b.speaker&&p.alive)
+  const p=b.speaker==='tolly'?boss:b.speaker==='daan'&&boss?{x:boss.x+140,y:boss.y+30}
+  :players.find(p=>p.id===b.speaker&&p.alive)
    ||bushes.find((b,i)=>players.some(q=>q.bushId===i));
   if(!p)continue;
   const x=p.x,y=p.y-(b.speaker==='tolly'?152:82);
@@ -887,6 +914,7 @@ function update(dt){
  if(phase==='ended'||phase==='cutscene')return;
  updateAutoAttacks(dt);
  updatePairBanter(dt);
+ updateBossNicknames(dt);
  worldBubbles.forEach(b=>b.ttl-=dt);worldBubbles=worldBubbles.filter(b=>b.ttl>0);
  updateRevives(dt);
  updateEllieAuras(dt);
