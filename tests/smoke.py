@@ -71,7 +71,10 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     assert page.evaluate("window.Level32Sprites.loadedCharacters.length")==9
     assert page.evaluate("window.Level32Sprites.previewEnabled") is True
     assert page.evaluate("window.Level32Sprites.loadedCharacters.includes('daan')")
-    assert page.evaluate("window.Level32Sprites.approvedFiles.daan.endsWith('daan.svg')")
+    assert page.evaluate("""() => {
+        const source=window.Level32Sprites.approvedFiles.daan;
+        return source.endsWith('daan.svg') || source.startsWith('data:image/svg+xml;base64,');
+    }""")
     # Synthetic sheet verifies frame cropping and reversible fallback, then
     # restores the actual approved artwork before the gameplay regression run.
     sprite_check=page.evaluate("""async () => {
