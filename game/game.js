@@ -6,7 +6,7 @@ const WIDTH=2600,HEIGHT=1900, VIEWW=960,VIEWH=600, TAU=Math.PI*2, keys=new Set()
 // No server or shared scores required; all audio is original WebAudio synthesis.
 const petImages=Object.fromEntries(Array.from(document.querySelectorAll('#heroes .hero'),el=>[el.dataset.hero,el.querySelector('.portrait img')]));
 const roster={rosie:{name:'Rosie',emoji:'🐕‍🦺',color:'#222a36',hp:130,speed:220,range:225,rate:.56,damage:17,weapon:'dragon'},millie:{name:'Millie',emoji:'🐕',color:'#31323d',hp:135,speed:205,range:220,rate:.62,damage:14,weapon:'ball'},winnifred:{name:'Winnifred',emoji:'🐈',color:'#e4d4bc',hp:128,speed:240,range:153,rate:.41,damage:25,weapon:'sausage'},ellie:{name:'Ellie',emoji:'🐶',color:'#121823',hp:150,speed:250,range:175,rate:.86,damage:9,weapon:'kong',auraRadius:135,healPulse:2.7,selfRegen:1.4}};
-let selected=['rosie','winnifred'],players=[],foes=[],shots=[],drops=[],fx=[],hazards=[],boss=null,phase='idle',paused=false,score=0,kills=0,level=1,xp=0,goal=35,spawnClock=0,surgeClock=33,elapsed=0,clues=0,fridgeVisible=false,fridge={x:2180,y:1440},cam={x:0,y:0},lastTime=0,raf=0,messageClock=0,attackClock=0,heldTouch={},audioCtx=null,audioEnabled=true,musicTimer=null,musicStep=0,musicMode='idle',musicBar=0,musicNextBarAt=0,sloganClock=8,bossPhase=1,coneWarned=false;
+let selected=['rosie','winnifred'],players=[],foes=[],shots=[],drops=[],fx=[],hazards=[],boss=null,phase='idle',paused=false,score=0,kills=0,level=1,xp=0,goal=35,spawnClock=0,surgeClock=33,elapsed=0,clues=0,fridgeVisible=false,fridge={x:2180,y:1440},cam={x:0,y:0},lastTime=0,raf=0,messageClock=0,attackClock=0,heldTouch={},joystickAxes=[{x:0,y:0},{x:0,y:0}],audioCtx=null,audioEnabled=true,musicTimer=null,musicStep=0,musicMode='idle',musicBar=0,musicNextBarAt=0,sloganClock=8,bossPhase=1,coneWarned=false;
 let cutsceneNext=null,sceneName=null,reviveSeconds=1.85,hudClock=0;
 let duoActive=false,duoDefeated=false,laserUnlocked=false,beams=[],coneCooldown=6.8,coneWindup=0,coneAngle=0,bossPulseCooldown=4,bossPulseWindup=0,bananaWindup=0;
 let gate=null,gateCleared=[false,false,false],difficulty='challenge',daanActive=false,daanPulse=0;
@@ -346,6 +346,7 @@ function say(t,duration=3){$('game-message').textContent=t;messageClock=duration
 function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5}}
 function start(){
  $('ending-invite').hidden=true;cancelAnimationFrame(raf);
+ joystickAxes.forEach(a=>{a.x=0;a.y=0});document.querySelectorAll('.joystick-knob').forEach(k=>k.style.transform='translate(0px,0px)');
  players=[player(selected[0],0)];if($('coop').checked)players.push(player(selected[1],1));
  foes=[];shots=[];drops=[];fx=[];hazards=[];beams=[];difficulty=$('difficulty').value;gate=null;gateCleared=[false,false,false];duoActive=false;duoDefeated=false;laserUnlocked=false;coneCooldown=6.8;coneWindup=0;bossPulseCooldown=4;bossPulseWindup=0;bananaWindup=0;daanActive=false;daanPulse=0;phase='explore';paused=false;boss=null;cutsceneNext=null;sceneName=null;musicStep=0;musicMode='idle';musicBar=0;musicNextBarAt=0;
  elapsed=0;score=0;kills=0;level=1;xp=0;goal=35;clues=0;fridgeVisible=false;
@@ -403,6 +404,7 @@ function movePlayers(dt){
   if(!p.alive)return;
   let k=p.num===0?['a','d','w','s']:['arrowleft','arrowright','arrowup','arrowdown'];
   let dx=Number(keys.has(k[1]))-Number(keys.has(k[0])),dy=Number(keys.has(k[3]))-Number(keys.has(k[2]));
+  if(Math.hypot(joystickAxes[p.num].x,joystickAxes[p.num].y)>.08){dx=joystickAxes[p.num].x;dy=joystickAxes[p.num].y;}
   let l=Math.hypot(dx,dy)||1;
   p.slowTime=Math.max(0,(p.slowTime||0)-dt);const footing=p.slowTime>0?.63:1;
   p.x=clamp(p.x+dx/l*p.speed*footing*dt*(p.dash>0?2.3:1),24,WIDTH-24);
@@ -935,7 +937,21 @@ window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();
  if(k==='escape')togglePause();keys.add(k);
 });window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));window.addEventListener('blur',()=>keys.clear());
 for(const b of document.querySelectorAll('[data-dash]'))b.addEventListener('pointerdown',e=>{e.preventDefault();tryDash(Number(b.dataset.dash));});
- for(const b of document.querySelectorAll('[data-k]')){const k=b.dataset.k;b.addEventListener('pointerdown',e=>{e.preventDefault();keys.add(k);b.setPointerCapture(e.pointerId)});for(const ev of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,()=>keys.delete(k))}
+for(const pad of document.querySelectorAll('[data-joystick]')){
+ const axis=joystickAxes[Number(pad.dataset.joystick)],knob=pad.querySelector('.joystick-knob');
+ let active=null;
+ function position(e){
+  const box=pad.getBoundingClientRect(),cx=box.left+box.width/2,cy=box.top+box.height/2;
+  const radius=box.width*.36,dx=e.clientX-cx,dy=e.clientY-cy,m=Math.hypot(dx,dy),ratio=m>radius?radius/m:1;
+  axis.x=dx*ratio/radius;axis.y=dy*ratio/radius;
+  knob.style.transform='translate('+Math.round(dx*ratio)+'px,'+Math.round(dy*ratio)+'px)';
+ }
+ function release(e){if(active!==null&&(e.pointerId===active||!e.pointerId)){active=null;axis.x=axis.y=0;knob.style.transform='translate(0px,0px)'}}
+ pad.addEventListener('pointerdown',e=>{if(active!==null)return;e.preventDefault();active=e.pointerId;pad.setPointerCapture(active);position(e)});
+ pad.addEventListener('pointermove',e=>{if(active!==e.pointerId)return;e.preventDefault();position(e)});
+ for(const ev of ['pointerup','pointercancel','lostpointercapture'])pad.addEventListener(ev,release);
+ }
+ window.addEventListener('blur',()=>{joystickAxes.forEach(a=>{a.x=a.y=0});document.querySelectorAll('.joystick-knob').forEach(k=>k.style.transform='translate(0px,0px)')})
 // idle garden behind the opening card
 players=[player('rosie',0),player('winnifred',1)];render();syncHud();
 })();
