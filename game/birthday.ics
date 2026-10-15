@@ -25,8 +25,8 @@ END:VTIMEZONE
 BEGIN:VEVENT
 UID:level32-mission-one-20261113@birthday-invite
 DTSTAMP:20261015T000000Z
-DTSTART;TZID=Europe/Amsterdam:20261113T183000
-DTEND;TZID=Europe/Amsterdam:20261113T203000
+DTSTART;TZID=Europe/Amsterdam:20261113T181500
+DTEND;TZID=Europe/Amsterdam:20261113T201500
 SUMMARY:Level 32 · Mission One — Chocolate and Crafts
 LOCATION:Broodnodig\, Paardenveld 5\, 3511 RD Utrecht
 DESCRIPTION:Swedish chocolate balls\, crafts and photos. Dogs welcome during this first activity. Please coordinate food and dog drop-off in the WhatsApp group.
