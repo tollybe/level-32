@@ -233,8 +233,10 @@ Historical checks above concerning **three guardian waves at each clue** no long
 
 ## Day 8D — Phone scene and opposite-seat co-op layout
 
-- [ ] Full mobile landscape and portrait browser tests: story illustration, dialogue, NEXT/Skip controls fit without scrolling; game phase and HP stay frozen while reading.
-- [ ] Solo phone: joystick at left, DASH at right. Player 2 inputs hidden.
-- [ ] Phone co-op: P1 controls at bottom, P2 controls at top rotated 180°, with both guests' thumbsticks on their left and dash on their right from their respective perspectives. P2 input axes flip accordingly.
-- [ ] Shared XP, both HP displays, boss and phone Invite/Pause/Exit remain available between the two players without changing desktop layout.
+- [x] PR #24 Chromium: full mobile landscape and portrait browser tests: story illustration, dialogue, NEXT/Skip controls fit without scrolling; game phase and HP stay frozen while reading.
+- [x] PR #24 Chromium: solo phone joystick at left, DASH at right. Player 2 inputs hidden.
+- [x] PR #24 Chromium: phone co-op P1 controls at bottom, P2 controls at top rotated 180°, with both guests' thumbsticks on their left and dash on their right from their respective perspectives. P2 input axes flip accordingly.
+- [x] PR #24 Chromium: shared XP, both HP displays, boss and phone Invite/Pause/Exit remain available between the two players without changing desktop layout.
 - [ ] Owner physically tries one shared phone across a table (portrait and landscape) and reviews touch comfort, scene readability, damage-free dialogue.
+
+**Day 8D integration:** PR #24 merged to `main` on 15 October 2026 after green JS syntax, desktop/portrait/landscape/Extreme gameplay smoke tests. Real handheld opposite-seat controls and visual scene size still need owner approval.
