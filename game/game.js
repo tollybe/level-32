@@ -512,6 +512,36 @@ function updateEllieAuras(dt){
   if(didHeal) playSfx('heal');
  }
 }
+// Swept segment-to-circle collisions prevent frame skips on mobile.
+// Rosie's dragon intentionally pierces one enemy to hit a second, never a third.
+function advanceProjectiles(dt){
+ for(let i=shots.length-1;i>=0;i--){
+  const s=shots[i],x0=s.x,y0=s.y;
+  const x1=x0+s.vx*dt,y1=y0+s.vy*dt;
+  s.x=x1;s.y=y1;s.ttl-=dt;
+  if(s.ttl<=0){shots.splice(i,1);continue}
+  const dx=x1-x0,dy=y1-y0,length2=dx*dx+dy*dy;
+  const hits=[...foes,...(boss?[boss]:[])]
+   .filter(t=>t.hp>0&&!s.hitTargets.has(t))
+   .map(t=>{
+    const along=length2>0?clamp(((t.x-x0)*dx+(t.y-y0)*dy)/length2,0,1):0;
+    const cx0=x0+along*dx,cy0=y0+along*dy,radius=(t.size||41)+9;
+    return {target:t,along,hit:(cx0-t.x)**2+(cy0-t.y)**2<radius*radius};
+   }).filter(v=>v.hit).sort((a,b)=>a.along-b.along);
+  for(const {target} of hits){
+   if(target.hp<=0||s.hitTargets.has(target))continue;
+   s.hitTargets.add(target);
+   damage(target,s.damage,players[s.owner]);
+   if(s.kind==='dragon')emit(s.hitTargets.size===1?'DRAGON PIERCE!':'DOUBLE DRAGON HIT!',target.x,target.y-27,'#caffb2');
+   if(s.kind==='kong'){target.slow=Math.max(target.slow||0,2);emit('❄ SLOW',target.x,target.y-30,'#a9ecff')}
+   if(phase==='cutscene'||phase==='ended')break;
+   if(s.kind==='ball'&&s.hitTargets.size===1)s.damage*=.65;
+   else if(s.pierce>0)s.pierce--;
+   else {shots.splice(i,1);break}
+  }
+  if(phase==='cutscene'||phase==='ended')break;
+ }
+}
 function update(dt){
  if(phase==='ended'||phase==='cutscene')return;
  elapsed+=dt;messageClock-=dt;
@@ -540,20 +570,7 @@ function update(dt){
     say('🫧 BLEEPLING STAMPEDE! '+n+' extra bleps!',3.5); playSfx('wave');
     surgeClock=Math.max(23,34-elapsed*.022);
  }
- for(let i=shots.length-1;i>=0;i--){
-   let s=shots[i];s.x+=s.vx*dt;s.y+=s.vy*dt;s.ttl-=dt;
-   if(s.ttl<=0){shots.splice(i,1);continue}
-   for(const target of [...foes,...(boss?[boss]:[])]){
-     if(target.hp>0&&!s.hitTargets.has(target)&&dist(s,target)<(target.size||41)+9){
-       s.hitTargets.add(target);damage(target,s.damage,players[s.owner]);
-       if(s.kind==='kong'){target.slow=Math.max(target.slow||0,2.0);emit('❄ SLOW',target.x,target.y-30,'#a9ecff')}
-       if(s.kind==='ball'&&s.hitTargets.size===1){s.damage*=.65;s.x+=s.vx*.06;s.y+=s.vy*.06}
-       else if(s.pierce>0){s.pierce--;s.x+=s.vx*.05;s.y+=s.vy*.05}
-       else {shots.splice(i,1);break}
-       if(phase==='cutscene'||phase==='ended')break;
-     }
-   }
- }
+ advanceProjectiles(dt);
  if(phase==='ended'||phase==='cutscene')return; // stop all combat during illustrated scenes
  for(const beam of beams)beam.t-=dt;beams=beams.filter(b=>b.t>0);
  foes=foes.filter(e=>e.hp>0);
