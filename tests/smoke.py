@@ -205,6 +205,8 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
         assert card.locator('.hero-stats').is_visible(), 'Stats must be displayed without hover'
         assert card.locator('.stat-line').count()==3
     assert 'FIGHTER STATS' in page.locator('.hero-stats').first.inner_text()
+    assert page.locator('[data-hero="millie"] .hero-stats .stat-line').first.locator('.stars').inner_text()=='★★★★☆'
+    assert 'damage 4 of five' in page.locator('[data-hero="millie"] .hero-stats').get_attribute('aria-label')
     if not mobile:
         page.locator('[data-hero="rosie"]').hover()
         assert page.locator('[data-hero="rosie"] .stats-summary').is_visible()
