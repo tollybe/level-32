@@ -185,8 +185,8 @@ Historical checks above concerning **three guardian waves at each clue** no long
 
 ## Day 7C — Traversal, Millie and XP
 
-- [ ] Chromium CI: trees block through-travel, support sliding and mob steering.
-- [ ] Chromium CI: canopies fade more for players than mobs.
-- [ ] Chromium CI: Millie can dash twice quickly, never three times without recharge; other pets keep single dash.
-- [ ] Chromium CI: team XP meter has correct visible fill, label and accessibility progress.
+- [x] Chromium CI passed in PR #18: trees block through-travel, support sliding and mob steering.
+- [x] Chromium CI passed in PR #18: canopies fade more for players than mobs.
+- [x] Chromium CI passed in PR #18: Millie can dash twice quickly, never three times without recharge; other pets keep single dash.
+- [x] Chromium CI passed in PR #18: team XP meter has correct visible fill, label and accessibility progress.
 - [ ] Owner checks phone/tree behavior and preserves invitation.
