@@ -657,7 +657,58 @@ const ambientBanter=[
  'MILLIE: Did someone say throw? ...AAAAAH, IT MOVED!'
 ];
 function say(t,duration=3){$('game-message').textContent=t;messageClock=duration}
-function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,dashCharges:id==='millie'?2:1,dashRecharge:[],healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5,spriteFacing:'down',spriteMoving:false,spriteAttackAt:-1,perkGlow:0,perkRarity:'',hidden:false,bushTime:0,bushId:-1,ambushReady:0}}
+// Snack Power: spare chocolate charges fastest; hits and real healing charge
+// slowly. Full meters automatically empower one action without extra controls.
+const SNACK_MAX=100;
+function chargeSnack(p,amount){
+ if(!p?.alive||!(amount>0))return 0;
+ const prior=p.snackCharge||0;
+ p.snackCharge=Math.min(SNACK_MAX,prior+amount);
+ if(prior<SNACK_MAX&&p.snackCharge===SNACK_MAX){
+  emit('🍫 '+p.name.toUpperCase()+' · SNACK READY!',p.x,p.y-58,'#ffe9ad');
+  playSfx('heal');
+ }
+ return p.snackCharge-prior;
+}
+function useSnack(p){
+ if(!p||p.snackCharge<SNACK_MAX)return false;
+ p.snackCharge=0;
+ const names={rosie:'DRAGON CHORUS!',millie:'ZOOM-BALL!',
+  winnifred:'ROYAL SAUSAGE SWIPE!',ellie:'BIG HEALING LICKS!'};
+ emit('✨ '+names[p.id],p.x,p.y-54,'#ffe3a5');
+ p.perkGlow=Math.max(p.perkGlow,.85);
+ playSfx('special');return true;
+}
+function collectDrop(p,d){
+ if(d.kind==='xp'){
+  gainXP(12);score+=5;emit('+XP',p.x,p.y,'#a9f4d1');
+ }else if(d.kind==='magnet'){
+  p.magnetTime=Math.max(p.magnetTime,4.2);
+  emit('🌸 SAKURA BREEZE!',p.x,p.y-43,'#ffe7d3');playSfx('special');
+ }else if(d.kind==='heal'){
+  const healed=Math.max(0,Math.min(21,p.maxHp-p.hp)),excess=21-healed;
+  p.hp+=healed;
+  if(excess>0)chargeSnack(p,excess*2);
+  emit(excess>0?'🍫 +'+healed+' HP · +'+(excess*2)+' SNACK':'+21 HP',
+   p.x,p.y,'#a9ffc9');playSfx('heal');
+ }
+}
+function updateSnackMagnet(dt){
+ const active=players.filter(p=>p.alive&&!p.hidden&&p.magnetTime>0);
+ if(!active.length)return;
+ for(let i=drops.length-1;i>=0;i--){
+  const d=drops[i];if(d.kind!=='xp')continue;
+  const p=active.reduce((best,p)=>!best||dist(p,d)<dist(best,d)?p:best,null);
+  const len=dist(p,d);if(len>660)continue;
+  const step=Math.min(len,Math.max(200,len*2.2)*dt);
+  if(len>0){d.x+=(p.x-d.x)/len*step;d.y+=(p.y-d.y)/len*step}
+  if(dist(p,d)<31){
+   collectDrop(p,d);drops.splice(i,1);
+   if(phase==='upgrade')return;
+  }
+ }
+}
+function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,dashCharges:id==='millie'?2:1,dashRecharge:[],healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5,spriteFacing:'down',spriteMoving:false,spriteAttackAt:-1,perkGlow:0,perkRarity:'',hidden:false,bushTime:0,bushId:-1,ambushReady:0,snackCharge:0,snackNextHitAt:0,magnetTime:0}}
 function start(){
  ++scenePresentationToken;perkOffer=null;perksAwarded=0;$('perk-panel').hidden=true;
  $('scene-control-help').hidden=true;$('ending-invite').hidden=true;cancelAnimationFrame(raf);
@@ -694,7 +745,30 @@ function spawnBleepling(){
 }
 function emit(text,x,y,col='#ffe1aa'){if(fx.length<(liteFx?45:90))fx.push({text,x,y,col,t:1.1})}
 function nearest(origin,arr,r=Infinity){let item=null,bd=r;for(const o of arr){if(o.hp<=0||o.alive===false||o.hidden)continue;const d=dist(origin,o);if(d<bd){bd=d;item=o}}return item}
-function fire(p){if(p.hidden)return;const target=nearest(p,[...foes,...(boss?[boss]:[])],p.range);if(!target)return;p.spriteAttackAt=elapsed;if(p.weapon==='sausage'){for(const e of [...foes,...(boss?[boss]:[])])if(e.hp>0&&dist(p,e)<p.range){damage(e,p.damage+level*2,p);emit('⚔',e.x,e.y,'#fff0a7')}return}const angle=Math.atan2(target.y-p.y,target.x-p.x);shots.push({x:p.x,y:p.y,vx:Math.cos(angle)*410,vy:Math.sin(angle)*410,damage:p.damage+level*2,ttl:1.1,owner:p.num,kind:p.weapon,pierce:p.weapon==='dragon'?1:0,hitTargets:new Set()})}
+function fire(p){
+ if(p.hidden)return;
+ const range=p.weapon==='sausage'&&p.snackCharge>=SNACK_MAX?p.range+20:p.range;
+ const target=nearest(p,[...foes,...(boss?[boss]:[])],range);if(!target)return;
+ p.spriteAttackAt=elapsed;
+ if(p.weapon==='sausage'){
+  const charged=useSnack(p),hitRange=charged?p.range+20:p.range;
+  for(const e of [...foes,...(boss?[boss]:[])])
+   if(e.hp>0&&dist(p,e)<hitRange){
+    damage(e,(p.damage+level*2)*(charged?1.35:1),p);
+    emit(charged?'👑 ROYAL SWIPE!':'⚔',e.x,e.y,'#fff0a7');
+   }
+  return;
+ }
+ const charged=p.id!=='ellie'&&useSnack(p);
+ if(charged&&p.id==='millie'&&p.dashCharges<2){
+  p.dashCharges++;if(p.dashRecharge.length)p.dashRecharge.shift();
+ }
+ const mult=charged?(p.id==='rosie'?1.4:p.id==='millie'?1.5:1):1;
+ const angle=Math.atan2(target.y-p.y,target.x-p.x);
+ shots.push({x:p.x,y:p.y,vx:Math.cos(angle)*410,vy:Math.sin(angle)*410,
+  damage:(p.damage+level*2)*mult,ttl:1.1,owner:p.num,kind:p.weapon,
+  pierce:p.weapon==='dragon'?1:0,hitTargets:new Set()});
+}
 // XP remains standard for the first five levels in all difficulty modes.
 function gainXP(amount){
  xp+=amount*(level<=5?1:difficulty==='story'?1:difficulty==='extreme'?.60:.78);
@@ -757,6 +831,9 @@ function damage(enemy,amount,p){
   playSfx('special');
  }
  enemy.hp-=amount;
+ if(p?.alive&&enemy!==boss&&amount>0&&elapsed>=(p.snackNextHitAt||0)){
+  chargeSnack(p,.75);p.snackNextHitAt=elapsed+.35;
+ }
  if(enemy===boss){boss.hitFlash=.19;
    if(!boss.rage&&boss.hp>0&&boss.hp<=boss.maxHp*.33&&coneWarned){
    boss.rage=true;bossPhase=3;emit('FINAL FRIDGE FRENZY!',boss.x,boss.y-100,'#ffe0aa');
@@ -778,6 +855,8 @@ function damage(enemy,amount,p){
   }
   if(Math.random()<.17&&drops.length<35)drops.push({x:enemy.x,y:enemy.y,kind:'xp',r:13});
   if(Math.random()<.052&&drops.length<35)drops.push({x:enemy.x,y:enemy.y,kind:'heal',r:15});
+  if(Math.random()<.018&&drops.length<35&&!drops.some(d=>d.kind==='magnet'))
+   drops.push({x:enemy.x,y:enemy.y,kind:'magnet',r:18});
 
  }
 }
@@ -808,18 +887,21 @@ function movePlayers(dt){
   }
   p.perkGlow=Math.max(0,(p.perkGlow||0)-dt);p.inv=Math.max(0,p.inv-dt);p.dash=Math.max(0,p.dash-dt);
   p.dashCooldown=Math.max(0,p.dashCooldown-dt);
+  p.magnetTime=Math.max(0,p.magnetTime-dt);
   if(p.id==='millie'){
    p.dashRecharge=p.dashRecharge.map(t=>t-dt);
    for(let i=p.dashRecharge.length-1;i>=0;i--)if(p.dashRecharge[i]<=0){
     p.dashRecharge.splice(i,1);p.dashCharges=Math.min(2,p.dashCharges+1);
    }
   }
-  for(let i=drops.length-1;i>=0;i--){let d=drops[i];if(dist(p,d)<29){
-    if(d.kind==='xp'){gainXP(12);score+=5;emit('+XP',p.x,p.y,'#a9f4d1')}
-    else{p.hp=Math.min(p.maxHp,p.hp+21);emit('+21 HP',p.x,p.y,'#a9ffc9');playSfx('heal')}
-    drops.splice(i,1);
-  }}
+  for(let i=drops.length-1;i>=0;i--){
+   const d=drops[i];if(dist(p,d)<29){
+    collectDrop(p,d);drops.splice(i,1);
+    if(phase==='upgrade')break;
+   }
+  }
  });
+ if(phase!=='upgrade')updateSnackMagnet(dt);
 }
 // Mission Two foreshadowing: the legendary laser pointer unlocks after clue three.
 function laserAttack(p){
