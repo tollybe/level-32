@@ -2049,5 +2049,5 @@ for(const pad of document.querySelectorAll('[data-joystick]')){
  }
  window.addEventListener('blur',()=>{joystickAxes.forEach(a=>{a.x=a.y=0});document.querySelectorAll('.joystick-knob').forEach(k=>k.style.transform='translate(0px,0px)')})
 // idle garden behind the opening card
-players=[player('rosie',0),player('winnifred',1)];render();syncHud();
+players=[player('rosie',0)];render();syncHud();
 })();
