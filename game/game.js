@@ -186,7 +186,7 @@ function musicVoice(pitch,at,length,kind='flute',loudness=.024){
  env.gain.exponentialRampToValueAtTime(.0001,end);
  env.connect(ctx.destination);
  const osc=ctx.createOscillator();
- osc.type=kind==='pluck'?'triangle':kind==='bass'?'sine':kind==='bell'?'sine':'triangle';
+ osc.type=kind==='brass'?'sawtooth':kind==='pluck'||kind==='strings'?'triangle':kind==='bass'||kind==='bell'?'sine':'triangle';
  osc.frequency.setValueAtTime(freq,on);
  osc.connect(env);osc.start(on);osc.stop(end+.02);
  // A faint upper partial gives the lead/bell an airy, music-box quality.
@@ -199,31 +199,62 @@ function musicVoice(pitch,at,length,kind='flute',loudness=.024){
    upper.connect(upperEnv).connect(ctx.destination);upper.start(on);upper.stop(end+.02);
  }
 }
+// Original battle arrangements: game-like urgency, no borrowed melodies.
+// Each track has its own 4/4 motif, pulse, harmony and instrumentation.
+const battleScores={
+ duo:{bpm:120,root:[45,43,48,45,50,48,43,45],
+  intervals:[[0,3,7],[0,4,7],[0,3,7],[0,3,7]],
+  motif:[[0,69,.4],[.5,72,.35],[1.25,76,.5],[2.1,72,.38],[3,69,.65]]},
+ boss1:{bpm:157,root:[40,48,50,47,40,43,45,47],
+  intervals:[[0,3,7],[0,4,7],[0,3,7],[0,4,7]],
+  motif:[[0,76,.32],[.5,79,.32],[1,83,.5],[2,79,.36],[2.75,74,.4],[3.25,76,.5]]},
+ boss2:{bpm:166,root:[41,48,46,43,41,38,46,48],
+  intervals:[[0,3,7],[0,3,6],[0,4,7],[0,3,7]],
+  motif:[[0,77,.4],[.75,76,.24],[1,73,.47],[1.75,70,.4],[2.5,73,.35],[3,79,.7]]},
+ boss3:{bpm:172,root:[38,46,41,45,38,43,46,38],
+  intervals:[[0,3,7],[0,4,7],[0,3,7],[0,4,7]],
+  motif:[[0,74,.75],[1,81,.75],[2,77,.43],[2.75,86,.4],[3.25,81,.65]]}
+};
 function currentMusic(){
- if(phase==='boss')return'boss';
- if(phase==='cutscene')return'story';
+ if(phase==='cutscene'||phase==='upgrade')return 'story';
+ if(phase==='boss')return bossPhase>=3?'boss3':bossPhase===2?'boss2':'boss1';
+ if(duoActive&&phase==='explore')return'duo';
  return phase==='explore'?'garden':'idle';
 }
 function scheduleMusicBar(mode,index,startAt){
- const isBoss=mode==='boss',beat=60/(isBoss?153:mode==='story'?116:138);
- const chord=(isBoss?bossChords:gardenChords)[index];
- const melody=(isBoss?bossMelody:gardenMelody)[index];
- const gentle=mode==='story';
- musicVoice(chord.root,startAt,beat*(gentle?1.15:.79),'bass',isBoss?.033:gentle?.013:.023);
- for(const beatIndex of [1,2]){
-   // Gentle oom-pah-pah accompaniment, the main source of the waltz feel.
-   for(const pitch of chord.notes){
-     musicVoice(pitch,startAt+beat*beatIndex,beat*(gentle?.56:.38),
-       'pluck',isBoss?.014:gentle?.007:.012);
-   }
+ const battle=battleScores[mode],gentle=mode==='story',beat=60/(battle?battle.bpm:gentle?116:138);
+ if(battle){
+  const root=battle.root[index],notes=battle.intervals[index%4].map(v=>root+12+v);
+  musicVoice(root,startAt,beat*.8,'bass',.036);
+  musicVoice(root-12,startAt,beat*.48,'bass',.023);
+  for(let j=0;j<4;j++){
+   musicVoice(root+(j===3?7:0),startAt+beat*j,beat*.26,'pluck',.015);
+   if(j%2===1)musicVoice(root+24,startAt+beat*j,beat*.08,'pluck',.009);
+  }
+  for(const [beatAt,pitch,duration] of battle.motif){
+   const variation=index%4===2?-2:index%4===3?2:0;
+   musicVoice(pitch+variation,startAt+beat*beatAt,beat*duration,mode==='boss3'?'brass':'pluck',mode==='boss3'?.026:.024);
+  }
+  // Orchestral finale: slow layered string/brass chords and a high response.
+  if(mode==='boss3'||mode==='boss2'){
+   for(const pitch of notes)musicVoice(pitch,startAt,beat*3.65,
+     mode==='boss3'?'strings':'flute',mode==='boss3'?.009:.006);
+   if(index%2===1)musicVoice(root+36,startAt+beat*2.5,beat*1.1,'brass',.017);
+  }else if(mode==='boss1'&&index%2===0){
+   musicVoice(root+31,startAt+beat*2.5,beat*.8,'bell',.012);
+  }
+  if(mode==='duo')musicVoice(root+19,startAt+beat*2.5,beat*.35,'bell',.011);
+  return beat*4;
+ }
+ const chord=gardenChords[index],melody=gardenMelody[index];
+ musicVoice(chord.root,startAt,beat*(gentle?1.15:.79),'bass',gentle?.013:.023);
+ for(const beatIndex of [1,2])for(const pitch of chord.notes){
+  musicVoice(pitch,startAt+beat*beatIndex,beat*(gentle?.56:.38),'pluck',gentle?.007:.012);
  }
  for(const [pos,pitch,len] of melody){
-   musicVoice(pitch,startAt+beat*pos,beat*len,gentle?'bell':'flute',isBoss?.033:gentle?.018:.029);
+  musicVoice(pitch,startAt+beat*pos,beat*len,gentle?'bell':'flute',gentle?.018:.029);
  }
- // Little high-register sparkle at the end of phrases, like a village music box.
- if(index===3||index===7){
-   musicVoice(isBoss?83:86,startAt+beat*2.45,beat*.46,'bell',gentle?.008:.012);
- }
+ if(index===3||index===7)musicVoice(86,startAt+beat*2.45,beat*.46,'bell',gentle?.008:.012);
  return beat*3;
 }
 function tickMusic(){
