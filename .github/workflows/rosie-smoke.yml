@@ -2,7 +2,7 @@ name: Rosie Survivors Smoke Tests
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: ['**']
 permissions:
   contents: read
 jobs:
