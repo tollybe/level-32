@@ -21,7 +21,7 @@ Updated: 15 October 2026 after real two-player playtest feedback and Day 4.8 imp
 
 ## Project and event
 - Public GitHub: `tollybe/level-32`. Public game: https://tollybe.github.io/level-32/game/ . Standalone invitation: https://tollybe.github.io/level-32/game/invitation.html . Root `/` is a playful password gate forwarding to public `/game/`; not real authentication.
-- Birthday is Friday **13 November 2026**, Utrecht. **Mission One:** Broodnodig, Paardenveld 5, 18:30–20:30, chocolate/crafts, dogs welcome. **Mission Two:** Lasergames Utrecht, Biltstraat 4, 20:40, two games, €28.50/person. Guests RSVP/coordinate dogs in existing WhatsApp group. **Ten-minute transfer is unresolved**; don't change event details without user approval.
+- Birthday is Friday **13 November 2026**, Utrecht. **Mission One:** Broodnodig, Paardenveld 5, 18:15–20:15, chocolate/crafts, dogs welcome. **Mission Two:** Lasergames Utrecht, Biltstraat 4, 20:40, two games, €28.50/person. Guests RSVP/coordinate dogs in existing WhatsApp group. **Ten-minute transfer is unresolved**; don't change event details without user approval.
 - Original, editable vanilla HTML/CSS/JS, no build framework, single `game/` directory deployable to GitHub Pages; `tools/build.py` provides optional encrypted export.
 - Goal: an affectionate, funny game that invites friends to the real birthday. **Invitation must ALWAYS be available in one click**, before play/during play/after win or defeat. No completion barrier.
 
@@ -55,7 +55,7 @@ Updated: 15 October 2026 after real two-player playtest feedback and Day 4.8 imp
 - Day 4.6 PR #6 **merged into main** 15 October 2026 (commit `d48168c`).
 - Day 4.7 branch `iteration-4-7-stability-browser-tests` repairs GitHub Actions YAML parser error, expands Chromium solo/duo/mobile tests, fixes fullscreen boss HP and invitation CTA, and adds `docs/PLAYTEST.md`. Inspect whether this PR is merged before working further.
 - Automated Chromium checks passed for the expanded suite on this branch. **Do not confuse simulated mobile viewport tests with real physical phone acceptance.**
-- Current unfinished owner dependencies: real iPhone/Android portrait/landscape two-thumb test, approved Daan **static portrait**, party transfer logistics 20:30→20:40, and formal go/no-go for Day 5.
+- Current unfinished owner dependencies: real iPhone/Android portrait/landscape two-thumb test, approved Daan **static portrait**, party transfer logistics 20:15→20:40, and formal go/no-go for Day 5.
 
 ## Real two-player phone feedback — Day 4.8 (15 October 2026)
 - The user and Daan actually played together on a phone. Feedback: Tolly too easy, Daan needs an actual character, movement/battle visuals too static, occasional lag, cutscene pages feel too easy to skip into active combat, and P1 Shift/DASH affordance unclear.
