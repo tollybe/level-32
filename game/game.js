@@ -1184,13 +1184,13 @@ for(const e of foes){
 // birthday boss
 if(boss&&boss.hp>0){
  if(daanActive){
-  // Symbolic animated emblem-faced Daan; NOT an approved personal likeness.
-  // SPITE executes the existing delayed warning-zone slam, no damage changes.
+  // Photo-inspired chibi Daan: blond hair, dark hiking shirt, red trousers, backpack.
+  // His boulder attack and short capped heal each have distinct telegraphs.
   const dx=boss.x+140,dy=boss.y+30+Math.sin(elapsed*3.4)*3;
-  const winding=daanPulse<.95,slamming=daanActionTimer>.05;
+  const winding=daanPulse<1.2,slamming=daanActionTimer>.05,healing=daanHealWindup>0||daanHealFlash>0;
   circle(dx,dy+30,27,'#1c2d3d88');
   const spriteDaan=window.Level32Sprites?.draw(cx,'daan',
-   {state:slamming?'special':winding?'attack':'idle',direction:'down'},dx,dy-13,116,elapsed)||false;
+   {state:healing?'special':slamming||winding?'attack':'idle',direction:'down'},dx,dy-13,116,elapsed)||false;
   if(!spriteDaan){
    line(dx-18,dy+8,dx-28,dy+29,'#9fd5d6',12);line(dx+18,dy+8,dx+28,dy+29,'#9fd5d6',12);
    line(dx-9,dy+34,dx-15,dy+55,'#4b4e78',13);line(dx+9,dy+34,dx+15,dy+55,'#4b4e78',13);
@@ -1200,7 +1200,13 @@ if(boss&&boss.hp>0){
   }
   if(winding||slamming){cx.save();cx.setLineDash([6,5]);cx.strokeStyle='#ffe6a6';cx.lineWidth=4;
    cx.beginPath();cx.arc(dx,dy,43+(slamming?14*(1-daanActionTimer):0),0,TAU);cx.stroke();cx.restore();}
-  txt(slamming?'DAAN · SPITE: SLAM!':winding?'DAAN · WINDING UP':'DAAN · SUPPORT',dx,dy-91,15,'center','#ffe3a0');
+  if(daanHealWindup>0){
+    cx.save();cx.setLineDash([8,5]);cx.strokeStyle='#72ffa9';cx.lineWidth=7;
+    cx.beginPath();cx.moveTo(dx,dy-25);cx.lineTo(boss.x,boss.y-8);cx.stroke();
+    cx.restore();
+    circle(dx,dy-61,19,'#226c52cc');txt('💚',dx,dy-52,23,'center');
+    txt('HEAL '+daanHealWindup.toFixed(1)+'s',dx,dy-96,17,'center','#a8ffd6');
+  }else txt(slamming?'BOULDER SLAM!':winding?'DAAN · WIND-UP':'DAAN · SUPPORT',dx,dy-91,15,'center','#ffe3a0');
  }
  const wobble=Math.sin(elapsed*(boss.rage?9:4))*3;
  const portrait=$('boss-card').querySelector('img');
@@ -1297,7 +1303,32 @@ for(const p of players){
  rect(p.x-28,p.y+29,56,7,'#152636');rect(p.x-27,p.y+30,54*clamp(p.hp/p.maxHp,0,1),5,p.hp/p.maxHp<.3?'#ff9995':'#9aebbb');
 }
 for(const s of shots){txt(s.kind==='dragon'?'🐉':s.kind==='kong'?'🧊':'🔴',s.x,s.y+9,24,'center')}
-for(const h of hazards){if(h.kind==='duo-banana'){circle(h.x,h.y,17,'#e6a84b66');txt('🍌',h.x,h.y+9,23,'center');continue}if(h.kind==='daan-warning'){cx.save();cx.setLineDash([8,8]);circle(h.x,h.y,h.size,'#ffd35e38');cx.strokeStyle='#ffe4a3';cx.lineWidth=5;cx.beginPath();cx.arc(h.x,h.y,h.size,0,TAU);cx.stroke();cx.restore();txt('DAAN SPITE · MOVE!',h.x,h.y-85,18,'center','#fff1ae')}else if(h.kind==='goop'){circle(h.x,h.y,22,'#88e5e977');circle(h.x,h.y,13,'#b0f6ff99')}else{circle(h.x,h.y,17,'#ffbd6144');txt('🍌',h.x,h.y+9,25,'center')}}
+for(const h of hazards){
+ if(h.kind==='duo-banana'){circle(h.x,h.y,17,'#e6a84b66');txt('🍌',h.x,h.y+9,23,'center');continue}
+ if(h.kind==='daan-warning'){
+  // A fixed, high-contrast arena mark with visible countdown and impact size.
+  cx.save();cx.setLineDash([9,5]);circle(h.x,h.y,h.size,'#e5ac3870');
+  cx.strokeStyle='#ffef98';cx.lineWidth=6;
+  cx.beginPath();cx.arc(h.x,h.y,h.size,0,TAU);cx.stroke();
+  cx.restore();
+  txt('🪨',h.x,h.y+8,31,'center');
+  txt('BOULDER SLAM · '+h.ttl.toFixed(1)+'s',h.x,h.y-h.size-13,18,'center','#fff1ae');
+  continue;
+ }
+ if(h.kind==='daan-impact'){
+  circle(h.x,h.y,h.size*(1.1-h.ttl*.5),'#e6ba7e77');
+  txt('💥',h.x,h.y+12,37,'center');
+  continue;
+ }
+ if(h.kind==='daan-heal-flash'){
+  cx.save();cx.strokeStyle='#7bffc6';cx.lineWidth=6;cx.globalAlpha=Math.min(1,h.ttl*2);
+  cx.beginPath();cx.arc(h.x,h.y,h.size+(1-h.ttl)*24,0,TAU);cx.stroke();cx.restore();
+  txt('💚 TOLLY +HP',h.x,h.y-91,18,'center','#b7ffdc');
+  continue;
+ }
+ if(h.kind==='goop'){circle(h.x,h.y,22,'#88e5e977');circle(h.x,h.y,13,'#b0f6ff99')}
+ else{circle(h.x,h.y,17,'#ffbd6144');txt('🍌',h.x,h.y+9,25,'center')}
+}
 if(boss&&boss.hp>0&&coneWindup>0){cx.save();cx.beginPath();cx.moveTo(boss.x,boss.y);cx.arc(boss.x,boss.y,275,coneAngle-.65,coneAngle+.65);cx.closePath();cx.fillStyle='#ff69735d';cx.fill();cx.strokeStyle='#ffeeb1';cx.lineWidth=5;cx.stroke();cx.restore()}
 for(const beam of beams){cx.save();cx.globalAlpha=Math.max(.1,beam.t/.28);cx.strokeStyle='#ff586a';cx.lineWidth=13;cx.shadowColor='#ff7373';cx.shadowBlur=17;cx.beginPath();cx.moveTo(beam.x1,beam.y1);cx.lineTo(beam.x2,beam.y2);cx.stroke();cx.strokeStyle='#fff2b5';cx.lineWidth=4;cx.stroke();cx.restore()}
 for(const f of fx){if(f.x<cam.x-60||f.x>cam.x+VIEWW+60||f.y<cam.y-60||f.y>cam.y+VIEWH+60)continue;txt(f.text,f.x,f.y,17,'center',f.col)}
