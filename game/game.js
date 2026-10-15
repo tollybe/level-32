@@ -10,7 +10,7 @@ let selected=['rosie','winnifred'],players=[],foes=[],shots=[],drops=[],fx=[],ha
 let cutsceneNext=null,sceneName=null,reviveSeconds=1.85,hudClock=0,sceneOpenedAt=0,perkOffer=null,perkReturnPhase='explore',scenePresentationToken=0,perksAwarded=0;
 let liteFx=typeof matchMedia==='function'&&matchMedia('(pointer:coarse)').matches;
 let duoActive=false,duoDefeated=false,laserUnlocked=false,beams=[],coneCooldown=6.8,coneWindup=0,coneAngle=0,bossPulseCooldown=4,bossPulseWindup=0,bananaWindup=0;
-let gate=null,gateCleared=[false,false,false],difficulty='challenge',daanActive=false,daanPulse=0,daanActionTimer=0;
+let gate=null,gateCleared=[false,false,false],difficulty='challenge',daanActive=false,daanPulse=0,daanActionTimer=0,daanHealCooldown=0,daanHealWindup=0,daanHealsRemaining=0,daanHealFlash=0;
 const GATE_WAVES={challenge:[[3,3,2],[3,3,3],[4,3,3]],story:[[2,2,2],[2,2,2],[2,2,3]],extreme:[[5,5,5],[6,5,6],[6,7,7]]};
 const daanPortrait=new Image();daanPortrait.src='assets/daan.svg';
 // Day 4 uses a distinct static art asset, never a chibi sprite. The graphic is a
@@ -86,7 +86,7 @@ const CLUE_SCENES=[
 function renderSceneLines(kind){
  const host=$('scene-dialogues');host.replaceChildren();host.dataset.beat='0';
  const lines=[...(SCENE_LINES[kind]||[])];
- if(kind==='phase3'&&difficulty==='extreme')lines.push(...EXTRA_BANTER.daan);
+ if(kind==='phase3'&&difficulty==='extreme'){lines.push(['daan','I have Tolly’s back! Dodge the boulder and watch the green healing beam!']);lines.push(...EXTRA_BANTER.daan)}
  // Character-specific ending callbacks, always with the established portraits.
  if(kind==='victory'||kind==='defeat'){
   const lead=players[0],replies={rosie:'Can we discuss the banana situation on the way to the party?',
@@ -104,11 +104,11 @@ function renderSceneLines(kind){
   const avatar=document.createElement('div');avatar.className='scene-face';
   const image=document.createElement('img');
   // Reuse the canonical art mounted in character select / the boss card.
-  image.src=id==='tolly'?$('boss-card').querySelector('img').src:petImages[id].src;
-  image.alt=(id==='tolly'?'Tolly':roster[id].name)+' character illustration';
+  image.src=id==='tolly'?$('boss-card').querySelector('img').src:id==='daan'?daanPortrait.src:petImages[id].src;
+  image.alt=(id==='tolly'?'Tolly':id==='daan'?'Daan':roster[id].name)+' character illustration';
   avatar.append(image);
   const info=document.createElement('div');info.className='scene-speech';
-  const who=document.createElement('strong');who.textContent=id==='tolly'?'TOLLY':roster[id].name.toUpperCase();
+  const who=document.createElement('strong');who.textContent=id==='tolly'?'TOLLY':id==='daan'?'DAAN':roster[id].name.toUpperCase();
   const speech=document.createElement('span');speech.textContent='* '+words;
   info.append(who,speech);row.append(avatar,info);host.append(row);
  });
@@ -444,7 +444,7 @@ function continueScene(){
  if(kind==='intro'){
    const hp=(players.length===2?2040:1450)*(difficulty==='story'?.67:difficulty==='extreme'?EXTREME.bossHp:1);
    boss={x:fridge.x+45,y:fridge.y-80,hp,maxHp:hp,size:49,speed:difficulty==='story'?96:difficulty==='extreme'?137*EXTREME.bossSpeed:145,attack:1.1,hitFlash:0,rage:false};
-   hazards=[];foes=foes.slice(-5);bossPhase=1;coneWarned=false;coneCooldown=6.6;coneWindup=0;bossPulseCooldown=1.65;bossPulseWindup=0;bananaWindup=0;daanActive=false;daanPulse=4;daanActionTimer=0;
+   hazards=[];foes=foes.slice(-5);bossPhase=1;coneWarned=false;coneCooldown=6.6;coneWindup=0;bossPulseCooldown=1.65;bossPulseWindup=0;bananaWindup=0;daanActive=false;daanPulse=4;daanActionTimer=0;daanHealCooldown=0;daanHealWindup=0;daanHealsRemaining=0;daanHealFlash=0;
    $('bossbar').classList.add('show');$('boss-card').classList.add('show');
    say('⚔ TOLLY: No Rosie, you’re on a diet — no more banana!',5);playSfx('boss');score+=200;
  }else if(kind==='phase2'){
@@ -456,7 +456,7 @@ function continueScene(){
    bossPhase=3;boss.rage=true;playSfx('phase');
    players.filter(p=>p.alive).forEach(p=>p.inv=Math.max(p.inv,1.6));
    coneCooldown=2;bossPulseCooldown=1.2;
-   if(difficulty==='extreme'){daanActive=true;daanPulse=3;daanActionTimer=.7;say('⚠ DAAN ARRIVES! FINAL FRIDGE DEFENCE!',4)}
+   if(difficulty==='extreme'){daanActive=true;daanPulse=3;daanActionTimer=.7;daanHealCooldown=7;daanHealWindup=0;daanHealsRemaining=2;daanHealFlash=0;say('⚠ DAAN ARRIVES! WATCH THE BOULDER AND GREEN HEAL!',4)}
    else say('⚠ FINAL FRIDGE FRENZY!',4);
  }else if(kind==='clue2'){
    players.filter(p=>p.alive).forEach(p=>p.inv=Math.max(p.inv,1.2));
@@ -488,7 +488,7 @@ function start(){
  players=[player(selected[0],0)];if($('coop').checked)players.push(player(selected[1],1));
  const startHealth=DIFFICULTY_BALANCE[$('difficulty').value].startingHealth;
  players.forEach(p=>{p.maxHp=Math.round(p.maxHp*startHealth);p.hp=p.maxHp;});
- foes=[];shots=[];drops=[];fx=[];hazards=[];beams=[];difficulty=$('difficulty').value;gate=null;gateCleared=[false,false,false];scentStep=0;duoActive=false;duoDefeated=false;laserUnlocked=false;coneCooldown=6.8;coneWindup=0;bossPulseCooldown=4;bossPulseWindup=0;bananaWindup=0;daanActive=false;daanPulse=0;daanActionTimer=0;laserChallenge={index:0,timer:0,zapCooldown:0};phase='explore';paused=false;boss=null;cutsceneNext=null;sceneName=null;musicStep=0;musicMode='idle';musicBar=0;musicNextBarAt=0;
+ foes=[];shots=[];drops=[];fx=[];hazards=[];beams=[];difficulty=$('difficulty').value;gate=null;gateCleared=[false,false,false];scentStep=0;duoActive=false;duoDefeated=false;laserUnlocked=false;coneCooldown=6.8;coneWindup=0;bossPulseCooldown=4;bossPulseWindup=0;bananaWindup=0;daanActive=false;daanPulse=0;daanActionTimer=0;daanHealCooldown=0;daanHealWindup=0;daanHealsRemaining=0;daanHealFlash=0;laserChallenge={index:0,timer:0,zapCooldown:0};phase='explore';paused=false;boss=null;cutsceneNext=null;sceneName=null;musicStep=0;musicMode='idle';musicBar=0;musicNextBarAt=0;
  elapsed=0;score=0;kills=0;level=1;xp=0;goal=35;clues=0;fridgeVisible=false;
  spawnClock=.55;surgeClock=33;attackClock=0;hudClock=0;keys.clear();ensureAudio();
  $('scene-skip').hidden=true;$('share-result').classList.remove('show');$('mission-unlock').classList.remove('show');$('scene-dialogues').hidden=true;$('share-status').textContent='';$('overlay').classList.remove('cinematic');$('overlay').classList.add('hidden');$('pause').disabled=false;$('pause').textContent='Ⅱ PAWS';
@@ -880,12 +880,40 @@ function update(dt){
    // His distinctive warning is an additional dodgable challenge, never an invitation gate.
    if(daanActive){
      daanActionTimer=Math.max(0,daanActionTimer-dt);
+     daanHealFlash=Math.max(0,daanHealFlash-dt);
      daanPulse-=dt;
      if(daanPulse<=0){
        const focus=nearest(boss,players);
-       if(focus){hazards.push({x:focus.x,y:focus.y,vx:0,vy:0,ttl:1.2,damage:0,kind:'daan-warning',size:78,triggered:false});
-         daanActionTimer=.9;say('⚠ DAAN SPITE: BOULDER SLAM! MOVE AWAY!',2);}
+       if(focus){
+         // Fixed area for 1.2s so the player can dodge before impact.
+         hazards.push({x:focus.x,y:focus.y,vx:0,vy:0,ttl:1.2,maxTtl:1.2,
+           damage:0,kind:'daan-warning',size:78});
+         daanActionTimer=.9;
+         say('⚠ DAAN BOULDER SLAM! GET OUT OF THE GOLD CIRCLE!',2);
+       }
        daanPulse=5.3;
+     }
+     if(daanHealWindup>0){
+       daanHealWindup-=dt;
+       if(daanHealWindup<=0&&boss.hp>0&&daanHealsRemaining>0){
+         const amount=Math.min(Math.round(boss.maxHp*.05),
+           Math.max(0,Math.round(boss.maxHp*.43-boss.hp)));
+         daanHealsRemaining--;
+         if(amount>0){
+           boss.hp=Math.min(boss.maxHp*.43,boss.hp+amount);
+           $('bossfill').style.width=100*clamp(boss.hp/boss.maxHp,0,1)+'%';
+           emit('TOLLY HEALED +'+amount,boss.x,boss.y-94,'#b2ffd2');
+           hazards.push({kind:'daan-heal-flash',x:boss.x,y:boss.y,ttl:.65,size:80});
+           daanHealFlash=.85;playSfx('heal');
+         }
+       }
+     }else{
+       daanHealCooldown-=dt;
+       if(daanHealCooldown<=0&&daanHealsRemaining>0&&boss.hp>0&&
+          boss.hp<boss.maxHp*.43){
+         daanHealWindup=1.45;daanHealCooldown=10.5;
+         say('💚 DAAN CHANNELS A HEAL TO TOLLY! 1.5 SECONDS!',2);
+       }
      }
    }
    bossPulseCooldown-=dt;
@@ -966,11 +994,17 @@ function update(dt){
    if(daanHazard.kind==='daan-warning'){
      daanHazard.ttl-=dt;
      if(daanHazard.ttl<=0){
+       hazards.push({kind:'daan-impact',x:daanHazard.x,y:daanHazard.y,ttl:.38,size:daanHazard.size});
+       playSfx('cone');
        for(const p of players.filter(p=>p.alive&&dist(p,daanHazard)<daanHazard.size)){
          if(p.inv<=0){p.hp=Math.max(0,p.hp-24);p.inv=.8;if(p.hp===0)p.alive=false;emit('DAAN SHOCKWAVE -24',p.x,p.y-26,'#ffe3ab')}
        }
        hazards.splice(i,1);
      }
+     continue;
+   }
+   if(daanHazard.kind==='daan-impact'||daanHazard.kind==='daan-heal-flash'){
+     daanHazard.ttl-=dt;if(daanHazard.ttl<=0)hazards.splice(i,1);
      continue;
    }
     const h=hazards[i];if(h.kind!=='goop'){h.x+=h.vx*dt;h.y+=h.vy*dt;}h.ttl-=dt;
