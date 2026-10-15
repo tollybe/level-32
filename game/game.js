@@ -798,7 +798,16 @@ function drawObjectiveMarker(){
  circle(0,0,28,'#382c39ee');cx.fillStyle='#ffe190';cx.beginPath();cx.moveTo(22,0);cx.lineTo(-12,-15);cx.lineTo(-12,15);cx.closePath();cx.fill();cx.restore();
  txt(duoActive?'🫧':clues<3?'📜':'❄',x,y+37,19,'center','#ffe9b4');
 }
-function syncHud(){updateObjective();let h='';for(const p of players){h+='<p><strong>P'+(p.num+1)+' '+p.name+'</strong> · '+Math.ceil(p.hp)+' / '+p.maxHp+' HP'+(p.id==='ellie'?' · 💚 Lick Aura':'')+'</p><div class="meter"><span style="width:'+100*clamp(p.hp/p.maxHp,0,1)+'%"></span></div>'}$('playerhud').innerHTML=h||'Choose your heroes!';
+function syncHud(){
+ $('fx-toggle').textContent=liteFx?'⚡ LITE FX ON':'✨ FULL FX';
+ const dash=$('dash-status');
+ if(dash){dash.replaceChildren();for(const p of players){
+  const pill=document.createElement('span');pill.className='dash-pill';
+  const key=p.num===0?'⇧ SHIFT':'↵ ENTER';
+  pill.textContent='P'+(p.num+1)+' '+key+' = DASH · '+(p.dashCooldown<=0?'READY':p.dashCooldown.toFixed(1)+'s');
+  pill.classList.toggle('on-cooldown',p.dashCooldown>0);dash.append(pill);
+ }}
+ updateObjective();let h='';for(const p of players){h+='<p><strong>P'+(p.num+1)+' '+p.name+'</strong> · '+Math.ceil(p.hp)+' / '+p.maxHp+' HP'+(p.id==='ellie'?' · 💚 Lick Aura':'')+'</p><div class="meter"><span style="width:'+100*clamp(p.hp/p.maxHp,0,1)+'%"></span></div>'}$('playerhud').innerHTML=h||'Choose your heroes!';
  const health=$('mobile-health');
  if(health){health.replaceChildren();for(const p of players){
   const card=document.createElement('div');card.className='mobile-health-card';
@@ -895,16 +904,31 @@ for(const e of foes){
 }
 // birthday boss
 if(boss&&boss.hp>0){
- if(daanActive&&daanPortrait.complete&&daanPortrait.naturalWidth){cx.drawImage(daanPortrait,boss.x+75,boss.y-100,90,90);txt('DAAN · EXTREME',boss.x+116,boss.y-110,14,'center','#ffe3a0')}
- circle(boss.x,boss.y+23,57,'#402f3a99');circle(boss.x,boss.y,52,'#e4b9bd');
+ if(daanActive){
+  // Temporary full-body support character; NOT Daan's actual likeness.
+  const dx=boss.x+140,dy=boss.y+30+Math.sin(elapsed*3.4)*4;
+  circle(dx,dy+30,29,'#1c2d3d88');
+  line(dx-18,dy+8,dx-28,dy+29,'#9fd5d6',12);line(dx+18,dy+8,dx+28,dy+29,'#9fd5d6',12);
+  line(dx-9,dy+34,dx-15,dy+55,'#4b4e78',13);line(dx+9,dy+34,dx+15,dy+55,'#4b4e78',13);
+  circle(dx,dy+10,27,'#526997');
+  if(daanPortrait.complete&&daanPortrait.naturalWidth)cx.drawImage(daanPortrait,dx-26,dy-56,52,52);
+  else circle(dx,dy-36,24,'#d4ae87');
+  if(daanPulse<1.1){cx.save();cx.setLineDash([6,5]);cx.strokeStyle='#ffe6a6';cx.lineWidth=4;
+   cx.beginPath();cx.arc(dx,dy,42+(1.1-daanPulse)*12,0,TAU);cx.stroke();cx.restore();}
+  txt('DAAN · SUPPORT',dx,dy-70,15,'center','#ffe3a0');
+ }
+ const wobble=Math.sin(elapsed*(boss.rage?9:4))*3;
+ circle(boss.x,boss.y+23,57,'#402f3a99');
+ circle(boss.x,boss.y+wobble,52,boss.hitFlash>0?'#fff0d1':'#e4b9bd');
  const portrait=$('boss-card').querySelector('img');
  if(portrait.complete&&portrait.naturalWidth){
    const crop=Math.min(portrait.naturalWidth,portrait.naturalHeight);
-   cx.save();cx.beginPath();cx.arc(boss.x,boss.y,46,0,TAU);cx.clip();
-   cx.drawImage(portrait,(portrait.naturalWidth-crop)/2,(portrait.naturalHeight-crop)/2,crop,crop,boss.x-48,boss.y-48,96,96);cx.restore();
+   cx.save();cx.translate(boss.x,boss.y+wobble);cx.rotate(Math.sin(elapsed*3)*.055);
+   cx.beginPath();cx.arc(0,0,46,0,TAU);cx.clip();
+   cx.drawImage(portrait,(portrait.naturalWidth-crop)/2,(portrait.naturalHeight-crop)/2,crop,crop,-48,-48,96,96);cx.restore();
  }else txt('🧑',boss.x,boss.y+21,52,'center');
- cx.save();cx.strokeStyle=bossPhase===2?'#ff959c':'#f8dea4';cx.lineWidth=5;cx.beginPath();cx.arc(boss.x,boss.y,49,0,TAU);cx.stroke();cx.restore();
- txt('👑',boss.x,boss.y-41,34,'center');txt('TOLLY · NO MORE BANANA',boss.x,boss.y-70,15,'center','#fff5ca');
+ cx.save();cx.strokeStyle=boss.hitFlash>0?'#fff2ca':boss.rage?'#ff6886':bossPhase===2?'#ff959c':'#f8dea4';cx.lineWidth=5;cx.beginPath();cx.arc(boss.x,boss.y,49,0,TAU);cx.stroke();cx.restore();
+ txt('👑',boss.x,boss.y-41+wobble,34,'center');txt('TOLLY · NO MORE BANANA',boss.x,boss.y-70,15,'center','#fff5ca');
  if(bananaWindup>0){
   cx.save();cx.strokeStyle='#ffa94f';cx.fillStyle='#ffb45122';cx.lineWidth=4;
   cx.beginPath();cx.arc(boss.x,boss.y,115,0,TAU);cx.fill();cx.stroke();cx.restore();
@@ -937,15 +961,19 @@ for(const p of players){
 for(const p of players){
  if(!p.alive){circle(p.x,p.y,23,'#4c5968');txt('💤',p.x,p.y+11,26,'center');txt('REVIVE P'+(p.num+1),p.x,p.y-32,16,'center','#fff4cd');cx.beginPath();cx.arc(p.x,p.y,30,-Math.PI/2,-Math.PI/2+TAU*(p.reviveProgress||0)/reviveSeconds);cx.strokeStyle='#9cffcb';cx.lineWidth=5;cx.stroke();continue}
  if(p.inv>0&&Math.floor(elapsed*16)%2)continue;
+ const moving=Math.hypot(joystickAxes[p.num].x,joystickAxes[p.num].y)>.1||
+   (p.num===0?['w','a','s','d']:['arrowup','arrowdown','arrowleft','arrowright']).some(k=>keys.has(k));
+ const hop=moving?Math.sin(elapsed*15+p.num)*3:Math.sin(elapsed*2.7+p.num)*1.2;
+ if(p.dash>0){cx.save();cx.globalAlpha=.36;circle(p.x-16,p.y+11,31,'#9be7ff');cx.restore();}
  circle(p.x,p.y+20,23,'#1b293a88');
  const avatar=petImages[p.id];
  if(avatar&&avatar.complete&&avatar.naturalWidth){
   // A readable, recognisable illustrated portrait for each actual furry friend.
-  cx.save();cx.beginPath();cx.arc(p.x,p.y,24,0,TAU);cx.clip();
+  cx.save();cx.beginPath();cx.arc(p.x,p.y+hop,24,0,TAU);cx.clip();
   const scale=48/Math.min(avatar.naturalWidth,avatar.naturalHeight);
   const w=avatar.naturalWidth*scale,h=avatar.naturalHeight*scale;
-  cx.drawImage(avatar,p.x-w/2,p.y-h/2,w,h);cx.restore();
-  cx.beginPath();cx.arc(p.x,p.y,24,0,TAU);
+  cx.drawImage(avatar,p.x-w/2,p.y+hop-h/2,w,h);cx.restore();
+  cx.beginPath();cx.arc(p.x,p.y+hop,24,0,TAU);
   cx.strokeStyle=p.num===0?'#adf8db':'#ffc0c4';cx.lineWidth=3;cx.stroke();
  }else{circle(p.x,p.y,24,p.color);txt(p.emoji,p.x,p.y+16,37,'center')}
  txt('P'+(p.num+1),p.x,p.y-38,17,'center',p.num===0?'#a6ffe1':'#ffc7c3');
@@ -1001,6 +1029,7 @@ $('share-result').addEventListener('click',async()=>{
  try{await navigator.clipboard.writeText(text);$('share-status').textContent='Copied! Paste it into our WhatsApp group.';}
  catch{$('share-status').textContent='Copy blocked by this browser. Take a screenshot of your score instead.';}
 });
+$('fx-toggle').addEventListener('click',()=>{liteFx=!liteFx;syncHud()});
 $('start').addEventListener('click',start);$('overlay-start').addEventListener('click',()=>{
  if(phase==='cutscene'){if(performance.now()-sceneOpenedAt>350)continueScene();}
  else start();
