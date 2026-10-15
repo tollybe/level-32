@@ -125,3 +125,13 @@ Historical checks above concerning **three guardian waves at each clue** no long
 - [ ] Actual iPhone/Android 2-person test confirms FPS, readability, no sprite clipping and health bar visibility (both Lite FX settings).
 - [ ] Daan's real portrait/sprite approved; provisional non-likeness actor is unchanged.
 - [ ] Final event logistics, physical-device acceptance and owner release sign-off before distributing invitations.
+
+## Day 5C — visual and collision corrections
+
+- [x] Implement larger full-body Tolly art with old portrait disc only in classic/fallback mode.
+- [x] Add 8-pose, 4-direction *provisional* Daan badge-face sprite and visual SPITE slam warning; real likeness still unapproved.
+- [x] Preserve Extreme-only surprise after Tolly's half-health cutscene; no cameo in Adventure/Story.
+- [x] Fix Rosie dragon projectile tunnelling via swept collision, retaining exactly two possible enemy hits.
+- [ ] GitHub Actions Chromium tests green for Daan sprite, two-hit projectile, Story/Adventure/Extreme and invitation paths.
+- [ ] Two people retest on real phone: Tolly readability, Daan warning, mobile frame rate, cutscene/PAWS, dragon hit indication.
+- [ ] Owner supplies/approves Daan likeness; placeholder must never be presented as authentic portrait.
