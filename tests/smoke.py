@@ -625,7 +625,26 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     assert page.locator('[data-joystick]').count()==2
     assert 'Daan joins' not in page.locator('#difficulty').inner_text()
     assert page.locator('.select-invite').get_attribute('target')=='_blank'
-    assert page.locator('.hero-invite-line a').get_attribute('target')=='_blank'
+    invite_primary=page.locator('.hero-primary-invite')
+    assert invite_primary.count()==1 and invite_primary.is_visible()
+    assert invite_primary.get_attribute('href')=='invitation.html'
+    assert invite_primary.get_attribute('target')=='_blank'
+    assert 'BIRTHDAY INVITATION' in invite_primary.inner_text()
+    optional_game=page.locator('.hero-play-link')
+    assert optional_game.count()==1 and optional_game.get_attribute('href')=='#character-select'
+    assert page.locator('#character-select').count()==1
+    assert 'optional' in page.locator('.hero-entry-note').inner_text().lower()
+    assert not any(text in page.locator('.masthead').inner_text() for text in
+      ('1–2 LOCAL PLAYERS','JAPANESE GARDEN ARCADE','ADVENTURE · 7/10'))
+    entry_bounds=page.evaluate("""()=>{
+      const p=document.querySelector('.hero-primary-invite').getBoundingClientRect();
+      const q=document.querySelector('.hero-play-link').getBoundingClientRect();
+      const vw=window.innerWidth;
+      return {inviteOnScreen:p.width>=180&&p.left>=0&&p.right<=vw,
+        playOnScreen:q.width>=180&&q.left>=0&&q.right<=vw,
+        inviteFirst:p.top<=q.top};
+    }""")
+    assert all(entry_bounds.values()),entry_bounds
     assert page.locator('#ending-invite').is_hidden()
     if not mobile and mode=='challenge' and not solo:
         matrix=page.evaluate('window.__rosieTest.combatMatrix()')
