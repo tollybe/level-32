@@ -215,3 +215,6 @@ Historical checks above concerning **three guardian waves at each clue** no long
 - [ ] CI: Bushes grant only 0.1 HP/s while hiding; entering cover does not bank recovery ticks.
 - [ ] CI: Max HP cap, no resurrection, co-op Ellie unchanged and no generic multiplayer regen.
 - [ ] Owner checks mobile visibility, pacing and boss survivability.
+
+- [ ] Day 8B CI: Remove dense top metadata chips; invitation is the visually primary direct link with a separate optional play action and a no-game-required explanation on desktop and phone.
+- [ ] Host non-gamer playtest: guests can find party schedule and add both events without clicking Play.
