@@ -1,5 +1,5 @@
 # AI HANDOFF — LEVEL 32 / Rosie Survivors
-Updated: 15 October 2026. **Read this first in new AI chats.** Source of truth is the latest `main` + any open pull request; this file records intended design and known acceptance gaps, not a claim that a release is finished.
+Updated: 15 October 2026 after Day 4.7 automated-stability pass. **Read this first in new AI chats.** Source of truth is the latest `main` + any open pull request; this file records intended design and known acceptance gaps, not a claim that a release is finished.
 
 ## Project and event
 - Public GitHub: `tollybe/level-32`. Public game: https://tollybe.github.io/level-32/game/ . Standalone invitation: https://tollybe.github.io/level-32/game/invitation.html . Root `/` is a playful password gate forwarding to public `/game/`; not real authentication.
@@ -32,6 +32,12 @@ Updated: 15 October 2026. **Read this first in new AI chats.** Source of truth i
 - `tools/build.py`: `game_as_single_html()` inlines JS/CSS and game asset image URLs; includes SVG support for provisional Daan.
 - `game/invitation.html` + `game/birthday.ics`: authoritative invitation/calendar; preserve party times/addresses unless corrected by user.
 - `docs/release-checklist.md`: manual acceptance; `docs/iteration-4-6.md`: this pass; `docs/iteration-4-7.md`: quality follow-up; `docs/iteration-5.md`: **plan only**.
+
+## Day 4.7 development status and next action
+- Day 4.6 PR #6 **merged into main** 15 October 2026 (commit `d48168c`).
+- Day 4.7 branch `iteration-4-7-stability-browser-tests` repairs GitHub Actions YAML parser error, expands Chromium solo/duo/mobile tests, fixes fullscreen boss HP and invitation CTA, and adds `docs/PLAYTEST.md`. Inspect whether this PR is merged before working further.
+- Automated Chromium checks passed for the expanded suite on this branch. **Do not confuse simulated mobile viewport tests with real physical phone acceptance.**
+- Current unfinished owner dependencies: real iPhone/Android portrait/landscape two-thumb test, approved Daan **static portrait**, party transfer logistics 20:30→20:40, and formal go/no-go for Day 5.
 
 ## Mandatory validation and unfinished dependencies
 - JS syntax/DOM IDs and browser smoke; real Android/iPhone portrait + landscape, two independent simultaneous touch pointers, fullscreen restrictions, PAWS/re-entry, safe laser windows; solo/co-op each difficulty; Tolly stationary exploit; Daan warning clarity; original asset hashes.

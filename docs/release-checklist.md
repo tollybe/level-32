@@ -5,7 +5,7 @@
 - [ ] `game/game.js` parses in a JavaScript runtime without syntax errors.
 - [ ] Check JS-referenced DOM IDs exist in `game/index.html`; all standalone invitation links resolve.
 - [ ] Verify all `game/assets/*.webp` blobs retain their original SHA after gameplay changes.
-- [ ] Run `python tests/smoke.py` with Playwright, Chromium and `cryptography` installed.
+- [x] Run `python tests/smoke.py` with Playwright, Chromium and `cryptography` installed — automated Ubuntu Chromium runner (15 October 2026).
 - [ ] Play solo as Rosie, Millie, Winnifred and Ellie. Try standing still against Tolly.
 - [ ] Play local co-op on one keyboard. Test revive, pause, and both dash keys.
 - [ ] Test clue 1/2/3 dialogue next buttons and Skip scene. Audio and damage must pause.
@@ -77,3 +77,16 @@
 - [ ] **Day 5 remains docs-only**, despite being fully specified.
 
 Historical checks above concerning **three guardian waves at each clue** no longer apply after the Day 4.6 branch. Use `docs/AI-HANDOFF.md` and `docs/iteration-4-6.md` for current game intent.
+
+
+## Day 4.7 — completed in automated tests; real-device acceptance outstanding
+- [x] Repair GitHub Actions YAML error and run valid browser jobs.
+- [x] Run expanded Chromium smoke tests: Adventure, Story, Extreme; desktop, simulated mobile portrait/landscape; solo and co-op; Q1/Q2/Q3; Tolly and Daan phase; PAWS; win/loss and invitation anchors.
+- [x] Check analogue speed is proportional and that P1/P2 movement directions are independent in simulation.
+- [x] Keep boss health and invitation visible in fullscreen stylesheet.
+- [ ] Two people physically play simultaneous thumbsticks on Android and iPhone, including landscape/fullscreen support and return from invitation.
+- [ ] User-approved Daan portrait replaces provisional emblem.
+- [ ] All heroes have a fair boss encounter in solo and 2P; all three difficulties have acceptable play times.
+- [ ] Confirm opening the ICS file in common mobile calendar apps.
+- [ ] Confirm original character asset hashes are unchanged after final release merge.
+- [ ] Owner acceptance and explicit authorization to start Day 5 sprites.

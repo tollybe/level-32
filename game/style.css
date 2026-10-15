@@ -213,3 +213,11 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:3px solid #9cf
 #game-section:fullscreen .game-actions .footer-invite{font-size:.7rem;min-height:39px;padding:6px}
 #game-section:fullscreen .game-actions #game-message{display:none}
 @media(max-width:620px){#game-section:fullscreen .game-actions .footer-invite{display:none}}
+
+/* 4.7 accessibility repair: fullscreen must retain boss HP and invitation.
+   The earlier wide-play rules accidentally hid both on small screens. */
+#game-section:fullscreen>.bossbar.show{display:block;padding:3px 8px;margin:3px auto;max-width:700px;font-size:.78rem}
+#game-section:fullscreen>.bossbar.show .meter{margin:2px 0;height:8px}
+#game-section:fullscreen .game-actions .footer-invite{display:inline-flex!important;justify-content:center;align-items:center;max-width:180px;width:auto!important;font-size:.7rem;min-height:39px;padding:5px 8px}
+#game-section:fullscreen .game-actions>div{gap:4px}
+@media(max-width:620px){#game-section:fullscreen .game-actions .footer-invite{display:inline-flex!important}}

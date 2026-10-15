@@ -134,8 +134,17 @@ Day 4 applies the [Iteration 4 roadmap](docs/iteration-4.md), motivated by playt
 - Day 5 stays **documentation-only** until Day 4 and 4.5 are accepted. See `docs/iteration-4-5.md` and `docs/iteration-5.md`.
 
 
-### Day 4.6 — Playability & Personality (under review)
+### Day 4.6 — Playability & Personality (merged into main)
 
-The original three-waves-per-scroll design is **historical**, not the latest rules. In the Day 4.6 branch: Q1 follows three pawprints; Q2 has two ambush rounds, then Boink & Bocht; Q3 has three timed red/green laser terminals (no guardian waves). The joysticks gain proportional movement and a dead zone; the phone gets optional fullscreen wide play with graceful rotation fallback. Returning from another tab PAWSes the active game. Portraits remain canonical; banter, small reaction animations, visible in-world HP and off-screen scene culling improve the experience.
+The original three-waves-per-scroll design is **historical**, not the latest rules. In the current game: Q1 follows three pawprints; Q2 has two ambush rounds, then Boink & Bocht; Q3 has three timed red/green laser terminals (no guardian waves). The joysticks gain proportional movement and a dead zone; the phone gets optional fullscreen wide play with graceful rotation fallback. Returning from another tab PAWSes the active game. Portraits remain canonical; banter, small reaction animations, visible in-world HP and off-screen scene culling improve the experience.
 
 **Start new AI sessions by reading [docs/AI-HANDOFF.md](docs/AI-HANDOFF.md).** See [Day 4.6 spec](docs/iteration-4-6.md), [Day 4.7 QA backlog](docs/iteration-4-7.md), and [Day 5 (not implemented)](docs/iteration-5.md). Day 4.6 is still a review/playtest change, not an official release. Daan's character emblem is temporary pending an approved portrait. The game's invitation links remain accessible regardless of progress.
+
+
+### Day 4.7 — Automated stability & physical playtest (in progress)
+
+- GitHub Actions now runs Chromium Playwright smoke tests automatically, with syntax validation, Story/Adventure/Extreme modes, simulated phone portrait/landscape, solo and co-op path, independent joystick movement, timed laser security, Daan's Extreme trigger and invitation links.
+- Fixed Wide Play CSS so fullscreen no longer hides the **boss health bar** or **direct invitation link**.
+- Use [the real-phone playtest checklist](docs/PLAYTEST.md) before any real release. Passing desktop/headless tests does **not** validate a real touch device, Safari screen orientation, or game balance.
+- See [the up-to-date AI context handoff](docs/AI-HANDOFF.md) and [Day 4.7 release criteria](docs/iteration-4-7.md).
+- No approved Daan portrait yet; the placeholder SVG is temporary. Day 5 sprite development **still not started**.
