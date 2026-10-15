@@ -114,10 +114,17 @@ function steerAroundTrees(actor,vx,vy,radius=20){
   const w=actor.treeWaypoint,dx=w.x-actor.x,dy=w.y-actor.y;
   const d=Math.hypot(dx,dy);
   if(d>13&&cherryTrees.includes(w.tree))return {x:dx/d,y:dy/d};
+  actor.treeAvoidLast=w.tree;
   actor.treeWaypoint=null;
  }
  for(const t of cherryTrees){
   const tr=treeTrunk(t),rx=tr.x-actor.x,ry=tr.y-actor.y;
+  // Once the mob has reached the safe tangent waypoint, continue past
+  // the trunk rather than choosing the opposite side on the next frame.
+  if(actor.treeAvoidLast===t){
+   if(Math.hypot(rx,ry)<200)continue;
+   actor.treeAvoidLast=null;
+  }
   const ahead=rx*vx+ry*vy,cross=rx*vy-ry*vx;
   if(ahead>0&&ahead<120&&Math.abs(cross)<tr.r+radius+19){
    const side=cross>=0?-1:1,clearance=tr.r+radius+39;
