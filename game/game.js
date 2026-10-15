@@ -946,16 +946,20 @@ function updateEllieAuras(dt){
   if(ellie.healClock>0) continue;
   ellie.healClock+=ellie.healPulse;
   ellie.healFlash=.68;
-  let didHeal=false;
-  for(const ally of players){
-   if(!ally.alive||dist(ellie,ally)>ellie.auraRadius) continue;
-   const amount=Math.min(ally.maxHp-ally.hp,ally===ellie?13:10);
-   if(amount<=0) continue;
-   ally.hp=Math.min(ally.maxHp,ally.hp+amount);
-   emit('💚 +'+Math.ceil(amount)+' HP',ally.x,ally.y-26,'#9ef7ce');
+  const targets=players.filter(ally=>ally.alive&&dist(ellie,ally)<=ellie.auraRadius);
+  const powered=targets.some(ally=>ally.hp<ally.maxHp)&&
+   ellie.snackCharge>=SNACK_MAX&&useSnack(ellie);
+  let didHeal=false,healedOther=0;
+  for(const ally of targets){
+   const amount=Math.min(ally.maxHp-ally.hp,(ally===ellie?13:10)+(powered?12:0));
+   if(amount<=0)continue;
+   ally.hp+=amount;
+   if(ally!==ellie)healedOther+=amount;
+   emit((powered?'💖':'💚')+' +'+Math.ceil(amount)+' HP',ally.x,ally.y-26,'#9ef7ce');
    didHeal=true;
   }
-  if(didHeal) playSfx('heal');
+  if(healedOther>0)chargeSnack(ellie,healedOther*.45);
+  if(didHeal)playSfx('heal');
  }
 }
 // Swept segment-to-circle collisions prevent frame skips on mobile.
@@ -1655,7 +1659,12 @@ rect(fridge.x-55,fridge.y-35,120,95,'#a37772');rect(fridge.x-48,fridge.y-95,100,
 if(phase==='explore'&&clues<3&&!duoActive&&(clues!==2||duoDefeated)){const s=clueSpots[clues];const glow=1+0.16*Math.sin(elapsed*4);circle(s.x,s.y,35*glow,'#ffdf7d49');circle(s.x,s.y,20,'#fff0b8');txt('📜',s.x,s.y+12,28,'center')}
 if(clues>=3){txt('❄️',fridge.x,fridge.y-103,36,'center');circle(fridge.x,fridge.y-140,12,'#f7e6a8')}
 // items
-for(const d of drops){txt(d.kind==='xp'?'✨':'🍫',d.x,d.y+8,22,'center')}
+for(const d of drops){
+ const icon=d.kind==='xp'?'✨':d.kind==='heal'?'🍫':'🌸';
+ if(d.kind==='magnet'){cx.save();cx.globalAlpha=.3+.12*Math.sin(elapsed*5);
+  circle(d.x,d.y,24,'#ffd0e8');cx.restore()}
+ txt(icon,d.x,d.y+8,d.kind==='magnet'?27:22,'center');
+}
 // The Bleepling Menace: original pastel silhouettes, easily distinguishable at game speed.
 for(const e of foes){
  if(e.x<cam.x-100||e.x>cam.x+VIEWW+100||e.y<cam.y-100||e.y>cam.y+VIEWH+100)continue;
@@ -1818,7 +1827,18 @@ for(const p of players){
  txt(p.hidden?'🌿 HIDDEN':'P'+(p.num+1),p.x,p.y-38,16,'center',p.hidden?'#dcffc9':p.num===0?'#a6ffe1':'#ffc7c3');
  if(wiggle)txt('WIGGLE!',p.x+12,p.y+45,15,'center','#ffe3b5');
  // Health stays readable next to the character on phone and desktop.
- rect(p.x-28,p.y+29,56,7,'#152636');rect(p.x-27,p.y+30,54*clamp(p.hp/p.maxHp,0,1),5,p.hp/p.maxHp<.3?'#ff9995':'#9aebbb');
+ rect(p.x-28,p.y+29,56,7,'#152636');
+ rect(p.x-27,p.y+30,54*clamp(p.hp/p.maxHp,0,1),5,p.hp/p.maxHp<.3?'#ff9995':'#9aebbb');
+ // A second, unobtrusive bar reflects Snack Power for this individual pet.
+ rect(p.x-28,p.y+38,56,5,'#292c40');
+ rect(p.x-27,p.y+39,54*clamp(p.snackCharge/SNACK_MAX,0,1),3,
+  p.snackCharge>=SNACK_MAX?'#fff0aa':'#eabb82');
+ if(p.snackCharge>=SNACK_MAX)txt('🍫 READY',p.x,p.y-55,13,'center','#ffe8ad');
+ if(p.magnetTime>0){
+  cx.save();cx.strokeStyle='#f6cada';cx.globalAlpha=.45+.22*Math.sin(elapsed*9);
+  cx.lineWidth=3;cx.beginPath();cx.arc(p.x,p.y,33,0,TAU);cx.stroke();cx.restore();
+  if(!liteFx)txt('🌸 '+Math.ceil(p.magnetTime)+'s',p.x,p.y+61,13,'center','#ffdfec');
+ }
 }
 for(const p of players.filter(p=>p.alive&&p.hidden)){
  const b=bushes[p.bushId];if(!b)continue;
