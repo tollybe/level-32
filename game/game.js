@@ -44,7 +44,7 @@ let laserChallenge={index:0,timer:0,zapCooldown:0};
 const laserSafe=()=>laserChallenge.timer%3.5>=1.55;
 const bushes=[{x:545,y:430},{x:970,y:740},{x:1445,y:1130},{x:2020,y:1520},{x:2365,y:1525}];
 const bushArt=new Image();bushArt.src='assets/sprites/bush.svg';
-// Decorative cherry trees and waving grass: no colliders, no pathfinding changes.
+// Tree crowns allow depth occlusion; only their small lower trunks block movement.
 const treeArt=new Image();treeArt.src='assets/sprites/cherry-tree.svg';
 let cherryTrees=[],grassTufts=[],gardenSeed=0;
 const pathSections=[
@@ -79,6 +79,54 @@ function generateGarden(){
   x:40+random()*(WIDTH-80),y:40+random()*(HEIGHT-80),
   size:7+random()*8,phase:random()*TAU
  });
+}
+// Tree trunk only; the wider flowering canopy is passable behind.
+function treeTrunk(t){return {x:t.x,y:t.y-25*t.scale,r:24*t.scale};}
+function blockedByTree(x,y,radius=18){
+ return cherryTrees.some(t=>{const tr=treeTrunk(t);return Math.hypot(x-tr.x,y-tr.y)<tr.r+radius});
+}
+function moveAroundTrees(actor,deltaX,deltaY,radius=18){
+ const steps=Math.max(1,Math.ceil(Math.hypot(deltaX,deltaY)/9));
+ for(let i=0;i<steps;i++){
+  const nx=clamp(actor.x+deltaX/steps,24,WIDTH-24);
+  const ny=clamp(actor.y+deltaY/steps,24,HEIGHT-24);
+  if(!blockedByTree(nx,ny,radius)){actor.x=nx;actor.y=ny;continue}
+  // Slide along a trunk instead of getting caught on the whole crown.
+  if(!blockedByTree(nx,actor.y,radius))actor.x=nx;
+  if(!blockedByTree(actor.x,ny,radius))actor.y=ny;
+ }
+}
+function steerAroundTrees(actor,vx,vy,radius=20){
+ let ax=vx,ay=vy;
+ for(const t of cherryTrees){
+  const tr=treeTrunk(t),rx=tr.x-actor.x,ry=tr.y-actor.y;
+  const ahead=rx*vx+ry*vy,cross=rx*vy-ry*vx;
+  if(ahead>0&&ahead<90&&Math.abs(cross)<tr.r+radius+22){
+   const dir=cross>=0?-1:1;
+   ax+=-vy*dir*.95;ay+=vx*dir*.95;
+  }
+ }
+ const length=Math.hypot(ax,ay)||1;
+ return {x:ax/length,y:ay/length};
+}
+function cherryCanopyOpacity(t,cast=players,mobs=foes){
+ const behind=e=>e.hp>0&&e.alive!==false&&
+  Math.abs(e.x-t.x)<65*t.scale&&e.y<t.y-25*t.scale&&e.y>t.y-160*t.scale;
+ if(cast.some(behind))return .22;
+ if(mobs.some(behind))return .57;
+ return 1;
+}
+function drawCherryCanopies(){
+ for(const t of cherryTrees){
+  if(t.x<cam.x-130||t.x>cam.x+VIEWW+130||t.y<cam.y-190||t.y>cam.y+VIEWH+100)continue;
+  const w=144*t.scale,h=190*t.scale;
+  cx.save();cx.globalAlpha=cherryCanopyOpacity(t);
+  cx.beginPath();cx.rect(t.x-w/2,t.y-h,w,h*.78);cx.clip();
+  if(treeArt.complete&&treeArt.naturalWidth)cx.drawImage(treeArt,t.x-w/2,t.y-h,w,h);
+  else{circle(t.x,t.y-115*t.scale,44*t.scale,'#edb5c7');
+       circle(t.x-22*t.scale,t.y-105*t.scale,24*t.scale,'#f6d1dd')}
+  cx.restore();
+ }
 }
 function grassLean(g,squad=players){
  let part=0;
@@ -719,8 +767,8 @@ function movePlayers(dt){
   // proportional instead of snapping to maximum running speed.
   let l=Math.max(1,Math.hypot(dx,dy));
   p.slowTime=Math.max(0,(p.slowTime||0)-dt);const footing=p.slowTime>0?.63:1;
-  p.x=clamp(p.x+dx/l*p.speed*footing*dt*(p.dash>0?2.3:1),24,WIDTH-24);
-  p.y=clamp(p.y+dy/l*p.speed*footing*dt*(p.dash>0?2.3:1),24,HEIGHT-24);
+  moveAroundTrees(p,dx/l*p.speed*footing*dt*(p.dash>0?2.3:1),
+   dy/l*p.speed*footing*dt*(p.dash>0?2.3:1),18);
   // Player and Tolly cannot occupy the same collision space.
   if(phase==='boss'&&boss&&boss.hp>0){
    const d=dist(p,boss),minimum=boss.size+44;
@@ -1033,8 +1081,8 @@ function update(dt){
      if(e.searchTime>4){
       const b=bushes.find((b,i)=>players.some(q=>q.hidden&&q.bushId===i));
       if(b&&dist(e,b)>110){const a=Math.atan2(b.y-e.y,b.x-e.x);
-       e.x=clamp(e.x+Math.cos(a)*e.speed*.22*dt,24,WIDTH-24);
-       e.y=clamp(e.y+Math.sin(a)*e.speed*.22*dt,24,HEIGHT-24);}
+       const v=steerAroundTrees(e,Math.cos(a),Math.sin(a),e.size*.7);
+       moveAroundTrees(e,v.x*e.speed*.22*dt,v.y*e.speed*.22*dt,e.size*.7);}
      }
      continue;
     }
@@ -1064,7 +1112,8 @@ function update(dt){
       if(e.telegraph===0&&e.charge===0){e.charge=.32;playSfx('boink')}
     }
     const boost=e.kind==='boink'&&e.charge>0?2.8:1;
-    if(d>e.size+15){e.x=clamp(e.x+Math.cos(angle)*e.speed*pace*boost*dt,24,WIDTH-24);e.y=clamp(e.y+Math.sin(angle)*e.speed*pace*boost*dt,24,HEIGHT-24)}
+    if(d>e.size+15){const v=steerAroundTrees(e,Math.cos(angle),Math.sin(angle),e.size*.72);
+     moveAroundTrees(e,v.x*e.speed*pace*boost*dt,v.y*e.speed*pace*boost*dt,e.size*.72)}
     if(e.kind==='boink'&&e.charge>0){e.charge-=dt;if(e.charge<=0)e.charge=-1;}
     if(e.kind==='bocht'){
       e.trailTimer=(e.trailTimer||0)-dt;
@@ -1220,7 +1269,8 @@ function update(dt){
        }
      }
      const a=Math.atan2(p.y-boss.y,p.x-boss.x),d=dist(p,boss);
-     if(d>108){boss.x+=Math.cos(a)*boss.speed*dt*(boss.rage?1.16:1);boss.y+=Math.sin(a)*boss.speed*dt*(boss.rage?1.16:1)}
+     if(d>108){const v=steerAroundTrees(boss,Math.cos(a),Math.sin(a),39);
+      moveAroundTrees(boss,v.x*boss.speed*dt*(boss.rage?1.16:1),v.y*boss.speed*dt*(boss.rage?1.16:1),39)}
      // The illustrated cone cutscene triggers precisely when HP crosses 50% (in damage()).
      if(bananaWindup>0){
       bananaWindup-=dt;
@@ -1605,6 +1655,7 @@ if(winston?.shaking&&!players.some(p=>p.id==='rosie')){
   txt('ROSIE · WIGGLE BOTTOM!',b.x,b.y-74,15,'center','#fff1b6');
  }
 }
+drawCherryCanopies(); // Fade blossoms strongly for players, softly for mobs.
 for(const s of shots){txt(s.kind==='dragon'?'🐉':s.kind==='kong'?'🧊':'🔴',s.x,s.y+9,24,'center')}
 for(const h of hazards){
  if(h.kind==='duo-banana'){circle(h.x,h.y,17,'#e6a84b66');txt('🍌',h.x,h.y+9,23,'center');continue}
