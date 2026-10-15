@@ -620,7 +620,17 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     print('idle',s['phase'])
     page.locator('#mute').click()
     page.locator('#difficulty').select_option(mode)
-    if solo: page.locator('#coop').uncheck()
+    # Non-gamers begin in solo mode, keeping the existing P1 Rosie selection.
+    assert not page.locator('#coop').is_checked()
+    assert page.locator('[data-slot="0"]').get_attribute('aria-pressed')=='true'
+    assert page.locator('[data-slot="1"]').is_disabled()
+    assert 'P1: Rosie' in page.locator('#selection-status').inner_text()
+    assert 'SOLO MODE' in page.locator('#selection-status').inner_text()
+    if not solo:
+        page.locator('#coop').check()
+        assert page.locator('#coop').is_checked()
+        assert page.locator('[data-slot="1"]').is_enabled()
+        assert 'P2: Winnifred' in page.locator('#selection-status').inner_text()
     assert page.locator('[data-dash]').count()==2
     assert page.locator('[data-joystick]').count()==2
     assert 'Daan joins' not in page.locator('#difficulty').inner_text()
