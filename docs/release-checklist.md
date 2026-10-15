@@ -150,7 +150,7 @@ Historical checks above concerning **three guardian waves at each clue** no long
 
 ## Day 6B — Player-feedback corrections
 
-- [ ] CI checks pass for displayed hero stats, decoded cutscene opening, and the 12-way hero × difficulty matrix.
+- [x] PR #13 Chromium CI passed for displayed hero stats, decoded cutscene opening, and the 12-way hero × difficulty matrix.
 - [ ] Confirm Story 4/10 is approachable for first-time solo and local co-op guests.
 - [ ] Owner checks Adventure elite duo survives long enough to feel threatening, but not tedious.
 - [ ] Owner tests Extreme banana +/X telegraphs, collision and safe gaps on real devices.
