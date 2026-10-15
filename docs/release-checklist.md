@@ -223,9 +223,9 @@ Historical checks above concerning **three guardian waves at each clue** no long
 
 ## Day 8C — Phone fullscreen, legible controls and compact perk menus
 
-- [ ] CI: tapping Play enables full-viewport phone game, preserving portrait and rotated landscape view, with visible EXIT, PAWS/UNPAWS and INVITE actions.
-- [ ] CI: landscape HUD containers have approximately 10% background opacity, with text and health/XP indicators still legible; overlay never blocks the whole game.
-- [ ] CI: solo gameplay shows only P1 joystick and dash; enabling co-op shows both; original controls still function.
-- [ ] CI: phone-level-up pause displays a compact, scrollable, two-choice touch panel rather than a fullscreen opaque dialog; no combat advances during selection.
-- [ ] CI: PAWS tap updates to UNPAWS, second tap resumes play and resets on a new game.
+- [x] PR #23 CI passed: tapping Play enables full-viewport phone game, preserving portrait and rotated landscape view, with visible EXIT, PAWS/UNPAWS and INVITE actions.
+- [x] PR #23 CI passed: landscape HUD containers have approximately 10% background opacity, with text and health/XP indicators still legible; overlay never blocks the whole game.
+- [x] PR #23 CI passed: solo gameplay shows only P1 joystick and dash; enabling co-op shows both; original controls still function.
+- [x] PR #23 CI passed: phone-level-up pause displays a compact, scrollable, two-choice touch panel rather than a fullscreen opaque dialog; no combat advances during selection.
+- [x] PR #23 CI passed: PAWS tap updates to UNPAWS, second tap resumes play and resets on a new game.
 - [ ] Owner tests native Android fullscreen/autorotation and iOS Safari fixed-viewport fallback, safe-area cutouts, control comfort, upgrade text readability and return to birthday invitation.
