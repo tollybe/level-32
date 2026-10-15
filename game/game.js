@@ -44,7 +44,7 @@ let laserChallenge={index:0,timer:0,zapCooldown:0};
 const laserSafe=()=>laserChallenge.timer%3.5>=1.55;
 const bushes=[{x:545,y:430},{x:970,y:740},{x:1445,y:1130},{x:2020,y:1520},{x:2365,y:1525}];
 const bushArt=new Image();bushArt.src='assets/sprites/bush.svg';
-// Decorative cherry trees and waving grass: no colliders, no pathfinding changes.
+// Tree crowns allow depth occlusion; only their small lower trunks block movement.
 const treeArt=new Image();treeArt.src='assets/sprites/cherry-tree.svg';
 let cherryTrees=[],grassTufts=[],gardenSeed=0;
 const pathSections=[
@@ -79,6 +79,82 @@ function generateGarden(){
   x:40+random()*(WIDTH-80),y:40+random()*(HEIGHT-80),
   size:7+random()*8,phase:random()*TAU
  });
+}
+// Tree trunk only; the wider flowering canopy is passable behind.
+function treeTrunk(t){return {x:t.x,y:t.y-25*t.scale,r:24*t.scale};}
+function blockedByTree(x,y,radius=18){
+ return cherryTrees.some(t=>{const tr=treeTrunk(t);return Math.hypot(x-tr.x,y-tr.y)<tr.r+radius});
+}
+function moveAroundTrees(actor,deltaX,deltaY,radius=18){
+ // Knockback, scripted boss shoves and spawn changes may push an actor into
+ // a trunk. Eject them before movement so they cannot get permanently stuck.
+ for(const t of cherryTrees){
+  const tr=treeTrunk(t),dx=actor.x-tr.x,dy=actor.y-tr.y;
+  const d=Math.hypot(dx,dy),limit=tr.r+radius+1;
+  if(d<limit){
+   const angle=d>.001?Math.atan2(dy,dx):0;
+   actor.x=clamp(tr.x+Math.cos(angle)*limit,24,WIDTH-24);
+   actor.y=clamp(tr.y+Math.sin(angle)*limit,24,HEIGHT-24);
+  }
+ }
+ const steps=Math.max(1,Math.ceil(Math.hypot(deltaX,deltaY)/9));
+ for(let i=0;i<steps;i++){
+  const nx=clamp(actor.x+deltaX/steps,24,WIDTH-24);
+  const ny=clamp(actor.y+deltaY/steps,24,HEIGHT-24);
+  if(!blockedByTree(nx,ny,radius)){actor.x=nx;actor.y=ny;continue}
+  // Slide along a trunk instead of getting caught on the whole crown.
+  if(!blockedByTree(nx,actor.y,radius))actor.x=nx;
+  if(!blockedByTree(actor.x,ny,radius))actor.y=ny;
+ }
+}
+function steerAroundTrees(actor,vx,vy,radius=20){
+ // Choose and remember one route around a trunk. Alternating tangents each
+ // frame could otherwise cause enemies to oscillate forever beside a tree.
+ if(actor.treeWaypoint){
+  const w=actor.treeWaypoint,dx=w.x-actor.x,dy=w.y-actor.y;
+  const d=Math.hypot(dx,dy);
+  if(d>13&&cherryTrees.includes(w.tree))return {x:dx/d,y:dy/d};
+  actor.treeAvoidLast=w.tree;
+  actor.treeWaypoint=null;
+ }
+ for(const t of cherryTrees){
+  const tr=treeTrunk(t),rx=tr.x-actor.x,ry=tr.y-actor.y;
+  // Once the mob has reached the safe tangent waypoint, continue past
+  // the trunk rather than choosing the opposite side on the next frame.
+  if(actor.treeAvoidLast===t){
+   if(Math.hypot(rx,ry)<200)continue;
+   actor.treeAvoidLast=null;
+  }
+  const ahead=rx*vx+ry*vy,cross=rx*vy-ry*vx;
+  if(ahead>0&&ahead<120&&Math.abs(cross)<tr.r+radius+19){
+   const side=cross>=0?-1:1,clearance=tr.r+radius+39;
+   const wx=clamp(tr.x-vy*side*clearance,24,WIDTH-24);
+   const wy=clamp(tr.y+vx*side*clearance,24,HEIGHT-24);
+   const dx=wx-actor.x,dy=wy-actor.y,d=Math.hypot(dx,dy)||1;
+   actor.treeWaypoint={tree:t,x:wx,y:wy};
+   return {x:dx/d,y:dy/d};
+  }
+ }
+ return {x:vx,y:vy};
+}
+function cherryCanopyOpacity(t,cast=players,mobs=foes){
+ const behind=e=>e.hp>0&&e.alive!==false&&
+  Math.abs(e.x-t.x)<65*t.scale&&e.y<t.y-25*t.scale&&e.y>t.y-160*t.scale;
+ if(cast.some(behind))return .22;
+ if(mobs.some(behind))return .57;
+ return 1;
+}
+function drawCherryCanopies(){
+ for(const t of cherryTrees){
+  if(t.x<cam.x-130||t.x>cam.x+VIEWW+130||t.y<cam.y-190||t.y>cam.y+VIEWH+100)continue;
+  const w=144*t.scale,h=190*t.scale;
+  cx.save();cx.globalAlpha=cherryCanopyOpacity(t);
+  cx.beginPath();cx.rect(t.x-w/2,t.y-h,w,h*.78);cx.clip();
+  if(treeArt.complete&&treeArt.naturalWidth)cx.drawImage(treeArt,t.x-w/2,t.y-h,w,h);
+  else{circle(t.x,t.y-115*t.scale,44*t.scale,'#edb5c7');
+       circle(t.x-22*t.scale,t.y-105*t.scale,24*t.scale,'#f6d1dd')}
+  cx.restore();
+ }
 }
 function grassLean(g,squad=players){
  let part=0;
@@ -581,7 +657,7 @@ const ambientBanter=[
  'MILLIE: Did someone say throw? ...AAAAAH, IT MOVED!'
 ];
 function say(t,duration=3){$('game-message').textContent=t;messageClock=duration}
-function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5,spriteFacing:'down',spriteMoving:false,spriteAttackAt:-1,perkGlow:0,perkRarity:'',hidden:false,bushTime:0,bushId:-1,ambushReady:0}}
+function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,dashCharges:id==='millie'?2:1,dashRecharge:[],healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5,spriteFacing:'down',spriteMoving:false,spriteAttackAt:-1,perkGlow:0,perkRarity:'',hidden:false,bushTime:0,bushId:-1,ambushReady:0}}
 function start(){
  ++scenePresentationToken;perkOffer=null;perksAwarded=0;$('perk-panel').hidden=true;
  $('scene-control-help').hidden=true;$('ending-invite').hidden=true;cancelAnimationFrame(raf);
@@ -719,8 +795,8 @@ function movePlayers(dt){
   // proportional instead of snapping to maximum running speed.
   let l=Math.max(1,Math.hypot(dx,dy));
   p.slowTime=Math.max(0,(p.slowTime||0)-dt);const footing=p.slowTime>0?.63:1;
-  p.x=clamp(p.x+dx/l*p.speed*footing*dt*(p.dash>0?2.3:1),24,WIDTH-24);
-  p.y=clamp(p.y+dy/l*p.speed*footing*dt*(p.dash>0?2.3:1),24,HEIGHT-24);
+  moveAroundTrees(p,dx/l*p.speed*footing*dt*(p.dash>0?2.3:1),
+   dy/l*p.speed*footing*dt*(p.dash>0?2.3:1),18);
   // Player and Tolly cannot occupy the same collision space.
   if(phase==='boss'&&boss&&boss.hp>0){
    const d=dist(p,boss),minimum=boss.size+44;
@@ -732,6 +808,12 @@ function movePlayers(dt){
   }
   p.perkGlow=Math.max(0,(p.perkGlow||0)-dt);p.inv=Math.max(0,p.inv-dt);p.dash=Math.max(0,p.dash-dt);
   p.dashCooldown=Math.max(0,p.dashCooldown-dt);
+  if(p.id==='millie'){
+   p.dashRecharge=p.dashRecharge.map(t=>t-dt);
+   for(let i=p.dashRecharge.length-1;i>=0;i--)if(p.dashRecharge[i]<=0){
+    p.dashRecharge.splice(i,1);p.dashCharges=Math.min(2,p.dashCharges+1);
+   }
+  }
   for(let i=drops.length-1;i>=0;i--){let d=drops[i];if(dist(p,d)<29){
     if(d.kind==='xp'){gainXP(12);score+=5;emit('+XP',p.x,p.y,'#a9f4d1')}
     else{p.hp=Math.min(p.maxHp,p.hp+21);emit('+21 HP',p.x,p.y,'#a9ffc9');playSfx('heal')}
@@ -1033,8 +1115,8 @@ function update(dt){
      if(e.searchTime>4){
       const b=bushes.find((b,i)=>players.some(q=>q.hidden&&q.bushId===i));
       if(b&&dist(e,b)>110){const a=Math.atan2(b.y-e.y,b.x-e.x);
-       e.x=clamp(e.x+Math.cos(a)*e.speed*.22*dt,24,WIDTH-24);
-       e.y=clamp(e.y+Math.sin(a)*e.speed*.22*dt,24,HEIGHT-24);}
+       const v=steerAroundTrees(e,Math.cos(a),Math.sin(a),e.size*.7);
+       moveAroundTrees(e,v.x*e.speed*.22*dt,v.y*e.speed*.22*dt,e.size*.7);}
      }
      continue;
     }
@@ -1064,7 +1146,8 @@ function update(dt){
       if(e.telegraph===0&&e.charge===0){e.charge=.32;playSfx('boink')}
     }
     const boost=e.kind==='boink'&&e.charge>0?2.8:1;
-    if(d>e.size+15){e.x=clamp(e.x+Math.cos(angle)*e.speed*pace*boost*dt,24,WIDTH-24);e.y=clamp(e.y+Math.sin(angle)*e.speed*pace*boost*dt,24,HEIGHT-24)}
+    if(d>e.size+15){const v=steerAroundTrees(e,Math.cos(angle),Math.sin(angle),e.size*.72);
+     moveAroundTrees(e,v.x*e.speed*pace*boost*dt,v.y*e.speed*pace*boost*dt,e.size*.72)}
     if(e.kind==='boink'&&e.charge>0){e.charge-=dt;if(e.charge<=0)e.charge=-1;}
     if(e.kind==='bocht'){
       e.trailTimer=(e.trailTimer||0)-dt;
@@ -1220,7 +1303,8 @@ function update(dt){
        }
      }
      const a=Math.atan2(p.y-boss.y,p.x-boss.x),d=dist(p,boss);
-     if(d>108){boss.x+=Math.cos(a)*boss.speed*dt*(boss.rage?1.16:1);boss.y+=Math.sin(a)*boss.speed*dt*(boss.rage?1.16:1)}
+     if(d>108){const v=steerAroundTrees(boss,Math.cos(a),Math.sin(a),39);
+      moveAroundTrees(boss,v.x*boss.speed*dt*(boss.rage?1.16:1),v.y*boss.speed*dt*(boss.rage?1.16:1),39)}
      // The illustrated cone cutscene triggers precisely when HP crosses 50% (in damage()).
      if(bananaWindup>0){
       bananaWindup-=dt;
@@ -1334,13 +1418,32 @@ function drawObjectiveMarker(){
  txt(duoActive?'🫧':clues<3?'📜':'❄',x,y+37,19,'center','#ffe9b4');
 }
 function syncHud(){
+ // One shared progress meter: both teammates earn the same experience.
+ const progress=clamp(xp/Math.max(1,goal),0,1);
+ $('team-level-label').textContent='TEAM LV '+level;
+ $('team-xp-text').textContent=Math.floor(xp)+' / '+goal+' XP';
+ $('team-perk-label').textContent='NEXT PERK LV '+(Math.floor(level/5)+1)*5;
+ $('team-xp-fill').style.width=(progress*100)+'%';
+ const xpBar=$('team-xp-progress');
+ xpBar.setAttribute('aria-valuenow',String(Math.min(goal,Math.floor(xp))));
+ xpBar.setAttribute('aria-valuemax',String(goal));
+ xpBar.setAttribute('aria-valuetext',Math.floor(xp)+' of '+goal+' XP toward team level '+(level+1));
  $('fx-toggle').textContent=liteFx?'⚡ LITE FX ON':'✨ FULL FX';
  const dash=$('dash-status');
  if(dash){dash.replaceChildren();for(const p of players){
   const pill=document.createElement('span');pill.className='dash-pill';
   const key=p.num===0?'⇧ SHIFT':'↵ ENTER';
-  pill.textContent='P'+(p.num+1)+' '+key+' = DASH · '+(p.dashCooldown<=0?'READY':p.dashCooldown.toFixed(1)+'s');
-  pill.classList.toggle('on-cooldown',p.dashCooldown>0);dash.append(pill);
+  if(p.id==='millie'){
+   pill.textContent='P'+(p.num+1)+' '+key+' = DOUBLE DASH · '+
+     ('⚡'.repeat(p.dashCharges)+'○'.repeat(2-p.dashCharges))+
+     (p.dashCharges<2?' · next '+Math.max(0,Math.min(...p.dashRecharge)).toFixed(1)+'s':'');
+   pill.classList.toggle('on-cooldown',p.dashCharges===0);
+  }else{
+   pill.textContent='P'+(p.num+1)+' '+key+' = DASH · '+
+     (p.dashCooldown<=0?'READY':p.dashCooldown.toFixed(1)+'s');
+   pill.classList.toggle('on-cooldown',p.dashCooldown>0);
+  }
+  dash.append(pill);
  }}
  updateObjective();let h='';for(const p of players){h+='<p><strong>P'+(p.num+1)+' '+p.name+'</strong> · '+Math.ceil(p.hp)+' / '+p.maxHp+' HP'+(p.id==='ellie'?' · 💚 Lick Aura':'')+'</p><div class="meter"><span style="width:'+100*clamp(p.hp/p.maxHp,0,1)+'%"></span></div>'}$('playerhud').innerHTML=h||'Choose your heroes!';
  const health=$('mobile-health');
@@ -1605,6 +1708,7 @@ if(winston?.shaking&&!players.some(p=>p.id==='rosie')){
   txt('ROSIE · WIGGLE BOTTOM!',b.x,b.y-74,15,'center','#fff1b6');
  }
 }
+drawCherryCanopies(); // Fade blossoms strongly for players, softly for mobs.
 for(const s of shots){txt(s.kind==='dragon'?'🐉':s.kind==='kong'?'🧊':'🔴',s.x,s.y+9,24,'center')}
 for(const h of hazards){
  if(h.kind==='duo-banana'){circle(h.x,h.y,17,'#e6a84b66');txt('🍌',h.x,h.y+9,23,'center');continue}
@@ -1699,8 +1803,18 @@ $('start').addEventListener('click',start);$('overlay-start').addEventListener('
 });$('restart').addEventListener('click',start);$('pause').addEventListener('click',togglePause);$('mute').addEventListener('click',()=>{audioEnabled=!audioEnabled; if(audioCtx){audioEnabled?audioCtx.resume():audioCtx.suspend()} $('mute').textContent=audioEnabled?'🔊 MUSIC + SFX':'🔇 SOUND OFF'; if(audioEnabled) ensureAudio();});
 function tryDash(id){
  if(!['boss','explore'].includes(phase)||paused)return;
- const p=players[id];if(!p||!p.alive||p.hidden||bushes.some(b=>dist(p,b)<51)||p.dashCooldown>0)return;
- emit('DASH!',p.x,p.y-55,'#aaf5ff');p.dash=.18;p.dashCooldown=p.id==='ellie'?2.2:3.4;p.inv=Math.max(p.inv,.18);playSfx('dash');
+ const p=players[id];if(!p||!p.alive||p.hidden||bushes.some(b=>dist(p,b)<51))return;
+ if(p.id==='millie'?p.dashCharges<1:p.dashCooldown>0)return;
+ if(p.id==='millie'){
+  p.dashCharges--;
+  p.dashRecharge.push(3.3);
+  p.dashCooldown=0;
+  emit('ZOOM-ZOOM! '+p.dashCharges+'/2',p.x,p.y-55,'#aaf5ff');
+ }else{
+  p.dashCooldown=p.id==='ellie'?2.2:3.4;
+  emit('DASH!',p.x,p.y-55,'#aaf5ff');
+ }
+ p.dash=.2;p.inv=Math.max(p.inv,.2);playSfx('dash');
 }
 // Device rotation is an opt-in enhancement. iOS/browser privacy restrictions can
 // reject landscape locks; the responsive web layout still works without them.

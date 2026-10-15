@@ -1,3 +1,5 @@
+> **Day 7C in test:** Tree trunk collision with see-through canopies (players clearer than mobs), Millie's separate double dash charges, and a visible shared XP bar. See docs/iteration-7.md. Still pending CI and mobile review.
+
 > **Day 7B merged to `main` (PR #17, green CI):** PR follow-up adds Tolly's names for all pets, a Rosie/Daan text duet, independent Boink/Bocht bursts with random 1–4s post-recovery, strict no-fire bush stealth, first-hit mob-only crit after leaving cover, and reduced-damage banana 'OW!' knockback through foliage. See `docs/iteration-7.md`; Full Chromium regression passed; owner real-device approval still pending.
 
 > **Day 7 merged into `main` via PR #16, green CI:** Simultaneous Impossible Boink and Bocht red-warning machine-gun volleys, hideable flowering bushes, 30-second secret, nonblocking Tolly/Winston banter with Rosie's wiggle reveal, and six co-op personality dialogues. No guest release until owner phone feedback. See `docs/iteration-7.md`.

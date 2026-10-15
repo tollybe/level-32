@@ -182,3 +182,11 @@ Historical checks above concerning **three guardian waves at each clue** no long
 - [x] PR #17 CI: banana impact through bushes causes only 25% projectile damage, 'OW!' bubble, and a knockback outside concealment.
 - [x] PR #17 CI: Tolly nicknames and Rosie/Daan shared lyrics appear without disrupting existing cinematics.
 - [ ] Owner evaluates in real play: random volley fairness, bush hitboxes, song presentation and all four nicknames.
+
+## Day 7C — Traversal, Millie and XP
+
+- [ ] Chromium CI: trees block through-travel, support sliding and mob steering.
+- [ ] Chromium CI: canopies fade more for players than mobs.
+- [ ] Chromium CI: Millie can dash twice quickly, never three times without recharge; other pets keep single dash.
+- [ ] Chromium CI: team XP meter has correct visible fill, label and accessibility progress.
+- [ ] Owner checks phone/tree behavior and preserves invitation.

@@ -53,3 +53,12 @@ Banter triggers when both heroes are alive, visible and within 165 world units. 
 Each new run places up to nine decorative, non-colliding cherry trees at randomized safe positions. The placement logic leaves generous clearance around the main winding path, hiding bushes, clues, laser terminals and shrine, and spreads the trees apart. A new original cherry-tree SVG supplies the artwork. Gentle falling petals are animated in normal graphics mode, reduced in Lite FX, and disabled with reduced motion.
 
 The ground gains 180 little grass tufts that part when a moving player brushes past. Grass has no collision and appears at reduced density in Lite FX. Automated checks regenerate the world repeatedly and verify positioning and proximity response. Real-device review remains pending.
+
+## Day 7C — Millie zoomies, tree depth and shared XP
+
+- Millie has two Shift/Enter (or mobile dash) charges, each independently recharging after 3.3 seconds. Her second dash can be used immediately; her third cannot trigger until a charge refills. The HUD shows two lightning pips. Other pets' dash cooldowns are unchanged.
+- Cherry trees have small solid trunk colliders, not solid canopies. Player dash movement uses short substeps plus axis sliding to avoid tunneling. Mobs and Tolly use local tangent steering and the same trunk collision; random placement still avoids quest paths.
+- Players and mobs can pass behind blossom crowns. A canopy is redrawn on top at 22% opacity when hiding a player, or 57% when hiding only a mob; the player has priority. Unobscured canopies remain fully opaque.
+- A slim shared XP progress meter is shown over the game canvas, displaying level, current/required experience, and next five-level perk threshold. It uses actual team XP, updates with the existing HUD, and exposes accessible progress values. Co-op P1/P2 alternating perk turns remain unchanged.
+- Browser tests cover straight-line collision, sliding, mob steering, depth fade, Millie's two dashes and recharge, Rosie single-dash behavior, and accessible team XP progress.
+- Owner playtest: mobile movement, canopy art and XP readability, tree traversal feel, and invitation regression. All character designs and birthday event details remain unchanged.
