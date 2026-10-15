@@ -139,11 +139,11 @@ Historical checks above concerning **three guardian waves at each clue** no long
 
 ## Day 6 — Dialogue, original music, combat balance and legendary progression
 
-- [ ] CI passing: first scene does not scroll document, controls C/Next/Skip still work.
+- [x] Chromium CI passing for first scene scroll and C/Next/Skip controls (PR #12).
 - [ ] Hero card stats hover/tap/focus properly, including keyboard and mobile.
 - [ ] Rosie secondary pierce exactly 50%, Millie ball single-hit, Winnifred highest DPS and melee, Ellie lowest DPS with slow/heal.
 - [ ] Tolly boss phase changes at 67%/33%; Daan Extreme-only in third phase; music tracks distinct and original.
 - [ ] Boink and Bocht spawn apart, remain distinct and challenging on Adventure.
-- [ ] Level 5/10/15 choices work with randomly chosen player, rarity weights and tiered XP.
+- [x] Automated coverage for first five-level offer, random player selection, rarity bounds and tiered XP; real playtest for levels 10/15 still pending.
 - [ ] Super aura/health labels do not obscure telegraphs, mobile performance/reduced motion sound.
 - [ ] Real-device balance, invitation and ICS signoff.
