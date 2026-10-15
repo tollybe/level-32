@@ -560,6 +560,58 @@ hook='''window.__rosieTest={
     pausedByScene,noResurrection};
   }finally{players=saved.players;phase=saved.phase;fx=saved.fx;syncHud()}
  },
+ phoneLayoutProbe(){
+  const section=$('game-section'),frame=section.querySelector('.game-frame');
+  const perk=$('perk-panel'),choices=$('perk-choices');
+  const old={panelHidden:perk.hidden,choices:choices.innerHTML,
+   phone:document.body.classList.contains('phone-play')};
+  setPhonePlay(true);
+  const bounds=e=>e.getBoundingClientRect();
+  const stage=bounds(section),canvas=bounds($('game')),screenW=innerWidth,screenH=innerHeight;
+  const view={stage:{left:stage.left,right:stage.right,top:stage.top,bottom:stage.bottom,
+    width:stage.width,height:stage.height},screenW,screenH,
+   canvas:{width:canvas.width,height:canvas.height},
+   center:Math.abs((canvas.left+canvas.right)/2-screenW/2)<4,
+   full:stage.left>=-1&&stage.top>=-1&&Math.abs(stage.width-screenW)<4&&
+    Math.abs(stage.height-screenH)<4,
+   frameFull:bounds(frame).height>=screenH-8,
+   exitVisible:getComputedStyle($('phone-exit')).display!=='none',
+   inviteVisible:getComputedStyle(document.querySelector('.phone-play-invite')).display!=='none',
+   solo:document.body.classList.contains('solo-play'),
+   firstStick:getComputedStyle(document.querySelector('.touch-player:first-child')).display!=='none',
+   secondStick:getComputedStyle(document.querySelector('.touch-player:nth-child(2)')).display!=='none'};
+  const rgbaAlpha=el=>{
+   const color=getComputedStyle(el).backgroundColor;
+   const parts=color.replace(/rgba?\(|\)/g,'').split(',').map(x=>Number(x.trim()));
+   return parts.length===4?parts[3]:1;
+  };
+  view.alpha={health:rgbaAlpha($('mobile-health')),
+   quest:rgbaAlpha($('mobile-quest')),xp:rgbaAlpha($('team-xp-overlay'))};
+  // The same large phone button must clearly show how to unpause.
+  $('phone-pause').click();
+  view.pause={paused,button:$('phone-pause').textContent,
+   pressed:$('phone-pause').getAttribute('aria-pressed'),
+   panel:!$('paws-panel').hidden};
+  $('phone-pause').click();
+  view.unpause={paused,button:$('phone-pause').textContent,
+   pressed:$('phone-pause').getAttribute('aria-pressed'),
+   panel:!$('paws-panel').hidden};
+  // Measure the compact two-choice upgrade layout without altering level,
+  // character stats or existing modal callback state.
+  perk.hidden=false;choices.replaceChildren();
+  for(let i=0;i<2;i++){const b=document.createElement('button');
+   b.className='perk-choice perk-normal';b.textContent='NORMAL · HP +20 — quick choice '+(i+1);
+   choices.append(b)}
+  const inner=bounds(perk.querySelector('.perk-inner'));
+  const buttons=[...choices.children].map(el=>bounds(el));
+  view.perk={inside:inner.left>=-1&&inner.right<=screenW+1&&inner.top>=-1&&inner.bottom<=screenH+1,
+   compact:inner.height<=screenH*.80&&inner.width<=screenW*.99,
+   tappable:buttons.every(b=>b.width>95&&b.height>=44),
+   choices:buttons.length};
+  perk.hidden=old.panelHidden;choices.innerHTML=old.choices;
+  setPhonePlay(old.phone);
+  return view;
+ },
  getEnemyList(){return [...new Set(foes.map(e=>e.kind))]},
  state(){return {phase,clues,duoActive,duoDefeated,laserUnlocked,laserIndex:laserChallenge.index,scentStep,score,kills,coneWindup,elapsed,hp:players.map(p=>p.hp),sceneName,cutsceneNext,bossHp:boss?.hp||0,daanActive,bossRage:boss?.rage||false,bossMaxHp:boss?.maxHp||0,liteFx,guardWave:gate?.wave??null,guardians:foes.filter(e=>e.guardian&&e.hp>0).length,cleared:gateCleared.slice(),mode:difficulty,overlay:!$('overlay').classList.contains('hidden'),imgSrc:$('overlay-art').getAttribute('src').slice(0,90),dialogueImages:[...$('scene-dialogues').querySelectorAll('img')].map(im=>im.getAttribute('src').slice(0,80)),missionUnlock:$('mission-unlock').classList.contains('show'),objectText:$('objective-label').textContent}}
 };'''
@@ -681,6 +733,19 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     assert set(['duo','boss1','boss2','boss3']).issubset(soundtrack['modes']),soundtrack
     assert soundtrack['legendaryBpm']>=170,soundtrack
     s=page.evaluate('window.__rosieTest.start()')
+    if mobile:
+        full=page.evaluate('window.__rosieTest.phoneLayoutProbe()')
+        assert full['full'] and full['frameFull'] and full['center'],full
+        assert full['exitVisible'] and full['inviteVisible'] and full['firstStick'],full
+        assert full['secondStick']==(not solo),full
+        assert full['perk']['inside'] and full['perk']['compact'] and full['perk']['tappable'],full
+        assert full['perk']['choices']==2,full
+        assert full['pause']=={'paused':True,'button':'▶ UNPAWS','pressed':'true','panel':True},full
+        assert full['unpause']=={'paused':False,'button':'Ⅱ PAWS','pressed':'false','panel':False},full
+        if screen[0]>screen[1]:
+            assert all(abs(value-.10)<.015 for value in full['alpha'].values()),full
+        assert not page.evaluate("document.body.classList.contains('phone-play')")
+        print('Full-screen phone stage, solo joystick, 10% rotated HUD panels and compact upgrades: PASS')
     prompt=page.evaluate('window.__rosieTest.scrollReturnProbe()')
     assert len(prompt['checkpoints'])==3 and all(all(entry.values())
       for entry in prompt['checkpoints']),prompt
