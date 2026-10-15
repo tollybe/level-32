@@ -8,6 +8,9 @@ html=game_as_single_html()
 # Party mission times must agree in the invitation, game hint, and calendar.
 invite_text=(ROOT/'game/invitation.html').read_text(encoding='utf-8')
 calendar=(ROOT/'game/birthday.ics').read_text(encoding='utf-8')
+assert calendar.count('BEGIN:VEVENT')==2 and calendar.count('END:VEVENT')==2
+assert invite_text.count('href="birthday.ics" download="level32-birthday.ics"')==1
+assert game_text.count('href="birthday.ics" download="level32-birthday.ics"')==1
 game_text=(ROOT/'game/index.html').read_text(encoding='utf-8')
 assert 'MISSION ONE · 18:15–20:15' in invite_text
 assert 'Mission One begins at 18:15' in game_text
@@ -712,6 +715,10 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     assert len(s['dialogueImages'])>=2 and all(im.startswith('data:image/webp') for im in s['dialogueImages'])
     print('victory and invitation: PASS')
     # Screenshot optional; uncomment if visual debugging is useful.
+    both=page.locator('#birthday-mission .calendar-both')
+    assert both.count()==1 and both.get_attribute('href')=='birthday.ics'
+    assert both.get_attribute('download')=='level32-birthday.ics'
+    assert 'BOTH MISSIONS' in both.inner_text()
     assert page.locator('#party-details').get_attribute('target')=='_blank'
     assert page.locator('#party-details').get_attribute('href').endswith('invitation.html')
     assert page.locator('.footer-invite').get_attribute('href').endswith('invitation.html')
