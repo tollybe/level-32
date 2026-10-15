@@ -1,3 +1,9 @@
+> **Day 8B solo-by-default:** On the opening selection screen, co-op is unchecked initially, P1 remains Rosie, and P2 remains Winnifred if explicitly enabled. The idle showcase is one Rosie, matching the default. Existing single/two-player flows and invitations preserved.
+
+> **Day 8B guest-first follow-up:** header now puts View Birthday Invitation before optional Play the Game and removes top gamer metadata. Full invite remains accessible from character select and while playing; mobile/browser checks in PR #22.
+
+> **Day 8B under test:** On-screen return-to-scroll prompt and stronger quest marker when wards clear. Solo only: outdoor 2.4 HP/5s damage-free, hidden 0.1 HP/s; multiplayer unchanged. CI and owner device check pending.
+
 > **Day 8 merged via PR #21 (green CI):** Snack Power is a slim per-pet bar directly under the HP bar, charging fast from excess chocolate and very slowly from mob hits or Ellie healing. Next eligible action triggers that pet's signature bonus. Sakura Breeze XP magnet is locked until exactly kill 100 (guaranteed at the milestone), with rare subsequent spawns. No user-visible mechanics explainer or new controls. Review docs/iteration-7.md; automated CI passed; phone review pending.
 
 > **Day 7C merged into main via PR #18 (green CI):** Tree trunk collision with see-through canopies (players clearer than mobs), Millie's separate double dash charges, and a visible shared XP bar. See docs/iteration-7.md. Mobile owner review remains pending.
