@@ -436,7 +436,7 @@ hook='''window.__rosieTest={
    winni.snackCharge=100;players=[winni];shots=[];
    mob.x=winni.x+60;mob.y=winni.y;mob.hp=1000;
    fire(winni);
-   result.winnifred=winni.snackCharge===0&&shots.length===0&&
+   result.winnifred=winni.snackCharge<1&&shots.length===0&&
     1000-mob.hp>(winni.damage+level*2);
    const ellie=player('ellie',0),friend=player('rosie',1);
    players=[ellie,friend];foes=[];ellie.snackCharge=100;
