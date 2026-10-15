@@ -537,7 +537,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
         daan_line=page.locator('#scene-dialogues [data-speaker="daan"]')
         # The phase-three dialogue was dismissed before the fight; the avatar
         # and speaker content are still in the scene DOM.
-        assert daan_line.count()==1
+        assert daan_line.count()>=2 and 'DOOOOOOG' in daan_line.all_inner_texts()[-1],daan_line.all_inner_texts()
         assert 'DAAN' in daan_line.inner_text()
         heal=page.evaluate('window.__rosieTest.daanHealProbe()')
         assert heal['active'] and all(heal['warnings']) and heal['capped'],heal
