@@ -168,14 +168,14 @@ function musicVoice(pitch,at,length,kind='flute',loudness=.024){
  const freq=noteHz(pitch),dur=Math.max(.07,length),on=Math.max(at,ctx.currentTime+.003);
  const end=on+dur,release=kind==='bell'?.17:kind==='bass'?.13:.085;
  const env=ctx.createGain();
- const attack=kind==='flute'?.055:kind==='bass'?.018:.008;
+ const attack=kind==='flute'?.055:kind==='bass'?.018:kind==='mythic'?.004:.008;
  env.gain.setValueAtTime(.0001,on);
  env.gain.linearRampToValueAtTime(loudness,on+attack);
  env.gain.setValueAtTime(loudness,Math.max(on+attack,end-release));
  env.gain.exponentialRampToValueAtTime(.0001,end);
  env.connect(ctx.destination);
  const osc=ctx.createOscillator();
- osc.type=kind==='pluck'?'triangle':kind==='bass'?'sine':kind==='bell'?'sine':'triangle';
+ osc.type=kind==='mythic'?'sawtooth':kind==='pluck'?'triangle':kind==='bass'?'sine':kind==='bell'?'sine':'triangle';
  osc.frequency.setValueAtTime(freq,on);
  osc.connect(env);osc.start(on);osc.stop(end+.02);
  // A faint upper partial gives the lead/bell an airy, music-box quality.
@@ -189,11 +189,25 @@ function musicVoice(pitch,at,length,kind='flute',loudness=.024){
  }
 }
 function currentMusic(){
+ if(phase==='cutscene'&&sceneName==='mythic')return'silence';
+ if(phase==='boss'&&bossPhase===3)return'mythic';
  if(phase==='boss')return'boss';
  if(phase==='cutscene')return'story';
  return phase==='explore'?'garden':'idle';
 }
+// 4/4 electronic mythic soundtrack, distinct from the cozy 3/4 garden waltz.
+function scheduleMythicBar(index,startAt){
+ const beat=60/180,chord=bossChords[index],scale=[0,3,7,12,7,3,10,7],note=chord.root+24;
+ for(let j=0;j<4;j++){
+  musicVoice(chord.root-12,startAt+j*beat,beat*.46,'mythic',.027);
+  musicVoice(j%2?40:35,startAt+j*beat,beat*.13,'pluck',.018);
+ }
+ for(let step=0;step<8;step++)musicVoice(note+scale[(step+index)%8],startAt+step*beat*.5,beat*.32,'mythic',.019);
+ if(index%2===0)musicVoice(chord.notes[0]+12,startAt,beat*1.8,'bell',.014);
+ return beat*4;
+}
 function scheduleMusicBar(mode,index,startAt){
+ if(mode==='mythic')return scheduleMythicBar(index,startAt);
  const isBoss=mode==='boss',beat=60/(isBoss?153:mode==='story'?116:138);
  const chord=(isBoss?bossChords:gardenChords)[index];
  const melody=(isBoss?bossMelody:gardenMelody)[index];
@@ -221,6 +235,7 @@ function tickMusic(){
  if(mode!==musicMode){
    musicMode=mode;musicBar=0;musicNextBarAt=now+.06;
  }
+ if(mode==='silence')return;
  // Avoid a burst of catch-up notes on tab resume or after switching tabs.
  if(musicNextBarAt<now-.18)musicNextBarAt=now+.05;
  while(musicNextBarAt<now+.17){
@@ -382,7 +397,7 @@ function start(){
  elapsed=0;score=0;kills=0;level=1;xp=0;goal=35;clues=0;fridgeVisible=false;deathPenalty=0;daan=null;daanRespawn=0;mythicArcCooldown=0;mythicArcWindup=0;best=readBest();
  spawnClock=.55;surgeClock=33;attackClock=0;hudClock=0;keys.clear();ensureAudio();
  $('scene-skip').hidden=true;$('share-result').classList.remove('show');$('mission-unlock').classList.remove('show');$('scene-dialogues').hidden=true;$('share-status').textContent='';$('overlay').classList.remove('cinematic');$('overlay').classList.add('hidden');$('pause').disabled=false;$('pause').textContent='Ⅱ PAUSE';
- $('bossbar').classList.remove('show','mythic');$('boss-card').classList.remove('show');$('overlay-art').classList.remove('show');$('scene-dialogues').hidden=true;$('overlay-kicker').textContent='ARCADE MODE';
+ $('bossbar').classList.remove('show','mythic');$('bossbar').firstChild.textContent='⚔ FRIDGE GUARDIAN: TOLLY';$('boss-card').classList.remove('show');$('phase-transformation').hidden=true;$('overlay-art').classList.remove('show');$('scene-dialogues').hidden=true;$('overlay-kicker').textContent='ARCADE MODE';
  say('Okay '+players.map(p=>p.name).join(' & ')+'… '+(players.length===1?'SUCH TOLLY!':'SUCHT TOLLY!')+' ADVENTURE MODE!',5);
  $('controls-reminder').textContent=players.length===1?'SOLO · WASD OR ARROWS to move · SHIFT OR ENTER to dash · automatic attacks':'CO-OP · P1 WASD + SHIFT · P2 ARROWS + ENTER · automatic attacks';
  closeBriefing();
@@ -391,8 +406,20 @@ function start(){
  syncHud();lastTime=performance.now();raf=requestAnimationFrame(loop);
  $('game-section').scrollIntoView({behavior:'smooth',block:'start'});
 }
-function scoreText(win){const squad=players.map(p=>p.name).join(' & ');const duration=Math.floor(elapsed/60)+':'+String(Math.floor(elapsed%60)).padStart(2,'0');return '🐾 LEVEL 32 — ROSIE SURVIVORS\n'+squad+' '+(win?'LIBERATED THE FRIDGE!':'WERE DEFEATED BY TOLLY!')+'\nScore: '+score+' | Snacklings boinked: '+kills+' | Time: '+duration+'\nCan you beat our run? 🎮\nBirthday invitation: '+new URL(inviteHref,location.href).href;}
-function resetEnd(win){hideQuestToast();$('ending-invite').hidden=false;phase='ended';paused=true;$('pause').disabled=true;let title=win?'🎉 TREATS LIBERATED!':'💀 THE FRIDGE PREVAILS';let detail=win?'Okay, you deserve the banana and cheese tax.':'Mwahahaha! You are a chonk and are of no match to the mighty Tolly!';if(score>best){best=score;try{localStorage.setItem('rosie-survivors-best',String(best))}catch{}detail+=' NEW PERSONAL BEST!'}$('overlay-kicker').textContent=win?'CUTSCENE · REWARD SCREEN':'GAME OVER · FRIDGE SEALED';$('overlay').classList.add('cinematic');$('overlay').querySelector('h3').textContent=title;$('boss-card').classList.remove('show');$('overlay').dataset.scene=win?'victory':'defeat';$('scene-skip').hidden=true;$('overlay-art').style.maxWidth='';$('overlay-art').src=win?SCENE_ART.victory:SCENE_ART.defeat;$('overlay-art').classList.add('show');renderSceneLines(win?'victory':'defeat');$('scene-dialogues').querySelectorAll('.scene-line').forEach(row=>row.hidden=false);$('mission-unlock').classList.add('show');$('overlay').querySelector('p').textContent=detail+' Score: '+score+' · Snacklings boinked: '+kills+'.';$('overlay-start').textContent='↻ PLAY AGAIN';$('scene-counter').textContent='';$('share-result').classList.add('show');$('share-status').textContent='';$('overlay').classList.remove('hidden'); if(win){playSfx('victory'); say(pick(slogans.victory),3)} else {playSfx('defeat')} syncHud()}
+function scoreText(win){
+ const squad=players.map(p=>p.name).join(' & ');
+ const duration=Math.floor(elapsed/60)+':'+String(Math.floor(elapsed%60)).padStart(2,'0');
+ return '🐾 LEVEL 32 — ROSIE SURVIVORS\n'+squad+' '+(win?'LIBERATED THE FRIDGE!':'WERE DEFEATED BY TOLLY!')
+ +'\n'+mode().label+' · '+players.length+' player'+(players.length===2?'s':'')+' · Points ×'+mode().multiplier
+ +'\nFinal score: '+score+(deathPenalty?' (wipe penalty −'+deathPenalty+')':'')
+ +' | Snacklings boinked: '+kills+' | Time: '+duration+'\nCan you beat our run? 🎮\nBirthday invitation: '+new URL(inviteHref,location.href).href;
+}
+function resetEnd(win){
+ if(phase==='ended')return;
+ if(!win){deathPenalty=Math.round(score*mode().deathLoss);score=Math.max(0,score-deathPenalty)}
+ else awardScore(300);
+ hideQuestToast();daan=null;$('phase-transformation').hidden=true;
+ $('ending-invite').hidden=false;phase='ended';paused=true;$('pause').disabled=true;let title=win?'🎉 TREATS LIBERATED!':'💀 THE FRIDGE PREVAILS';let detail=win?'Okay, you deserve the banana and cheese tax.':'Mwahahaha! You are a chonk and are of no match to the mighty Tolly!';if(score>best){best=score;try{localStorage.setItem(bestKey(),String(best))}catch{}detail+=' NEW PERSONAL BEST!'}$('overlay-kicker').textContent=win?'CUTSCENE · REWARD SCREEN':'GAME OVER · FRIDGE SEALED';$('overlay').classList.add('cinematic');$('overlay').querySelector('h3').textContent=title;$('boss-card').classList.remove('show');$('overlay').dataset.scene=win?'victory':'defeat';$('scene-skip').hidden=true;$('overlay-art').style.maxWidth='';$('overlay-art').src=win?SCENE_ART.victory:SCENE_ART.defeat;$('overlay-art').classList.add('show');renderSceneLines(win?'victory':'defeat');$('scene-dialogues').querySelectorAll('.scene-line').forEach(row=>row.hidden=false);$('mission-unlock').classList.add('show');$('overlay').querySelector('p').textContent=detail+' '+mode().label+' · Score ×'+mode().multiplier+' = '+score+(deathPenalty?' (full-wipe penalty −'+deathPenalty+')':'')+' · Snacklings boinked: '+kills+'.';$('overlay-start').textContent='↻ PLAY AGAIN';$('scene-counter').textContent='';$('share-result').classList.add('show');$('share-status').textContent='';$('overlay').classList.remove('hidden'); if(win){playSfx('victory'); say(pick(slogans.victory),3)} else {playSfx('defeat')} syncHud()}
 function spawnBleepling(){
  // Bound unrelated mobs so the required guardian fights remain challenging but fair.
  if(foes.length>=(gate?24:phase==='boss'?(bossPhase===3?24:48):65))return;
@@ -806,7 +833,7 @@ function currentObjective(){
 function updateObjective(){
  const target=currentObjective();
  const label=$('objective-label'),detail=$('objective-detail'),progress=$('objective-progress');
- if(!target){label.textContent=phase==='boss'?'⚔ TOLLY · FRIDGE GUARDIAN':phase==='ended'?'🏆 QUEST COMPLETE':'🐾 READY FOR THE HUNT';detail.textContent=phase==='boss'?'Dodge the banana barrage and survive the Cone of Shame!':phase==='ended'?'Share your score with the party':'Choose a hero and begin your mission';progress.style.width=phase==='ended'?'100%':'0%';return;}
+ if(!target){label.textContent=phase==='boss'?(bossPhase===3?'💠 MYTHIC TOLLY + DAAN':'⚔ TOLLY · FRIDGE GUARDIAN'):phase==='ended'?'🏆 QUEST COMPLETE':'🐾 READY FOR THE HUNT';detail.textContent=phase==='boss'?(bossPhase===3?'Dodge Daan’s chalk-circle leaps, the cone and the turquoise laser!':'Dodge the banana barrage and survive the Cone of Shame!'):phase==='ended'?'Share your score with the party':'Choose a hero and begin your mission';progress.style.width=phase==='ended'?'100%':'0%';return;}
  const living=players.filter(p=>p.alive);const origin=living[0]||players[0]||{x:320,y:400};
  const steps=Math.round(Math.hypot(target.x-origin.x,target.y-origin.y)/8);
  label.textContent='🧭 '+target.name;
