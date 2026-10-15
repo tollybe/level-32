@@ -38,6 +38,21 @@ hook='''window.__rosieTest={
  hitBoss(){if(!boss)throw Error('no boss');damage(boss,Math.ceil(boss.maxHp*.52),players[0]);return this.state()},
  killBoss(){damage(boss,boss.hp+9999,players[0]);return this.state()},
  lose(){resetEnd(false);return this.state()},
+ dragonPierceCheck(){
+  const saved={foes,shots,boss,phase,fx};
+  const targets=[320,365,410].map(x=>({x,y:200,hp:200,maxHp:200,size:12,kind:'bleepling'}));
+  const shot={x:290,y:200,vx:3000,vy:0,ttl:1,kind:'dragon',damage:17,owner:0,pierce:1,hitTargets:new Set()};
+  foes=targets;shots=[shot];boss=null;phase='explore';fx=[];
+  advanceProjectiles(.045);
+  const value={hp:targets.map(t=>t.hp),hits:shot.hitTargets.size,left:shots.length};
+  foes=saved.foes;shots=saved.shots;boss=saved.boss;phase=saved.phase;fx=saved.fx;
+  return value;
+ },
+ triggerDaanSpite(){
+  if(!daanActive)return {active:false};
+  daanPulse=.02;update(.04);
+  return {active:daanActive,action:daanActionTimer,warning:hazards.some(h=>h.kind==='daan-warning')};
+ },
  getEnemyList(){return [...new Set(foes.map(e=>e.kind))]},
  state(){return {phase,clues,duoActive,duoDefeated,laserUnlocked,laserIndex:laserChallenge.index,scentStep,score,kills,coneWindup,elapsed,hp:players.map(p=>p.hp),sceneName,cutsceneNext,bossHp:boss?.hp||0,daanActive,bossRage:boss?.rage||false,bossMaxHp:boss?.maxHp||0,liteFx,guardWave:gate?.wave??null,guardians:foes.filter(e=>e.guardian&&e.hp>0).length,cleared:gateCleared.slice(),mode:difficulty,overlay:!$('overlay').classList.contains('hidden'),imgSrc:$('overlay-art').getAttribute('src').slice(0,90),dialogueImages:[...$('scene-dialogues').querySelectorAll('img')].map(im=>im.getAttribute('src').slice(0,80)),missionUnlock:$('mission-unlock').classList.contains('show'),objectText:$('objective-label').textContent}}
 };'''
@@ -51,11 +66,15 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     errors=[]
     page.on('pageerror',lambda e:errors.append(str(e)))
     page.set_content(html,wait_until='domcontentloaded',timeout=60000)
-    page.wait_for_function('window.Level32Sprites && window.Level32Sprites.loadedCharacters.length === 8', timeout=15000)
-    # Day 5B: eight real approved images must decode and pass dimensions in Chromium.
-    assert page.evaluate("window.Level32Sprites.loadedCharacters.length")==8
+    page.wait_for_function('window.Level32Sprites && window.Level32Sprites.loadedCharacters.length === 9', timeout=15000)
+    # Day 5C: eight approved sheets plus a provisional Daan sheet decode in Chromium.
+    assert page.evaluate("window.Level32Sprites.loadedCharacters.length")==9
     assert page.evaluate("window.Level32Sprites.previewEnabled") is True
-    assert not page.evaluate("window.Level32Sprites.loadedCharacters.includes('daan')")
+    assert page.evaluate("window.Level32Sprites.loadedCharacters.includes('daan')")
+    assert page.evaluate("""() => {
+        const source=window.Level32Sprites.approvedFiles.daan;
+        return source.endsWith('daan.svg') || source.startsWith('data:image/svg+xml;base64,');
+    }""")
     # Synthetic sheet verifies frame cropping and reversible fallback, then
     # restores the actual approved artwork before the gameplay regression run.
     sprite_check=page.evaluate("""async () => {
@@ -81,7 +100,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
       const fallbackRestored=engine.draw(ctx,'rosie',{state:'idle',direction:'down'},50,50,32,0)===false;
       const realSheets=await engine.loadApproved();
       engine.setPreviewEnabled(true);
-      const artRestored=realSheets.every(Boolean) && engine.loadedCharacters.length===8;
+      const artRestored=realSheets.every(Boolean) && engine.loadedCharacters.length===9;
       const visibleRestored=engine.draw(ctx,'rosie',{state:'idle',direction:'down'},50,50,32,0);
       return {exists:true,defaultFallback,invalidRejected,validAccepted,result,pix,smoothingRestored,fallbackRestored,artRestored,visibleRestored};
     }""")
@@ -102,6 +121,9 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     assert page.locator('.hero-invite-line a').get_attribute('target')=='_blank'
     assert page.locator('#ending-invite').is_hidden()
     s=page.evaluate('window.__rosieTest.start()')
+    pierce=page.evaluate('window.__rosieTest.dragonPierceCheck()')
+    assert pierce['hp']==[183,183,200] and pierce['hits']==2 and pierce['left']==0,pierce
+    print('Rosie two-enemy swept collision: PASS')
     assert page.locator('#pause').inner_text().endswith('PAWS')
     assert page.locator('#fx-toggle').count()==1
     assert page.locator('#sprite-toggle').count()==1
@@ -195,6 +217,16 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     s=page.evaluate('window.__rosieTest.continue()')
     assert s['phase']=='boss'
     assert s['daanActive']==(mode=='extreme'),s
+    if mode=='extreme':
+        spite=page.evaluate('window.__rosieTest.triggerDaanSpite()')
+        assert spite['active'] and spite['warning'] and spite['action']>0,spite
+        drawn=page.evaluate("""() => {
+          const cv=document.createElement('canvas');cv.width=cv.height=128;
+          return window.Level32Sprites.draw(cv.getContext('2d'),'daan',
+            {state:'special',direction:'right'},64,64,96,0);
+        }""")
+        assert drawn, 'Daan provisional sprite should render in Extreme'
+        print('Daan animated SPITE boulder slam: PASS')
     s=page.evaluate('window.__rosieTest.killBoss()')
     assert s['phase']=='ended' and s['missionUnlock'] and s['overlay']
     assert len(s['dialogueImages'])>=2 and all(im.startswith('data:image/webp') for im in s['dialogueImages'])

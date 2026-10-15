@@ -10,7 +10,7 @@
   const APPROVED = Object.freeze({
     rosie:'assets/sprites/rosie.webp', millie:'assets/sprites/millie.webp',
     winnifred:'assets/sprites/winnifred.webp', ellie:'assets/sprites/ellie.webp',
-    tolly:'assets/sprites/tolly.webp', bleepling:'assets/sprites/bleepling.webp',
+    tolly:'assets/sprites/tolly.webp', daan:'assets/sprites/daan.svg', bleepling:'assets/sprites/bleepling.webp',
     boink:'assets/sprites/boink.webp', bocht:'assets/sprites/bocht.webp'
   });
   const ROW = Object.freeze({down:0, left:1, right:2, up:3});
@@ -20,7 +20,8 @@
   });
   const sheets = new Map();
   // Owner approved the Day 5 artwork for playtest. Guests can revert at any time
-  // with CLASSIC PORTRAITS or ?classic=1. Daan is not in the approved manifest.
+  // with CLASSIC PORTRAITS or ?classic=1. Daan is an EXPLICITLY PROVISIONAL
+  // emblem-faced action actor, not an approved portrait likeness.
   const params=new URLSearchParams(location.search);
   let preview=params.get('classic')!=='1' && params.get('chibiPreview')!=='0';
 

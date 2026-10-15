@@ -1,6 +1,6 @@
 # Hackathon Day 5 — Chibi Renaissance
 
-**Status: Day 5B merged into `main` via PR #10 on 15 October 2026, after green Chromium CI. Eight approved sheets ship with a CHIBI/CLASSIC toggle and original portrait fallback. This remains a playtest, NOT the birthday-invitation release. Physical-device acceptance is outstanding.**
+**Status: Day 5B merged via PR #10; Day 5C corrective gameplay-art pass under test. Eight approved pet/Tolly/enemy sheets plus a provisional Daan emblem sheet, with a CHIBI/CLASSIC toggle and original portrait fallback. This remains a playtest, not a birthday-invitation release. Physical-device acceptance is outstanding.**
 
 **15 October 2026:** The owner explicitly authorised beginning Day 5 after the Day 4.8 merge. This supersedes the older *do not start any Day 5 code* scheduling restriction **for this infrastructure slice only**. It does NOT waive the outstanding physical-device acceptance checks, the requirement to approve every derived likeness, or Daan's approved character-art dependency.
 
@@ -65,3 +65,14 @@ Use nearest-neighbor *only for sprite sheets*. Regular portrait/cutscene images 
 - Legacy mode: `/game/?classic=1` or the `CHIBI ON · CLASSIC?` control. If any approved image fails to decode or dimensions mismatch, that actor falls back to its original portrait/shapes.
 - `tools/build.py` bundles `assets/sprites/*.webp` in the offline encrypted export so no remote image fetch is required.
 - Don't reinterpret computer-emulated touch tests as human two-thumb Android/iOS acceptance. Daan's approved likeness and final release are still outstanding.
+
+## Day 5C — owner feedback: Tolly chibi, Daan SPITE, Rosie projectile
+
+- **Why Tolly looked like a portrait:** The old round boss disc, crown and portrait framing were still visible under/over the approved sprite. Day 5C renders her full-body chibi at a more visible size with correct directional facing and ground shadow behind, while keeping the circular portrait fallback in Classic mode. Combat collider is unchanged.
+- **Why Daan seemed absent:** He is a surprise **Extreme difficulty, phase-two-only** supporting boss, joining when Tolly crosses 50% HP and the phase scene is deliberately completed. He is not a co-op hero and does not join Story/Adventure. This is deliberate pacing, not a sprite loading bug.
+- **Daan gets a real animated SPITE action:** Added a directional eight-pose **provisional emblem-face** sprite sheet under `assets/sprites/daan.svg`, with visible wind-up and boulder-slam/action animation, plus the existing 1.2-second target ring and 24 HP shockwave. No new damage or enemy AI changes. The emblem design is NOT a depiction/approved likeness of Daan. A genuine Daan character illustration is still needed for final art approval.
+- **Rosie's stuffed dragon:** A projectile is intentionally capable of hitting **two different enemies total**: first enemy + one pierced enemy. The old point-in-time collision check could tunnel through small enemies on slow frames. Swept segment-circle checks now resolve hits in travel order, keep the two-enemy cap, prevent hitting the same enemy twice, and show a 'DRAGON PIERCE!' / 'DOUBLE DRAGON HIT!' feedback pop-up. This is not an unlimited AoE attack.
+- Automated coverage checks the SVG sprite dimensions/loading, Daan's Extreme SPITE warning+pose, fast-frame two-enemy projectile collision with third enemy untouched, classic/chibi toggle and existing quest/boss/invitation flows.
+- Daan's character selection remains intentionally concealed; final approval of his likeness, real-phone Tolly scale and balance, and iPhone/Android co-op testing remain owner review gates.
+
+**Expected character behavior:** Rosie does not gain unlimited multi-target or pass-through damage. Daan's SPITE is **the same previously shipped warned shockwave**, now visually synchronised, not an extra attack added to his cooldown.
