@@ -288,7 +288,7 @@ hook='''window.__rosieTest={
    worldBubbles=[];pairBanterClock=0;pairConversation=null;pairBanterVisits={};
    const encounters=[],sequential=[];
    for(let visit=0;visit<3;visit++){
-    pairBanterClock=0;
+    worldBubbles=[];pairBanterClock=0;
     const prior=worldBubbles.length;
     updatePairBanter(.1);
     const first=worldBubbles[worldBubbles.length-1]?.line;
@@ -535,6 +535,17 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
         assert em['encounters'][0]['lines'][:3]==['Zoom?','ZOOOOM!!','Ball?'],em
         assert 'forgetting me' in ' '.join(em['encounters'][1]['lines']),em
         print('Six hero pairings, three evolving scenes each, sequential readable bubbles: PASS')
+    xp_layout=page.evaluate("""()=>{
+       const box=id=>document.getElementById(id).getBoundingClientRect();
+       const left=box('team-level-label'),right=box('team-xp-text'),
+        progress=box('team-xp-progress'),perk=box('team-perk-label'),
+        container=box('team-xp-overlay');
+       return {levelAndXPSeparate:left.right+4<=right.left,
+        perkOnOwnRow:perk.top>=progress.bottom,
+        contentInside:right.right<=container.right-2,
+        progressVisible:progress.width>30&&progress.height>=5};
+    }""")
+    assert all(xp_layout.values()),xp_layout
     assert page.locator('.hero-stats').count()==4
     for card in page.locator('.hero').all():
         assert card.locator('.hero-stats').is_visible(), 'Stats must be displayed without hover'
