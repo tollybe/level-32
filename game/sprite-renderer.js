@@ -21,7 +21,7 @@
   const sheets = new Map();
   // Owner approved the Day 5 artwork for playtest. Guests can revert at any time
   // with CLASSIC PORTRAITS or ?classic=1. Daan is an EXPLICITLY PROVISIONAL
-  // emblem-faced action actor, not an approved portrait likeness.
+  // reference-photo-inspired chibi actor; pending owner visual approval.
   const params=new URLSearchParams(location.search);
   let preview=params.get('classic')!=='1' && params.get('chibiPreview')!=='0';
 

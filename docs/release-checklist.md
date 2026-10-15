@@ -156,3 +156,11 @@ Historical checks above concerning **three guardian waves at each clue** no long
 - [ ] Owner tests Extreme banana +/X telegraphs, collision and safe gaps on real devices.
 - [ ] Owner listens to original legendary-style battle arrangements and approves actual loudness/mood.
 - [ ] Existing invitation routes, all canonical art SHA checks, and Day 6 full regression suite remain green.
+
+## Day 6C — Rotating perks and Daan photo reference
+
+- [ ] GitHub Actions passes co-op P1/P2/P1 perk rotation (levels 5/10/15) and solo checks.
+- [ ] GitHub Actions verifies the new Daan sprite and phase-three dialogue portrait render.
+- [ ] GitHub Actions verifies Daan can heal Tolly at most twice, for at most 5% per cast, capped to 43% HP.
+- [ ] Owner validates Daan's appearance, boulder countdown, and green heal telegraph on physical devices.
+- [ ] Owner confirms Ellie/Winnifred upgrade fairness in an actual co-op session, and no perceived XP stall at level 10.
