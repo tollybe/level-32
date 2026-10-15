@@ -168,8 +168,8 @@ Historical checks above concerning **three guardian waves at each clue** no long
 
 ## Day 7 — Bush stealth and Impossible machine-gun bursts
 
-- [ ] CI proves 0.5-second warning, both 12-banana machine-gun volleys, and cooldown after all shots.
-- [ ] CI proves 30-second secret, stealth disables attacks, mobs search with question marks and exit restores combat.
-- [ ] CI proves first/second boss-bush visits, Winston dialogue, Rosie wiggle, ten-second forced reveal.
-- [ ] CI proves all six relationship-specific co-op dialogue pairs and retains previous birthday invite/quests.
+- [x] CI proves 0.5-second warning, both 12-banana machine-gun volleys, and cooldown after all shots (PR #16).
+- [x] CI proves 30-second secret, stealth disables attacks, mobs search with question marks and exit restores combat (PR #16).
+- [x] CI proves first/second boss-bush visits, Winston dialogue, Rosie wiggle, ten-second forced reveal (PR #16).
+- [x] CI proves all six relationship-specific co-op dialogue pairs and retains previous birthday invite/quests (PR #16).
 - [ ] Owner confirms real-device attack pacing and bubble legibility; no stage overlaps or invitation regression.
