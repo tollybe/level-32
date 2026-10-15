@@ -62,3 +62,5 @@ The ground gains 180 little grass tufts that part when a moving player brushes p
 - A slim shared XP progress meter is shown over the game canvas, displaying level, current/required experience, and next five-level perk threshold. It uses actual team XP, updates with the existing HUD, and exposes accessible progress values. Co-op P1/P2 alternating perk turns remain unchanged.
 - Browser tests cover straight-line collision, sliding, mob steering, depth fade, Millie's two dashes and recharge, Rosie single-dash behavior, and accessible team XP progress.
 - Owner playtest: mobile movement, canopy art and XP readability, tree traversal feel, and invitation regression. All character designs and birthday event details remain unchanged.
+
+**Day 7C status:** Merged into `main` via PR #18 (15 October 2026). Full JavaScript syntax and Chromium desktop/portrait/landscape/Extreme gameplay CI passed, including collision/steering, dash charges and accessible XP meter. Owner phone playtest and final birthday guest release remain pending.
