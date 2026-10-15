@@ -202,8 +202,8 @@ Historical checks above concerning **three guardian waves at each clue** no long
 
 ## Day 8 — Snack Power & Sakura Breeze
 
-- [ ] CI: overflowing chocolate fills the small below-HP meter; visible linear fill verified at 0/50/100 and healing is preserved.
-- [ ] CI: hits and actual teammate healing grow charge slowly with the hit-rate limit.
-- [ ] CI: all four role-specific full-charge benefits trigger correctly without manual inventory or extra buttons.
-- [ ] CI: Sakura Breeze cannot appear before 100 kills, is guaranteed at 100, rare afterward, and attracts stars only.
+- [x] PR #21 CI passed: overflowing chocolate fills the small below-HP meter; linear fill verified at 0/50/100 and healing is preserved.
+- [x] PR #21 CI passed: hits and actual teammate healing grow charge slowly with the hit-rate limit.
+- [x] PR #21 CI passed: all four role-specific full-charge benefits trigger correctly without manual inventory or extra buttons.
+- [x] PR #21 CI passed: Sakura Breeze cannot appear before 100 kills, is guaranteed at 100, rare afterward, and attracts stars only.
 - [ ] Owner: physical phone test for meter visibility, magnet timing, effect pacing, and fair co-op behavior.
