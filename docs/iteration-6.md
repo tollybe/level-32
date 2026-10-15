@@ -36,3 +36,13 @@ The word “Legendary has no perks” was interpreted as **no debuff**; this mat
 - **Still needs owner review:** New music through real speakers, beginner playtest without developer invincibility, 7/10 mini-boss challenge, the readability of +/X warning zones, physical phone animation performance, and Daan's approved actual likeness.
 
 **Release status:** PR #13 merged into `main` (15 October 2026); JavaScript syntax and Chromium gameplay, balance-matrix and cutscene readiness checks passed. Still a playtest pending real-device feedback. Original portrait/image hashes, guest invitation access, and birthday location/timing information are unchanged.
+
+## Day 6C — Co-op turn fairness and Daan reference artwork
+
+- XP and routine level bonuses are **shared** by the whole squad. Previously the single special perk at team levels 5, 10, 15, etc., was assigned randomly; the same player could be chosen indefinitely. Now P1 receives the level-5 offer, P2 the level-10 offer, P1 the level-15 offer, and so on; solo still receives every perk. Both remain free to choose HP or Damage, with independent rarity chances. The HUD identifies **TEAM LV**, **XP to next level**, and **NEXT PERK**.
+- The upgrade panel clarifies whose turn it is and who goes next. Consuming the selected perk also resumes any banked XP, rather than appearing stuck at level 10 until another pickup.
+- Daan's old abstract insignia is replaced in `game/assets/sprites/daan.svg` with a **new illustrated 768×384 sprite sheet** referencing the supplied photograph: short blond hair, dark charcoal hiking top, red trousers and a hiking backpack. `game/assets/daan.svg` contains the matching chibi cutscene portrait. These are original vector art, not a photo or a claim of a photographic likeness; visual owner approval remains open.
+- Daan joins **only in Extreme phase three**. The phase-three cinematic includes one brief Daan speech bubble with his matching portrait. Golden boulder markers show countdown seconds and a rock icon; on impact a shockwave animation appears. He also channels a green healing beam for 1.45 seconds, then heals Tolly by **up to 5% max HP per cast**, **two casts maximum** in the entire fight, and **never above 43% max HP**. No heal occurs when Tolly has died. These are readable audiovisual cues, not extra unseen attacks.
+- Automated regression covers P1/P2/P1 selection, solo-only choice, upgrade text, Daan's sprite load + dialogue portrait, two bounded heals, and existing boss/invitation flows.
+
+**Remaining gates:** owner accepts Daan art and telegraph clarity on desktop/phone; verify the heal pacing in a full physical playtest. The original five pet/Tolly portrait files and event details are unchanged.
