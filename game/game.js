@@ -1390,6 +1390,16 @@ function drawObjectiveMarker(){
  txt(duoActive?'🫧':clues<3?'📜':'❄',x,y+37,19,'center','#ffe9b4');
 }
 function syncHud(){
+ // One shared progress meter: both teammates earn the same experience.
+ const progress=clamp(xp/Math.max(1,goal),0,1);
+ $('team-level-label').textContent='TEAM LV '+level;
+ $('team-xp-text').textContent=Math.floor(xp)+' / '+goal+' XP';
+ $('team-perk-label').textContent='NEXT PERK LV '+(Math.floor(level/5)+1)*5;
+ $('team-xp-fill').style.width=(progress*100)+'%';
+ const xpBar=$('team-xp-progress');
+ xpBar.setAttribute('aria-valuenow',String(Math.min(goal,Math.floor(xp))));
+ xpBar.setAttribute('aria-valuemax',String(goal));
+ xpBar.setAttribute('aria-valuetext',Math.floor(xp)+' of '+goal+' XP toward team level '+(level+1));
  $('fx-toggle').textContent=liteFx?'⚡ LITE FX ON':'✨ FULL FX';
  const dash=$('dash-status');
  if(dash){dash.replaceChildren();for(const p of players){
