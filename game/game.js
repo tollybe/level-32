@@ -663,7 +663,7 @@ function laserAttack(p){
  const target=nearest(p,pool,310);if(!target)return;
  const angle=Math.atan2(target.y-p.y,target.x-p.x);
  const x2=p.x+Math.cos(angle)*335,y2=p.y+Math.sin(angle)*335;
- beams.push({x1:p.x,y1:p.y,x2,y2,t:.28});
+ beams.push({x1:p.x,y1:p.y,x2,y2,t:.28,owner:p.num});
  let hits=0;
  for(const e of pool){
   const projection=(e.x-p.x)*Math.cos(angle)+(e.y-p.y)*Math.sin(angle);
@@ -912,6 +912,10 @@ function update(dt){
  movePlayers(dt);
  updateBushes(dt);
  if(phase==='ended'||phase==='cutscene')return;
+ // Entering cover cancels projectiles and lingering visual beams already
+ // launched: hiding cannot be used to keep dealing off-screen damage.
+ shots=shots.filter(s=>!players[s.owner]?.hidden);
+ beams=beams.filter(b=>!players[b.owner]?.hidden);
  updateAutoAttacks(dt);
  updatePairBanter(dt);
  updateBossNicknames(dt);
@@ -1609,7 +1613,7 @@ $('start').addEventListener('click',start);$('overlay-start').addEventListener('
 });$('restart').addEventListener('click',start);$('pause').addEventListener('click',togglePause);$('mute').addEventListener('click',()=>{audioEnabled=!audioEnabled; if(audioCtx){audioEnabled?audioCtx.resume():audioCtx.suspend()} $('mute').textContent=audioEnabled?'🔊 MUSIC + SFX':'🔇 SOUND OFF'; if(audioEnabled) ensureAudio();});
 function tryDash(id){
  if(!['boss','explore'].includes(phase)||paused)return;
- const p=players[id];if(!p||!p.alive||p.hidden||p.dashCooldown>0)return;
+ const p=players[id];if(!p||!p.alive||p.hidden||bushes.some(b=>dist(p,b)<51)||p.dashCooldown>0)return;
  emit('DASH!',p.x,p.y-55,'#aaf5ff');p.dash=.18;p.dashCooldown=p.id==='ellie'?2.2:3.4;p.inv=Math.max(p.inv,.18);playSfx('dash');
 }
 // Device rotation is an opt-in enhancement. iOS/browser privacy restrictions can
