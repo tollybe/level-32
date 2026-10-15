@@ -1,4 +1,4 @@
-> **Day 6C in progress:** The owner supplied a reference photograph for Daan. Chibi sprite and dialogue portrait drawn from the reference, distinct gold boulder warning and green limited Tolly heal, plus team XP/P1-P2 alternating perks at team levels 5/10/15. PR and CI pending; real-device checks required. See `docs/iteration-6.md`.
+> **Day 6C merged (PR #15, green CI):** The owner supplied a reference photograph for Daan. Chibi sprite and dialogue portrait drawn from the reference, distinct gold boulder warning and green limited Tolly heal, plus team XP/P1-P2 alternating perks at team levels 5/10/15. Real-device owner art/attack/heal checks still required. See `docs/iteration-6.md`.
 
 > **Day 6B (15 October 2026):** Follow-up to owner playtest. Hero star ratings persist without hover; art is pre-decoded before clue overlays; Story 4/10 gains a beginner cushion; elite Boink/Bocht are tankier, with exclusive Extreme +/X banana attacks. Battle music gets original legendary-feeling drum/brass/string layers. 12-case hero/difficulty balance regression passed in PR #13. See `docs/iteration-6.md`; merged to `main`, phone/owner approval still outstanding.
 
