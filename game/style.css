@@ -322,3 +322,13 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:3px solid #9cf
 .objective-strip.scroll-unsealed{background:linear-gradient(90deg,#6d4b2d,#38374d);border:2px solid #ffdb85;box-shadow:0 0 13px #efc85d6b}
 .objective-strip.scroll-unsealed .objective-main strong{font-weight:1000;color:#ffe5a2}
 @media(max-width:620px){.scroll-return-notice{bottom:6px;padding:6px 10px;max-width:calc(100% - 12px)}.scroll-return-notice strong{font-size:.85rem}.scroll-return-notice span{font-size:.68rem}.scroll-return-notice small{font-size:.64rem}}
+
+/* Guest-first navigation: the birthday invitation is always the primary CTA.
+   The game is an optional extra, so avoid high-density gamer jargon at entry. */
+.hero-entry-actions{display:flex;justify-content:center;align-items:stretch;flex-wrap:wrap;gap:12px;margin:22px auto 8px}
+.hero-entry-actions .btn{display:inline-flex;align-items:center;justify-content:center;min-height:55px;min-width:min(270px,100%);text-decoration:none;text-align:center;padding:12px 18px;line-height:1.35}
+.hero-entry-actions .hero-primary-invite{background:#baf2d6;color:#173e37;border:2px solid #f7f1c4;box-shadow:0 4px #4d846d}
+.hero-entry-actions .hero-play-link{border:1px solid #b7afaf}
+.masthead .hero-entry-note{margin:12px auto 0;color:#e4eee3;font-size:.92rem;line-height:1.5}
+.masthead .hero-entry-note strong{color:#ffe5a0}
+@media(max-width:620px){.hero-entry-actions{display:flex;flex-direction:column;gap:10px;width:100%}.hero-entry-actions .btn{width:100%;min-width:0}.masthead .hero-entry-note{font-size:.84rem}}
