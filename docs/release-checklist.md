@@ -90,3 +90,15 @@ Historical checks above concerning **three guardian waves at each clue** no long
 - [ ] Confirm opening the ICS file in common mobile calendar apps.
 - [ ] Confirm original character asset hashes are unchanged after final release merge.
 - [ ] Owner acceptance and explicit authorization to start Day 5 sprites.
+
+
+## Day 4.8 — real 2P mobile playtest regression
+- [ ] Replay two-thumb touch on actual phone with Lite FX ON/OFF, note which scene lags and whether frame time improves.
+- [ ] Tolly duo Adventure/Extreme is genuinely challenging while having avoidable telegraphed attacks; Story remains friendly.
+- [ ] Tolly new low-HP frenzy is readable on a small screen, with visible warning windows.
+- [ ] Daan's temporary support actor visible/animated and explicitly not a true likeness; approved personal character art still needed.
+- [ ] No scene can accidentally advance from movement keys; keyboard **C** and mobile Next/Skip buttons work; no immediate damage on resumption.
+- [ ] P1 Shift and P2 Enter DASH plus cooldowns are legible and consistent with touch buttons.
+- [ ] Existing five immutable portraits exactly preserved and no Day 5 sprites.
+- [ ] Win/lose/skip/during play birthday invitation links still work.
+- [ ] CI Chromium smoke suite passes and in-person owner review signs off.
