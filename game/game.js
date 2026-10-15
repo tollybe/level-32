@@ -5,9 +5,9 @@ const WIDTH=2600,HEIGHT=1900, VIEWW=960,VIEWH=600, TAU=Math.PI*2, keys=new Set()
 // THE GREAT SNACK RIFT: original, friendly-looking blob enemies with readable combat tells.
 // No server or shared scores required; all audio is original WebAudio synthesis.
 const petImages=Object.fromEntries(Array.from(document.querySelectorAll('#heroes .hero'),el=>[el.dataset.hero,el.querySelector('.portrait img')]));
-const roster={rosie:{name:'Rosie',emoji:'🐕‍🦺',color:'#222a36',hp:130,speed:220,range:225,rate:.56,damage:17,weapon:'dragon'},millie:{name:'Millie',emoji:'🐕',color:'#31323d',hp:135,speed:205,range:220,rate:.62,damage:14,weapon:'ball'},winnifred:{name:'Winnifred',emoji:'🐈',color:'#e4d4bc',hp:128,speed:240,range:153,rate:.41,damage:25,weapon:'sausage'},ellie:{name:'Ellie',emoji:'🐶',color:'#121823',hp:150,speed:250,range:175,rate:.86,damage:9,weapon:'kong',auraRadius:135,healPulse:2.7,selfRegen:1.4}};
+const roster={rosie:{name:'Rosie',emoji:'🐕‍🦺',color:'#222a36',hp:130,speed:220,range:225,rate:.56,damage:17,weapon:'dragon'},millie:{name:'Millie',emoji:'🐕',color:'#31323d',hp:135,speed:205,range:220,rate:.56,damage:18,weapon:'ball'},winnifred:{name:'Winnifred',emoji:'🐈',color:'#e4d4bc',hp:128,speed:240,range:96,rate:.34,damage:30,weapon:'sausage'},ellie:{name:'Ellie',emoji:'🐶',color:'#121823',hp:150,speed:250,range:175,rate:.92,damage:8,weapon:'kong',auraRadius:135,healPulse:2.7,selfRegen:1.4}};
 let selected=['rosie','winnifred'],players=[],foes=[],shots=[],drops=[],fx=[],hazards=[],boss=null,phase='idle',paused=false,score=0,kills=0,level=1,xp=0,goal=35,spawnClock=0,surgeClock=33,elapsed=0,clues=0,fridgeVisible=false,fridge={x:2180,y:1440},cam={x:0,y:0},lastTime=0,raf=0,messageClock=0,attackClock=0,heldTouch={},joystickAxes=[{x:0,y:0},{x:0,y:0}],audioCtx=null,audioEnabled=true,musicTimer=null,musicStep=0,musicMode='idle',musicBar=0,musicNextBarAt=0,sloganClock=8,bossPhase=1,coneWarned=false;
-let cutsceneNext=null,sceneName=null,reviveSeconds=1.85,hudClock=0,sceneOpenedAt=0;
+let cutsceneNext=null,sceneName=null,reviveSeconds=1.85,hudClock=0,sceneOpenedAt=0,perkOffer=null,perkReturnPhase='explore';
 let liteFx=typeof matchMedia==='function'&&matchMedia('(pointer:coarse)').matches;
 let duoActive=false,duoDefeated=false,laserUnlocked=false,beams=[],coneCooldown=6.8,coneWindup=0,coneAngle=0,bossPulseCooldown=4,bossPulseWindup=0,bananaWindup=0;
 let gate=null,gateCleared=[false,false,false],difficulty='challenge',daanActive=false,daanPulse=0,daanActionTimer=0;
@@ -57,7 +57,7 @@ const CLUE_SCENES=[
 function renderSceneLines(kind){
  const host=$('scene-dialogues');host.replaceChildren();host.dataset.beat='0';
  const lines=[...(SCENE_LINES[kind]||[])];
- if(kind==='phase2'&&difficulty==='extreme')lines.push(...EXTRA_BANTER.daan);
+ if(kind==='phase3'&&difficulty==='extreme')lines.push(...EXTRA_BANTER.daan);
  // Character-specific ending callbacks, always with the established portraits.
  if(kind==='victory'||kind==='defeat'){
   const lead=players[0],replies={rosie:'Can we discuss the banana situation on the way to the party?',
@@ -258,7 +258,7 @@ function showScene(kind,title,dialogue){
  sceneOpenedAt=performance.now();joystickAxes.forEach(axis=>{axis.x=0;axis.y=0});
  $('pause').disabled=true;
  $('overlay').classList.add('cinematic');$('overlay').classList.remove('hidden');$('overlay').dataset.scene=kind;
- $('overlay-kicker').textContent=kind.startsWith('clue')?'DISCOVERY · CLUE '+kind.slice(-1)+'/3':kind==='intro'?'THE FRIDGE HAS BEEN FOUND':'PHASE TWO · CONE OF SHAME';
+ $('overlay-kicker').textContent=kind.startsWith('clue')?'DISCOVERY · CLUE '+kind.slice(-1)+'/3':kind==='intro'?'THE FRIDGE HAS BEEN FOUND':kind==='phase3'?'FINAL PHASE · LEGENDARY DEFENCE':'PHASE TWO · CONE OF SHAME';
  $('overlay').querySelector('h3').textContent=title;
  $('overlay').querySelector('p').textContent=dialogue;
  const sceneArt=$('overlay-art');sceneArt.src=SCENE_ART[kind];sceneArt.classList.add('show');sceneArt.style.maxWidth='';
@@ -268,13 +268,13 @@ function showScene(kind,title,dialogue){
   if(sceneArt.complete)limitToNative();else sceneArt.addEventListener('load',limitToNative,{once:true});
  }
  renderSceneLines(kind);$('mission-unlock').classList.remove('show');
- $('overlay-start').dataset.continueLabel='▶ '+(kind==='intro'?'FACE TOLLY':kind==='phase2'?'CONTINUE THE BATTLE':kind==='clue2'?'FACE BOINK & BOCHT':'CONTINUE EXPLORING');
+ $('overlay-start').dataset.continueLabel='▶ '+(kind==='intro'?'FACE TOLLY':kind==='phase2'||kind==='phase3'?'CONTINUE THE BATTLE':kind==='clue2'?'FACE BOINK & BOCHT':'CONTINUE EXPLORING');
  $('overlay-start').textContent=(SCENE_LINES[kind]||[]).length>1?'▶ NEXT LINE':$('overlay-start').dataset.continueLabel;
  $('scene-skip').hidden=false;
  $('scene-control-help').hidden=false;
  // New readers on a phone should see the first spoken line, not only the art.
  const visibleLine=$('scene-dialogues').querySelector('.scene-line:not([hidden])');
- if(visibleLine)visibleLine.scrollIntoView({block:'nearest',behavior:'instant'});
+ if(visibleLine)$('overlay').querySelector('.overlay-inner').scrollTop=0; // Avoid jumping document on first dialogue beat.
 }
 // Quest wards require three short, visible guardian waves at every scroll.
 function spawnGuardianWave(){
@@ -322,21 +322,27 @@ function continueScene(){
  cutsceneNext=null;keys.clear();
  $('scene-control-help').hidden=true;
  players.filter(p=>p.alive).forEach(p=>p.inv=Math.max(p.inv,1.7));
- phase=kind==='intro'||kind==='phase2'?'boss':'explore';
+ phase=['intro','phase2','phase3'].includes(kind)?'boss':'explore';
  $('overlay').classList.remove('cinematic');$('overlay').classList.add('hidden');$('scene-skip').hidden=true;
  $('scene-dialogues').hidden=true;
  $('pause').disabled=false;$('pause').textContent='Ⅱ PAWS';
  if(kind==='intro'){
-   const hp=(players.length===2?1430:990)*(difficulty==='story'?.67:difficulty==='extreme'?EXTREME.bossHp:1);
+   const hp=(players.length===2?2040:1450)*(difficulty==='story'?.67:difficulty==='extreme'?EXTREME.bossHp:1);
    boss={x:fridge.x+45,y:fridge.y-80,hp,maxHp:hp,size:49,speed:difficulty==='story'?96:difficulty==='extreme'?137*EXTREME.bossSpeed:145,attack:1.1,hitFlash:0,rage:false};
    hazards=[];foes=foes.slice(-5);bossPhase=1;coneWarned=false;coneCooldown=6.6;coneWindup=0;bossPulseCooldown=1.65;bossPulseWindup=0;bananaWindup=0;daanActive=false;daanPulse=4;daanActionTimer=0;
    $('bossbar').classList.add('show');$('boss-card').classList.add('show');
    say('⚔ TOLLY: No Rosie, you’re on a diet — no more banana!',5);playSfx('boss');score+=200;
  }else if(kind==='phase2'){
-   say('⚠ CONE OF SHAME PROTOCOL ACTIVATED! Watch the warning arc!',4);playSfx('phase');
+   say('⚠ TOLLY UNLEASHES NEW ATTACKS! Watch the Cone of Shame!',4);playSfx('phase');
    players.filter(p=>p.alive).forEach(p=>p.inv=Math.max(p.inv,1.3));
    coneCooldown=2.5;bossPulseCooldown=1.4;
-   if(difficulty==='extreme'){daanActive=true;daanPulse=3;daanActionTimer=.7; say('⚠ TOLLY: DAAN! I REQUIRE REINFORCEMENTS! · MILLIE: AAAAAH!',4)}
+   /* The phase-two attack set is Tolly's alone. */
+ }else if(kind==='phase3'){
+   bossPhase=3;boss.rage=true;playSfx('phase');
+   players.filter(p=>p.alive).forEach(p=>p.inv=Math.max(p.inv,1.6));
+   coneCooldown=2;bossPulseCooldown=1.2;
+   if(difficulty==='extreme'){daanActive=true;daanPulse=3;daanActionTimer=.7;say('⚠ DAAN ARRIVES! FINAL FRIDGE DEFENCE!',4)}
+   else say('⚠ FINAL FRIDGE FRENZY!',4);
  }else if(kind==='clue2'){
    players.filter(p=>p.alive).forEach(p=>p.inv=Math.max(p.inv,1.2));
    spawnDuo();
@@ -359,7 +365,7 @@ const ambientBanter=[
  'MILLIE: Did someone say throw? ...AAAAAH, IT MOVED!'
 ];
 function say(t,duration=3){$('game-message').textContent=t;messageClock=duration}
-function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5,spriteFacing:'down',spriteMoving:false,spriteAttackAt:-1}}
+function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5,spriteFacing:'down',spriteMoving:false,spriteAttackAt:-1,perkGlow:0,perkRarity:''}}
 function start(){
  $('scene-control-help').hidden=true;$('ending-invite').hidden=true;cancelAnimationFrame(raf);
  joystickAxes.forEach(a=>{a.x=0;a.y=0});document.querySelectorAll('.joystick-knob').forEach(k=>k.style.transform='translate(0px,0px)');
@@ -396,12 +402,12 @@ function damage(enemy,amount,p){
  if(phase==='ended'||phase==='cutscene'||enemy.hp<=0)return;
  enemy.hp-=amount;
  if(enemy===boss){boss.hitFlash=.19;
-   if(!boss.rage&&boss.hp>0&&boss.hp<boss.maxHp*.27){
-     boss.rage=true;emit('FINAL FRIDGE FRENZY!',boss.x,boss.y-100,'#ffe0aa');
-     say('⚠ TOLLY: YOU SHALL NOT PASS THE SNACK DRAWER!',3);
-   }
+   if(!boss.rage&&boss.hp>0&&boss.hp<=boss.maxHp*.33&&coneWarned){
+   boss.rage=true;bossPhase=3;emit('FINAL FRIDGE FRENZY!',boss.x,boss.y-100,'#ffe0aa');
+   showScene('phase3','THE LEGENDARY FRIDGE DEFENCE','Tolly summons her final strategy!',[['tolly','MY FINAL DEFENCE! NO MORE BANANA!']]);return;
+  }
  }
- if(enemy===boss&&enemy.hp>0&&!coneWarned&&enemy.hp<=enemy.maxHp*.5){
+ if(enemy===boss&&enemy.hp>0&&!coneWarned&&enemy.hp<=enemy.maxHp*.67){
    coneWarned=true;bossPhase=2;showScene('phase2','THE CONE OF SHAME!',"Tolly has reached for the ultimate weapon. Watch the red warning arc!",[['tolly',"ARG. DON'T MAKE ME GET THE CONE OF SHAME OUT!!!"]]);return;
  }
  if(enemy.hp<=0){
@@ -531,12 +537,11 @@ function advanceProjectiles(dt){
   for(const {target} of hits){
    if(target.hp<=0||s.hitTargets.has(target))continue;
    s.hitTargets.add(target);
-   damage(target,s.damage,players[s.owner]);
-   if(s.kind==='dragon')emit(s.hitTargets.size===1?'DRAGON PIERCE!':'DOUBLE DRAGON HIT!',target.x,target.y-27,'#caffb2');
+   damage(target,s.kind==='dragon'&&s.hitTargets.size===2?s.damage*.5:s.damage,players[s.owner]);
+   if(s.kind==='dragon')emit(s.hitTargets.size===1?'DRAGON HIT!':'PIERCE · 50%!',target.x,target.y-27,'#caffb2');
    if(s.kind==='kong'){target.slow=Math.max(target.slow||0,2);emit('❄ SLOW',target.x,target.y-30,'#a9ecff')}
    if(phase==='cutscene'||phase==='ended')break;
-   if(s.kind==='ball'&&s.hitTargets.size===1)s.damage*=.65;
-   else if(s.pierce>0)s.pierce--;
+   if(s.pierce>0)s.pierce--;
    else {shots.splice(i,1);break}
   }
   if(phase==='cutscene'||phase==='ended')break;
