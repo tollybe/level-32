@@ -359,14 +359,14 @@ function spawnDuo(){
  duoActive=true;duoDefeated=false;
  const pos=players.find(p=>p.alive)||players[0];
  for(const [i,kind] of ['boink','bocht'].entries()){
-  const conf=ENEMY_TYPES[kind],scale=difficulty==='story'?1.15:difficulty==='extreme'?2.15:1.7;
+  const conf=ENEMY_TYPES[kind],scale=difficulty==='story'?.9:difficulty==='extreme'?3.2:2.4;
   const x=i===0?pos.x+210:pos.x-210,y=i===0?pos.y-180:pos.y+170;
   const hp=Math.round(conf.hp*3*scale);
   foes.push({x:clamp(x,45,WIDTH-45),y:clamp(y,45,HEIGHT-45),
    hp,maxHp:hp,speed:conf.speed*(difficulty==='story'?1:1.10),
    damage:Math.round(conf.damage*(difficulty==='story'?1:1.16)),
    size:conf.size+8,attack:1.2,kind,elite:true,age:0,
-   telegraph:0,charge:-1,trailTimer:0,slow:0});
+   telegraph:0,charge:-1,trailTimer:0,slow:0,volleyWarmup:0,volleyCooldown:i===0?3.2:4.8});
  }
  say('⚠ BOINK & BOCHT! Defeat the terrible twosome to reveal the last clue!',4);
  playSfx('boink');
@@ -519,6 +519,7 @@ function damage(enemy,amount,p){
   kills++;score+=(ENEMY_TYPES[enemy.kind]?.score||12);gainXP(ENEMY_TYPES[enemy.kind]?.xp||7);
   emit('+'+(ENEMY_TYPES[enemy.kind]?.score||12),enemy.x,enemy.y); playSfx('hit');
   if(enemy.elite&&['boink','bocht'].includes(enemy.kind)&&!foes.some(f=>f!==enemy&&f.elite&&f.hp>0)){
+    hazards=hazards.filter(h=>h.kind!=='duo-banana');
    duoActive=false;duoDefeated=true;score+=250;
    say('🎉 BOINK & BOCHT HAVE BEEN BOINKED! The last clue is revealed!',5);
    players.filter(q=>q.alive).forEach(q=>q.hp=Math.min(q.maxHp,q.hp+20));playSfx('victory');
@@ -648,6 +649,30 @@ function advanceProjectiles(dt){
   if(phase==='cutscene'||phase==='ended')break;
  }
 }
+// Extreme-only mini-boss attack: Boink fires an axis-aligned '+' volley;
+// Bocht fires a 45-degree 'X' volley. A readable .78s windup precedes each.
+function updateDuoVolley(e,dt){
+ if(difficulty!=='extreme'||!duoActive||!e.elite||!['boink','bocht'].includes(e.kind))return;
+ if(e.volleyWarmup>0){
+  e.volleyWarmup-=dt;
+  if(e.volleyWarmup<=0){
+   const offset=e.kind==='bocht'?Math.PI/4:0;
+   for(let n=0;n<4;n++){
+    const angle=offset+n*Math.PI/2;
+    hazards.push({kind:'duo-banana',source:e.kind,x:e.x,y:e.y,
+      vx:Math.cos(angle)*220,vy:Math.sin(angle)*220,damage:11,size:19,ttl:2.3});
+   }
+   playSfx('special');
+  }
+  return;
+ }
+ e.volleyCooldown-=dt;
+ if(e.volleyCooldown<=0){
+  e.volleyWarmup=.78;e.volleyCooldown=e.kind==='boink'?4.3:5.1;
+  say(e.kind==='boink'?'⚠ BOINK: + BANANA CROSS!':'⚠ BOCHT: X BANANA CROSS!',1.6);
+  emit(e.kind==='boink'?'⚠ +':'⚠ X',e.x,e.y-42,'#ffe4aa');
+ }
+}
 function update(dt){
  if(phase==='ended'||phase==='cutscene'||phase==='upgrade')return;
  elapsed+=dt;messageClock-=dt;
@@ -694,6 +719,7 @@ function update(dt){
        }
       }
     }
+    updateDuoVolley(e,dt);
     e.age=(e.age||0)+dt;e.slow=Math.max(0,(e.slow||0)-dt);
     const baseAngle=Math.atan2(p.y-e.y,p.x-e.x),d=dist(e,p);
     const pace=e.slow>0?.62:1;
@@ -1171,7 +1197,7 @@ for(const p of players){
  rect(p.x-28,p.y+29,56,7,'#152636');rect(p.x-27,p.y+30,54*clamp(p.hp/p.maxHp,0,1),5,p.hp/p.maxHp<.3?'#ff9995':'#9aebbb');
 }
 for(const s of shots){txt(s.kind==='dragon'?'🐉':s.kind==='kong'?'🧊':'🔴',s.x,s.y+9,24,'center')}
-for(const h of hazards){if(h.kind==='daan-warning'){cx.save();cx.setLineDash([8,8]);circle(h.x,h.y,h.size,'#ffd35e38');cx.strokeStyle='#ffe4a3';cx.lineWidth=5;cx.beginPath();cx.arc(h.x,h.y,h.size,0,TAU);cx.stroke();cx.restore();txt('DAAN SPITE · MOVE!',h.x,h.y-85,18,'center','#fff1ae')}else if(h.kind==='goop'){circle(h.x,h.y,22,'#88e5e977');circle(h.x,h.y,13,'#b0f6ff99')}else{circle(h.x,h.y,17,'#ffbd6144');txt('🍌',h.x,h.y+9,25,'center')}}
+for(const h of hazards){if(h.kind==='duo-banana'){circle(h.x,h.y,17,'#e6a84b66');txt('🍌',h.x,h.y+9,23,'center');continue}if(h.kind==='daan-warning'){cx.save();cx.setLineDash([8,8]);circle(h.x,h.y,h.size,'#ffd35e38');cx.strokeStyle='#ffe4a3';cx.lineWidth=5;cx.beginPath();cx.arc(h.x,h.y,h.size,0,TAU);cx.stroke();cx.restore();txt('DAAN SPITE · MOVE!',h.x,h.y-85,18,'center','#fff1ae')}else if(h.kind==='goop'){circle(h.x,h.y,22,'#88e5e977');circle(h.x,h.y,13,'#b0f6ff99')}else{circle(h.x,h.y,17,'#ffbd6144');txt('🍌',h.x,h.y+9,25,'center')}}
 if(boss&&boss.hp>0&&coneWindup>0){cx.save();cx.beginPath();cx.moveTo(boss.x,boss.y);cx.arc(boss.x,boss.y,275,coneAngle-.65,coneAngle+.65);cx.closePath();cx.fillStyle='#ff69735d';cx.fill();cx.strokeStyle='#ffeeb1';cx.lineWidth=5;cx.stroke();cx.restore()}
 for(const beam of beams){cx.save();cx.globalAlpha=Math.max(.1,beam.t/.28);cx.strokeStyle='#ff586a';cx.lineWidth=13;cx.shadowColor='#ff7373';cx.shadowBlur=17;cx.beginPath();cx.moveTo(beam.x1,beam.y1);cx.lineTo(beam.x2,beam.y2);cx.stroke();cx.strokeStyle='#fff2b5';cx.lineWidth=4;cx.stroke();cx.restore()}
 for(const f of fx){if(f.x<cam.x-60||f.x>cam.x+VIEWW+60||f.y<cam.y-60||f.y>cam.y+VIEWH+60)continue;txt(f.text,f.x,f.y,17,'center',f.col)}
