@@ -452,7 +452,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     if not mobile and not solo and mode=='challenge':
         winston=page.evaluate('window.__rosieTest.bossWinstonProbe()')
         assert all(winston.values()),winston
-        print('Tolly in-world Winston, Rosie's shake and timed expose: PASS')
+        print("Tolly in-world Winston, Rosie shake and timed expose: PASS")
     assert s['bossMaxHp']>=(1400 if not solo else 900) if mode!='story' else s['bossMaxHp']>400,s
     camp=page.evaluate('window.__rosieTest.bossCampCheck()')
     assert camp['pushed'] and camp['hpAfter'] < camp['hpBefore'] and camp['bossAfter']>0, camp
