@@ -277,6 +277,23 @@ hook='''window.__rosieTest={
   players=saved.players;worldBubbles=saved.worldBubbles;pairBanterClock=saved.pairBanterClock;
   return details;
  },
+ gardenProbe(){
+  const original={trees:cherryTrees,grass:grassTufts,seed:gardenSeed};
+  const runs=[],seen=new Set();
+  for(let i=0;i<8;i++){
+   generateGarden();
+   const valid=cherryTrees.every((p,index)=>treeSiteSafe(p,cherryTrees.slice(0,index)));
+   const mark=cherryTrees.slice(0,3).map(p=>Math.floor(p.x)+':'+Math.floor(p.y)).join(',');
+   runs.push({count:cherryTrees.length,grass:grassTufts.length,valid});
+   seen.add(mark);
+  }
+  const stationary=grassLean({x:100,y:100},[{alive:true,spriteMoving:false,x:90,y:100}]);
+  const moving=grassLean({x:100,y:100},[{alive:true,spriteMoving:true,x:90,y:100}]);
+  const far=grassLean({x:100,y:100},[{alive:true,spriteMoving:true,x:400,y:400}]);
+  cherryTrees=original.trees;grassTufts=original.grass;gardenSeed=original.seed;
+  return {runs,distinct:seen.size,stationary,moving,far,treeAsset:treeArt.src.includes('cherry-tree.svg')||
+   treeArt.src.startsWith('data:image/svg+xml')};
+ },
  getEnemyList(){return [...new Set(foes.map(e=>e.kind))]},
  state(){return {phase,clues,duoActive,duoDefeated,laserUnlocked,laserIndex:laserChallenge.index,scentStep,score,kills,coneWindup,elapsed,hp:players.map(p=>p.hp),sceneName,cutsceneNext,bossHp:boss?.hp||0,daanActive,bossRage:boss?.rage||false,bossMaxHp:boss?.maxHp||0,liteFx,guardWave:gate?.wave??null,guardians:foes.filter(e=>e.guardian&&e.hp>0).length,cleared:gateCleared.slice(),mode:difficulty,overlay:!$('overlay').classList.contains('hidden'),imgSrc:$('overlay-art').getAttribute('src').slice(0,90),dialogueImages:[...$('scene-dialogues').querySelectorAll('img')].map(im=>im.getAttribute('src').slice(0,80)),missionUnlock:$('mission-unlock').classList.contains('show'),objectText:$('objective-label').textContent}}
 };'''
@@ -377,6 +394,12 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
           'Princess Winnifred, floof of her name'},nick
         assert all(any(lyric[1] in line for line in nick['lines']) for lyric in nick['theme']),nick
         print('Ambush crit, bush-hit ejection and new Rosie/Daan lyrics: PASS')
+        garden=page.evaluate('window.__rosieTest.gardenProbe()')
+        assert garden['treeAsset'] and garden['distinct']>1,garden
+        assert all(5<=run['count']<=9 and run['grass']==180 and run['valid']
+          for run in garden['runs']),garden
+        assert garden['stationary']==0 and garden['far']==0 and abs(garden['moving'])>1,garden
+        print('Eight random cherry groves, free quest paths and reactive grass: PASS')
     if not mobile and mode=='challenge' and not solo:
         stealth=page.evaluate('window.__rosieTest.bushStealthProbe()')
         assert all(stealth.values()),stealth
@@ -538,7 +561,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
         # The phase-three dialogue was dismissed before the fight; the avatar
         # and speaker content are still in the scene DOM.
         assert daan_line.count()>=2 and 'DOOOOOOG' in daan_line.all_inner_texts()[-1],daan_line.all_inner_texts()
-        assert 'DAAN' in daan_line.inner_text()
+        assert 'DAAN' in daan_line.first.inner_text()
         heal=page.evaluate('window.__rosieTest.daanHealProbe()')
         assert heal['active'] and all(heal['warnings']) and heal['capped'],heal
         assert heal['casts'][1]>heal['casts'][0]>0,heal
