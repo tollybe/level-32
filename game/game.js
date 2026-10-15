@@ -731,6 +731,21 @@ function syncHud(){updateObjective();let h='';for(const p of players){h+='<p><st
  $('combo-status').textContent=comboCount>=3&&comboClock>0?'🔥 SNACK STREAK · '+comboCount+' hits · '+(1+Math.min(1.5,Math.floor((comboCount-1)/3)*.25)).toFixed(2)+'× score':'Snack combo · Defeat enemies quickly for bonus points';
  $('missions').innerHTML=wardProgress+'<div class="missionline '+(clues>=1?'done':'')+'">'+(clues>=1?'✓':'○')+' Find the first scroll</div><div class="missionline '+(clues>=2?'done':'')+'">'+(clues>=2?'✓':'○')+' Discover the sausage clue</div><div class="missionline '+(clues>=3?'done':'')+'">'+(clues>=3?'✓':'○')+' Reveal the fridge shrine</div><div class="missionline '+(phase==='boss'||phase==='ended'?'done':'')+'">'+(phase==='boss'||phase==='ended'?'✓':'○')+' Find Tolly</div><div class="missionline '+(phase==='ended'&&boss&&boss.hp<=0?'done':'')+'">'+(phase==='ended'&&boss&&boss.hp<=0?'✓':'○')+' Free the tasty treats & reveal Mission Two</div>';$('scoreline').textContent='Score: '+score+' · Level: '+level;$('timerline').textContent='Time: '+Math.floor(elapsed/60)+':'+String(Math.floor(elapsed%60)).padStart(2,'0')+' · Snacklings boinked: '+kills;$('bestline').textContent='Personal best: '+(best||'—')}
 function rect(x,y,w,h,col){cx.fillStyle=col;cx.fillRect(x,y,w,h)}function circle(x,y,r,col){cx.fillStyle=col;cx.beginPath();cx.arc(x,y,r,0,TAU);cx.fill()}function line(x1,y1,x2,y2,col,width=2){cx.strokeStyle=col;cx.lineWidth=width;cx.beginPath();cx.moveTo(x1,y1);cx.lineTo(x2,y2);cx.stroke()}
+// RuneScape-inspired overhead combat HP: green active health against dark-red lost HP.
+function drawOverheadHp(x,y,hp,maxHp,width=67){
+ if(!maxHp||maxHp<=0)return;
+ const ratio=clamp(hp/maxHp,0,1),w=Math.round(width),h=9,left=Math.round(x-w/2),top=Math.round(y);
+ const fill=ratio>.55?'#5de48d':ratio>.25?'#ffd26a':'#f86d72';
+ cx.save();
+ cx.shadowColor='#000b';cx.shadowBlur=4;
+ rect(left-2,top-2,w+4,h+4,'#161e2b');
+ cx.shadowBlur=0;
+ rect(left,top,w,h,'#823747');
+ if(ratio>0)rect(left+1,top+1,Math.max(1,Math.round((w-2)*ratio)),h-2,fill);
+ cx.strokeStyle='#f4e9c4';cx.lineWidth=1;cx.strokeRect(left-.5,top-.5,w+1,h+1);
+ cx.restore();
+}
+function hasOverheadEnemyHp(e){return e.elite||e.kind==='boink'||e.kind==='bocht'||e.kind==='chunkling'}
 function world(){rect(0,0,VIEWW,VIEWH,'#69816d');cx.save();cx.translate(-cam.x,-cam.y);
 // tiled moss and Japanese garden paths
 for(let x=0;x<WIDTH;x+=150)for(let y=0;y<HEIGHT;y+=150){rect(x,y,149,149,(Math.floor(x/150)+Math.floor(y/150))%2?'#78917a':'#718b72');circle(x+35,y+58,20,'#7d987c')}
@@ -772,8 +787,10 @@ for(const e of foes){
  if(e.kind==='boink'&&e.telegraph>0){cx.beginPath();cx.arc(0,0,e.size+12,0,TAU);cx.strokeStyle='#ffe197';cx.lineWidth=5;cx.setLineDash([6,6]);cx.stroke();cx.setLineDash([]);txt('BOINK!',0,-e.size-22,14,'center','#ffe6a7')}
  if(e.kind==='bocht'){cx.beginPath();cx.arc(0,0,e.size+5,0,TAU);cx.strokeStyle='#b4f3fa';cx.lineWidth=2;cx.stroke()}
  if(e.slow>0){cx.beginPath();cx.arc(0,0,e.size+8,0,TAU);cx.strokeStyle='#a7edff';cx.lineWidth=4;cx.stroke()}
- if(e.elite){txt('⚠ '+e.kind.toUpperCase(),0,-e.size-25,16,'center','#fff2ac')}
- rect(-e.size,-e.size-11,e.size*2*clamp(e.hp/e.maxHp,0,1),4,'#d76c78');
+ if(hasOverheadEnemyHp(e)){
+  drawOverheadHp(0,-e.size-(e.elite?52:28),e.hp,e.maxHp,e.elite?78:65);
+  if(e.elite)txt('⚠ '+e.kind.toUpperCase(),0,-e.size-29,15,'center','#fff2ac');
+ }
  cx.restore();
 }
 // birthday boss
@@ -786,7 +803,9 @@ if(boss&&boss.hp>0){
    cx.drawImage(portrait,(portrait.naturalWidth-crop)/2,(portrait.naturalHeight-crop)/2,crop,crop,boss.x-48,boss.y-48,96,96);cx.restore();
  }else txt('🧑',boss.x,boss.y+21,52,'center');
  cx.save();cx.strokeStyle=bossPhase===2?'#ff959c':'#f8dea4';cx.lineWidth=5;cx.beginPath();cx.arc(boss.x,boss.y,49,0,TAU);cx.stroke();cx.restore();
- txt('👑',boss.x,boss.y-41,34,'center');txt('TOLLY · NO MORE BANANA',boss.x,boss.y-70,15,'center','#fff5ca');
+ txt('👑',boss.x,boss.y-41,34,'center');
+ txt('TOLLY · NO MORE BANANA',boss.x,boss.y-71,15,'center','#fff5ca');
+ drawOverheadHp(boss.x,boss.y-99,boss.hp,boss.maxHp,126);
  if(bananaWindup>0){
   cx.save();cx.strokeStyle='#ffa94f';cx.fillStyle='#ffb45122';cx.lineWidth=4;
   cx.beginPath();cx.arc(boss.x,boss.y,115,0,TAU);cx.fill();cx.stroke();cx.restore();
@@ -817,7 +836,9 @@ for(const p of players){
  cx.restore();
 }
 for(const p of players){
- if(!p.alive){circle(p.x,p.y,23,'#4c5968');txt('💤',p.x,p.y+11,26,'center');txt('REVIVE P'+(p.num+1),p.x,p.y-32,16,'center','#fff4cd');cx.beginPath();cx.arc(p.x,p.y,30,-Math.PI/2,-Math.PI/2+TAU*(p.reviveProgress||0)/reviveSeconds);cx.strokeStyle='#9cffcb';cx.lineWidth=5;cx.stroke();continue}
+ if(!p.alive){circle(p.x,p.y,23,'#4c5968');txt('💤',p.x,p.y+11,26,'center');txt('REVIVE P'+(p.num+1),p.x,p.y-32,16,'center','#fff4cd');drawOverheadHp(p.x,p.y-57,0,p.maxHp,65);cx.beginPath();cx.arc(p.x,p.y,30,-Math.PI/2,-Math.PI/2+TAU*(p.reviveProgress||0)/reviveSeconds);cx.strokeStyle='#9cffcb';cx.lineWidth=5;cx.stroke();continue}
+ // The HP bar remains visible on invulnerability flashing frames.
+ drawOverheadHp(p.x,p.y-56,p.hp,p.maxHp,66);
  if(p.inv>0&&Math.floor(elapsed*16)%2)continue;
  circle(p.x,p.y+20,23,'#1b293a88');
  const avatar=petImages[p.id];
@@ -830,7 +851,7 @@ for(const p of players){
   cx.beginPath();cx.arc(p.x,p.y,24,0,TAU);
   cx.strokeStyle=p.num===0?'#adf8db':'#ffc0c4';cx.lineWidth=3;cx.stroke();
  }else{circle(p.x,p.y,24,p.color);txt(p.emoji,p.x,p.y+16,37,'center')}
- txt('P'+(p.num+1),p.x,p.y-38,17,'center',p.num===0?'#a6ffe1':'#ffc7c3');
+ txt('P'+(p.num+1),p.x,p.y-36,15,'center',p.num===0?'#a6ffe1':'#ffc7c3');
 }
 for(const s of shots){txt(s.kind==='dragon'?'🐉':s.kind==='kong'?'🧊':'🔴',s.x,s.y+9,24,'center')}
 for(const h of hazards){if(h.kind==='goop'){circle(h.x,h.y,22,'#88e5e977');circle(h.x,h.y,13,'#b0f6ff99')}else{circle(h.x,h.y,17,'#ffbd6144');txt('🍌',h.x,h.y+9,25,'center')}}
