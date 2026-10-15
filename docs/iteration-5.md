@@ -46,7 +46,7 @@ Use nearest-neighbor *only for sprite sheets*. Regular portrait/cutscene images 
 - [ ] Owner supplies/approves Daan's actual character illustration. Until then, keep the existing *provisional* static actor.
 - [ ] Canonical five `*.webp` assets verified unchanged.
 - [x] Reversible renderer with portrait fallback and separate physics, controls and animation states.
-- [ ] Chromium tests pass for this branch including sprite test, all existing quest/character/win/lose/invitation coverage.
+- [x] Chromium tests passed in PR #9 (15 October 2026), including the sprite test and existing quest/character/win/lose/invitation coverage.
 - [ ] Approved sheets look crisp at phone scale and don't obstruct HP, boss hazards, timed lasers, PAWS or scene dialogue.
 - [ ] Both the original `/game/` page and independently shareable `game/invitation.html` remain available from start, play, win and loss.
 - [ ] Calendar file import tested on common phone platforms.
