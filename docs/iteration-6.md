@@ -35,7 +35,7 @@ The word “Legendary has no perks” was interpreted as **no debuff**; this mat
 - **Regression tests:** A 12-entry matrix (4 pets × 3 difficulty modes) verifies actual player starting HP, guardian health/damage/count, special duo HP and Exclusive-Extreme +/X shot-vector geometry. Separate browser checks test visible/focus/hover stats and that clue art is loaded before the cinematic opens.
 - **Still needs owner review:** New music through real speakers, beginner playtest without developer invincibility, 7/10 mini-boss challenge, the readability of +/X warning zones, physical phone animation performance, and Daan's approved actual likeness.
 
-**Release status:** PR #13 merged into `main` (15 October 2026); JavaScript syntax and Chromium gameplay, balance-matrix and cutscene readiness checks passed. Still a playtest pending real-device feedback. Original portrait/image hashes, guest invitation access, and birthday location/timing information are unchanged.
+**Release status:** PR #15 merged into `main` (15 October 2026), green JavaScript/Chromium regression checks for alternating perks, reference-based Daan art, two bounded heals, and existing quest/invitation flows. Still a playtest pending real-device feedback. Original portrait/image hashes, guest invitation access, and birthday location/timing information are unchanged.
 
 ## Day 6C — Co-op turn fairness and Daan reference artwork
 
