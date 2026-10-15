@@ -275,3 +275,10 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:3px solid #9cf
 .overlay.cinematic .overlay-art.scene-art-pending{visibility:hidden}
 .overlay.cinematic .overlay-art{aspect-ratio:16/9;height:auto}
 .overlay.cinematic .overlay-inner{overscroll-behavior:contain}
+
+/* Now-playing label is informational and must not obstruct movement controls. */
+.music-status{display:inline-flex;align-items:center;max-width:205px;
+ padding:5px 8px;border:1px solid #8eb9b2;border-radius:7px;
+ background:#1d3244;color:#f8e9ba;font-size:.67rem;font-weight:850;
+ letter-spacing:.015em;line-height:1.25}
+@media(max-width:620px){.music-status{max-width:160px;font-size:.62rem}}
