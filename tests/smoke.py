@@ -612,6 +612,80 @@ hook='''window.__rosieTest={
   setPhonePlay(old.phone);
   return view;
  },
+ mobileFacingAndSceneProbe(){
+  const coop=$('coop'),wasCoop=coop.checked,oldPhase=phase,
+   wasPhone=document.body.classList.contains('phone-play');
+  const old={sceneName,cutsceneNext,sceneOpenedAt,sceneToken:scenePresentationToken,
+   overlayClass:$('overlay').className,sceneAttr:$('overlay').dataset.scene,
+   overlayHidden:$('overlay').classList.contains('hidden'),
+   pauseDisabled:$('pause').disabled,
+   sceneHelp:$('scene-control-help').textContent,
+   sceneHelpHidden:$('scene-control-help').hidden,
+   sceneSkipHidden:$('scene-skip').hidden,
+   hp:players.map(p=>p.hp),elapsed};
+  const rect=el=>{const b=el.getBoundingClientRect();
+   return {x:b.x,y:b.y,left:b.left,right:b.right,top:b.top,bottom:b.bottom,width:b.width,height:b.height}};
+  const within=(b)=>b.left>=-1&&b.right<=innerWidth+1&&b.top>=-1&&b.bottom<=innerHeight+1;
+  try{
+   setPhonePlay(true);
+   const solo=()=>{
+    coop.checked=false;syncTouchPlayers();
+    const stick=rect(document.querySelector('[data-joystick="0"]')),
+      dash=rect(document.querySelector('[data-dash="0"]'));
+    return {leftRight:stick.right+5<dash.left,visible:within(stick)&&within(dash),
+      secondHidden:getComputedStyle(document.querySelector('.touch-player:nth-child(2)')).display==='none'};
+   };
+   const first=solo();
+   coop.checked=true;syncTouchPlayers();
+   const p1={stick:rect(document.querySelector('[data-joystick="0"]')),
+    dash:rect(document.querySelector('[data-dash="0"]'))};
+   const p2={stick:rect(document.querySelector('[data-joystick="1"]')),
+    dash:rect(document.querySelector('[data-dash="1"]'))};
+   const topRow=rect(document.querySelector('.touch-player:nth-child(2)'));
+   const bottomRow=rect(document.querySelector('.touch-player:first-child'));
+   const opposite={
+    topBottom:p2.stick.bottom+25<p1.stick.top,
+    p1LeftRight:p1.stick.right<p1.dash.left,
+    p2LeftRight:p2.dash.right<p2.stick.left,
+    controlsFit:[p1.stick,p1.dash,p2.stick,p2.dash].every(within),
+    flipped:getComputedStyle(document.querySelector('.touch-player:nth-child(2)')).transform.startsWith('matrix(-1'),
+    inputsP1:playerTouchDirection(0,1,-.5).x===1&&playerTouchDirection(0,1,-.5).y===-.5,
+    inputsP2:playerTouchDirection(1,1,-.5).x===-1&&playerTouchDirection(1,1,-.5).y===.5,
+    rowPositions:topRow.bottom<bottomRow.top
+   };
+   // Test the actual illustrated story layer while game is paused.
+   showScene('clue3','THE THIRD SCROLL','This is a longer mobile illustrated scene.');
+   $('overlay').classList.remove('hidden'); // presentation asset decode can be asynchronous
+   const sceneCard=$('overlay').querySelector('.overlay-inner'),
+     overlay=rect($('overlay')),card=rect(sceneCard),art=rect($('overlay-art')),
+     button=rect($('overlay-start')),skip=rect($('scene-skip'));
+   const before=players.map(p=>p.hp),elapsedBefore=elapsed;
+   update(9);
+   const frozen=phase==='cutscene'&&elapsed===elapsedBefore&&
+    players.every((p,i)=>p.hp===before[i]);
+   const scene={frozen,cardFits:within(card),nextVisible:within(button)&&button.height>=40,
+    skipVisible:within(skip),noScroll:sceneCard.scrollHeight<=sceneCard.clientHeight+2,
+    noPageScroll:getComputedStyle(document.body).overflow==='hidden',
+    artFits:art.bottom<=button.top&&art.height<=innerHeight*.32,
+    help:$('scene-control-help').textContent.includes('Tap NEXT LINE'),
+    overlayFits:overlay.height<=innerHeight+2,
+    inputsHidden:getComputedStyle(document.querySelector('.mobile-keys')).visibility==='hidden',
+    canAdvance:advanceSceneBeat()&&$('scene-dialogues').dataset.beat==='1'};
+   return {first,opposite,scene};
+  }finally{
+   ++scenePresentationToken;phase=oldPhase;sceneName=old.sceneName;
+   cutsceneNext=old.cutsceneNext;sceneOpenedAt=old.sceneOpenedAt;
+   $('overlay').className=old.overlayClass;
+   if(old.sceneAttr===undefined)delete $('overlay').dataset.scene;
+   else $('overlay').dataset.scene=old.sceneAttr;
+   $('pause').disabled=old.pauseDisabled;
+   $('scene-control-help').textContent=old.sceneHelp;
+   $('scene-control-help').hidden=old.sceneHelpHidden;
+   $('scene-skip').hidden=old.sceneSkipHidden;
+   coop.checked=wasCoop;syncTouchPlayers();setPhonePlay(wasPhone);
+   players.forEach((p,i)=>p.hp=old.hp[i]);elapsed=old.elapsed;syncHud();
+  }
+ },
  getEnemyList(){return [...new Set(foes.map(e=>e.kind))]},
  state(){return {phase,clues,duoActive,duoDefeated,laserUnlocked,laserIndex:laserChallenge.index,scentStep,score,kills,coneWindup,elapsed,hp:players.map(p=>p.hp),sceneName,cutsceneNext,bossHp:boss?.hp||0,daanActive,bossRage:boss?.rage||false,bossMaxHp:boss?.maxHp||0,liteFx,guardWave:gate?.wave??null,guardians:foes.filter(e=>e.guardian&&e.hp>0).length,cleared:gateCleared.slice(),mode:difficulty,overlay:!$('overlay').classList.contains('hidden'),imgSrc:$('overlay-art').getAttribute('src').slice(0,90),dialogueImages:[...$('scene-dialogues').querySelectorAll('img')].map(im=>im.getAttribute('src').slice(0,80)),missionUnlock:$('mission-unlock').classList.contains('show'),objectText:$('objective-label').textContent}}
 };'''
@@ -745,6 +819,11 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
         if screen[0]>screen[1]:
             assert all(abs(value-.10)<.015 for value in full['alpha'].values()),full
         assert not page.evaluate("document.body.classList.contains('phone-play')")
+        face=page.evaluate('window.__rosieTest.mobileFacingAndSceneProbe()')
+        assert all(face['first'].values()),face
+        assert all(face['opposite'].values()),face
+        assert all(face['scene'].values()),face
+        print('Mobile-only left-stick/right-dash, opposite-edge co-op and non-scrolling frozen cutscene: PASS')
         print('Full-screen phone stage, solo joystick, 10% rotated HUD panels and compact upgrades: PASS')
     prompt=page.evaluate('window.__rosieTest.scrollReturnProbe()')
     assert len(prompt['checkpoints'])==3 and all(all(entry.values())

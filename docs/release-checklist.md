@@ -229,3 +229,12 @@ Historical checks above concerning **three guardian waves at each clue** no long
 - [x] PR #23 CI passed: phone-level-up pause displays a compact, scrollable, two-choice touch panel rather than a fullscreen opaque dialog; no combat advances during selection.
 - [x] PR #23 CI passed: PAWS tap updates to UNPAWS, second tap resumes play and resets on a new game.
 - [ ] Owner tests native Android fullscreen/autorotation and iOS Safari fixed-viewport fallback, safe-area cutouts, control comfort, upgrade text readability and return to birthday invitation.
+
+
+## Day 8D — Phone scene and opposite-seat co-op layout
+
+- [ ] Full mobile landscape and portrait browser tests: story illustration, dialogue, NEXT/Skip controls fit without scrolling; game phase and HP stay frozen while reading.
+- [ ] Solo phone: joystick at left, DASH at right. Player 2 inputs hidden.
+- [ ] Phone co-op: P1 controls at bottom, P2 controls at top rotated 180°, with both guests' thumbsticks on their left and dash on their right from their respective perspectives. P2 input axes flip accordingly.
+- [ ] Shared XP, both HP displays, boss and phone Invite/Pause/Exit remain available between the two players without changing desktop layout.
+- [ ] Owner physically tries one shared phone across a table (portrait and landscape) and reviews touch comfort, scene readability, damage-free dialogue.

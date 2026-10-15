@@ -542,6 +542,7 @@ function syncTouchPlayers(){
  document.querySelectorAll('.touch-player').forEach((el,i)=>{
   const second=i===1&&!duo;
   el.setAttribute('aria-hidden',second?'true':'false');
+  if(i===1)el.setAttribute('aria-label','Player 2 · opposite side of phone');
   const joystick=el.querySelector('.joystick'),dash=el.querySelector('.touch-dash');
   if(joystick)joystick.setAttribute('aria-disabled',second?'true':'false');
   if(dash)dash.disabled=second;
@@ -571,6 +572,11 @@ function showScene(kind,title,dialogue){
  $('overlay-start').textContent=(SCENE_LINES[kind]||[]).length>1?'▶ NEXT LINE':$('overlay-start').dataset.continueLabel;
  $('scene-skip').hidden=false;
  $('scene-control-help').hidden=false;
+ // Explicit touch instructions when the whole phone is used for gameplay.
+ // Desktop keeps the familiar C-to-advance hint.
+ $('scene-control-help').textContent=document.body.classList.contains('phone-play')
+  ?'Tap NEXT LINE to read at your pace. Combat is frozen.'
+  :'Press C for the next line · Movement keys do not skip · Combat stays frozen';
  // New readers on a phone should see the first spoken line, not only the art.
  const visibleLine=$('scene-dialogues').querySelector('.scene-line:not([hidden])');
  if(visibleLine)$('overlay').querySelector('.overlay-inner').scrollTop=0;
@@ -2099,15 +2105,29 @@ window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();
  if(k==='escape')togglePause();keys.add(k);
 });window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));window.addEventListener('blur',()=>keys.clear());
 for(const b of document.querySelectorAll('[data-dash]'))b.addEventListener('pointerdown',e=>{e.preventDefault();tryDash(Number(b.dataset.dash));});
+function oppositeTouchFacing(id){
+ return id===1&&document.body.classList.contains('phone-play')&&
+  !document.body.classList.contains('solo-play');
+}
+function playerTouchDirection(id,dx,dy){
+ return oppositeTouchFacing(id)?{x:-dx,y:-dy}:{x:dx,y:dy};
+}
 for(const pad of document.querySelectorAll('[data-joystick]')){
- const axis=joystickAxes[Number(pad.dataset.joystick)],knob=pad.querySelector('.joystick-knob');
+ const index=Number(pad.dataset.joystick);
+ const axis=joystickAxes[index],knob=pad.querySelector('.joystick-knob');
  let active=null;
  function position(e){
   const box=pad.getBoundingClientRect(),cx=box.left+box.width/2,cy=box.top+box.height/2;
   const radius=box.width*.36,dx=e.clientX-cx,dy=e.clientY-cy,m=Math.hypot(dx,dy),ratio=m>radius?radius/m:1;
   const magnitude=Math.min(1,m/radius),analog=Math.max(0,(magnitude-.13)/.87);
-  axis.x=m>.001?dx/m*analog:0;axis.y=m>.001?dy/m*analog:0;
-  knob.style.transform='translate('+Math.round(dx*ratio)+'px,'+Math.round(dy*ratio)+'px)';
+  const oriented=playerTouchDirection(index,dx,dy);
+  axis.x=m>.001?oriented.x/m*analog:0;
+  axis.y=m>.001?oriented.y/m*analog:0;
+  // The second player's entire control bank is rotated 180 degrees; its
+  // joystick knob translates in local (also reversed) coordinates to follow
+  // the same screen-space touch point under the player's finger.
+  knob.style.transform='translate('+Math.round(oriented.x*ratio)+'px,'+
+   Math.round(oriented.y*ratio)+'px)';
  }
  function release(e){if(active!==null&&(e.pointerId===active||!e.pointerId)){active=null;axis.x=axis.y=0;knob.style.transform='translate(0px,0px)'}}
  pad.addEventListener('pointerdown',e=>{if(active!==null)return;e.preventDefault();active=e.pointerId;pad.setPointerCapture(active);position(e)});
