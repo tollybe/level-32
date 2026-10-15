@@ -708,7 +708,7 @@ function updateSnackMagnet(dt){
   }
  }
 }
-function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,dashCharges:id==='millie'?2:1,dashRecharge:[],healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5,spriteFacing:'down',spriteMoving:false,spriteAttackAt:-1,perkGlow:0,perkRarity:'',hidden:false,bushTime:0,bushId:-1,ambushReady:0,snackCharge:0,snackNextHitAt:0,magnetTime:0}}
+function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,dashCharges:id==='millie'?2:1,dashRecharge:[],healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5,spriteFacing:'down',spriteMoving:false,spriteAttackAt:-1,perkGlow:0,perkRarity:'',hidden:false,bushTime:0,bushId:-1,ambushReady:0,snackCharge:0,snackNextHitAt:0,magnetTime:0,recoveryClock:0}}
 function start(){
  ++scenePresentationToken;perkOffer=null;perksAwarded=0;$('perk-panel').hidden=true;
  $('scene-control-help').hidden=true;$('ending-invite').hidden=true;cancelAnimationFrame(raf);
@@ -1193,9 +1193,26 @@ function updateAutoAttacks(dt){
   if(laserUnlocked&&p.laserCooldown<=0){laserAttack(p);p.laserCooldown=5.3}
  }
 }
+// Solo only. Outdoor healing requires 5 uninterrupted seconds without taking
+// damage (2.4 HP per tick). A bush heals .1 HP/s but never banks outdoor ticks.
+function recordPlayerHit(p){if(p)p.recoveryClock=0}
+function updateSoloRecovery(dt){
+ if(players.length!==1||(phase!=='explore'&&phase!=='boss'))return;
+ const p=players[0];if(!p?.alive||p.hp<=0)return;
+ if(p.hp>=p.maxHp){p.recoveryClock=0;return}
+ if(p.hidden){
+  p.recoveryClock=0;p.hp=Math.min(p.maxHp,p.hp+.1*dt);return;
+ }
+ p.recoveryClock+=dt;
+ if(p.recoveryClock>=5){
+  p.recoveryClock-=5;
+  const before=p.hp;p.hp=Math.min(p.maxHp,p.hp+2.4);
+  if(p.hp>before)emit('💚 +'+(p.hp-before).toFixed(1)+' HP',p.x,p.y-28,'#b7f8c5');
+ }
+}
 function knockOutOfBush(p,h,bush){
  const impact=Math.max(1,Math.ceil(h.damage*.25)); // bush soaks 75%
- p.hp=Math.max(0,p.hp-impact);p.inv=.9;p.hidden=false;
+ recordPlayerHit(p);p.hp=Math.max(0,p.hp-impact);p.inv=.9;p.hidden=false;
  p.bushTime=0;p.bushId=-1;p.ambushReady=0;
  const speed=Math.hypot(h.vx||0,h.vy||0);
  const dx=speed>0?h.vx/speed:1,dy=speed>0?h.vy/speed:0;
@@ -1298,7 +1315,7 @@ function update(dt){
     }
     e.attack=Math.max(0,e.attack-dt);
     if(d<e.size+24&&(e.attack<=0||(e.kind==='boink'&&e.charge>0))&&p.inv<=0){
-       p.hp=Math.max(0,p.hp-(p.id==='winnifred'?Math.ceil(e.damage*.78):e.damage));p.inv=.6;e.attack=e.kind==='boink'?2.4:1.0; if(e.kind==='boink')e.charge=-1;
+       recordPlayerHit(p);p.hp=Math.max(0,p.hp-(p.id==='winnifred'?Math.ceil(e.damage*.78):e.damage));p.inv=.6;e.attack=e.kind==='boink'?2.4:1.0; if(e.kind==='boink')e.charge=-1;
        if(e.kind==='boink'){
          const pushX=Math.cos(baseAngle)*65,pushY=Math.sin(baseAngle)*65;
          p.x=clamp(p.x+pushX,24,WIDTH-24);p.y=clamp(p.y+pushY,24,HEIGHT-24);
@@ -1323,7 +1340,7 @@ function update(dt){
          }else say('✅ SECURITY TERMINAL '+laserChallenge.index+'/3 DISARMED! Follow the next beacon.',3);
        }else if(laserChallenge.zapCooldown<=0){
          if(visitor.inv<=0){const amount=difficulty==='story'?7:difficulty==='extreme'?16:11;
-           visitor.hp=Math.max(1,visitor.hp-amount);visitor.inv=.65;
+           if(visitor.hp>1)recordPlayerHit(visitor);visitor.hp=Math.max(1,visitor.hp-amount);visitor.inv=.65;
            emit('ZAP! -'+amount,visitor.x,visitor.y-35,'#ffbfc6');
          }
          laserChallenge.zapCooldown=1.1;
@@ -1415,7 +1432,7 @@ function update(dt){
           const a=Math.atan2(q.y-boss.y,q.x-boss.x);
           q.x=clamp(q.x+Math.cos(a)*110,24,WIDTH-24);q.y=clamp(q.y+Math.sin(a)*110,24,HEIGHT-24);
           if(q.inv<=0){const amount=Math.round((q.id==='winnifred'?18:bossPhase===2?29:23)*(difficulty==='story'?.7:1));
-            q.hp=Math.max(0,q.hp-amount);q.inv=.95;if(q.hp===0)q.alive=false;
+            recordPlayerHit(q);q.hp=Math.max(0,q.hp-amount);q.inv=.95;if(q.hp===0)q.alive=false;
             emit('FRIDGE REJECTION -'+amount,q.x,q.y-36,'#fff2ad');}
           else emit('SHOO!',q.x,q.y-34,'#fff2ad');
         }
@@ -1436,7 +1453,7 @@ function update(dt){
              if(!q.alive||q.hidden||q.inv>0||dist(q,boss)>275)continue;
              const direction=Math.atan2(q.y-boss.y,q.x-boss.x);
              const diff=Math.atan2(Math.sin(direction-coneAngle),Math.cos(direction-coneAngle));
-             if(Math.abs(diff)<.65){q.hp=Math.max(0,q.hp-24);q.inv=.95;emit('CONE SWEEP -24',q.x,q.y-36,'#ffbeca');if(q.hp===0)q.alive=false;}
+             if(Math.abs(diff)<.65){recordPlayerHit(q);q.hp=Math.max(0,q.hp-24);q.inv=.95;emit('CONE SWEEP -24',q.x,q.y-36,'#ffbeca');if(q.hp===0)q.alive=false;}
            }
            playSfx('cone');say('⚠ CONE SWEEP! Duck and dodge!',1.8);
          }
@@ -1465,7 +1482,7 @@ function update(dt){
        }
        for(const q of players){
          if(q.alive&&!q.hidden&&dist(q,boss)<110&&q.inv<=0){
-           q.hp=Math.max(0,q.hp-Math.ceil((frenzy?25:19)*(difficulty==='story'?.7:1)));q.inv=.56;
+           recordPlayerHit(q);q.hp=Math.max(0,q.hp-Math.ceil((frenzy?25:19)*(difficulty==='story'?.7:1)));q.inv=.56;
            emit('BANANA BLAST',q.x,q.y-18,'#ffe8a0');
            if(q.hp===0)q.alive=false; else playSfx('special');
          }
@@ -1489,7 +1506,7 @@ function update(dt){
        hazards.push({kind:'daan-impact',x:daanHazard.x,y:daanHazard.y,ttl:.38,size:daanHazard.size});
        playSfx('cone');
        for(const p of players.filter(p=>p.alive&&!p.hidden&&dist(p,daanHazard)<daanHazard.size)){
-         if(p.inv<=0){p.hp=Math.max(0,p.hp-24);p.inv=.8;if(p.hp===0)p.alive=false;emit('DAAN SHOCKWAVE -24',p.x,p.y-26,'#ffe3ab')}
+         if(p.inv<=0){recordPlayerHit(p);p.hp=Math.max(0,p.hp-24);p.inv=.8;if(p.hp===0)p.alive=false;emit('DAAN SHOCKWAVE -24',p.x,p.y-26,'#ffe3ab')}
        }
        hazards.splice(i,1);
      }
@@ -1509,7 +1526,7 @@ function update(dt){
       if(foliageHit){knockOutOfBush(p,h,bush);struck=true;break}
       if(p.alive&&!p.hidden&&p.inv<=0&&dist(h,p)<(h.size||30)){
         if(h.kind==='goop'){p.slowTime=Math.max(p.slowTime||0,1.3);struck=false;break;}
-        p.hp=Math.max(0,p.hp-h.damage);p.inv=.55;
+        recordPlayerHit(p);p.hp=Math.max(0,p.hp-h.damage);p.inv=.55;
         emit('-'+h.damage,p.x,p.y-23,'#ffe8ac');
         if(p.hp===0)p.alive=false;
         struck=true;break;
@@ -1518,6 +1535,7 @@ function update(dt){
     if(struck)hazards.splice(i,1);
  }
  if(players.every(p=>!p.alive)){resetEnd(false);return}
+ updateSoloRecovery(dt);
  for(const f of fx){f.y-=25*dt;f.t-=dt}fx=fx.filter(f=>f.t>0);
  hudClock-=dt;if(hudClock<=0){syncHud();hudClock=liteFx?.32:.23;}
 }
@@ -1531,17 +1549,21 @@ function currentObjective(){
  }
  if(clues===0&&!gateCleared[0])return {...scentTrail[Math.min(scentStep,scentTrail.length-1)],name:'FOLLOW THE SCENT · '+scentStep+'/3',hint:'Follow the golden pawprints — investigate the next scent marker!'};
  if(clues===2&&duoDefeated&&!gateCleared[2])return {...laserNodes[Math.min(laserChallenge.index,2)],name:'LASER SECURITY · '+laserChallenge.index+'/3',hint:laserSafe()?'GREEN WINDOW! Touch the glowing terminal.':'RED LASER! Wait for a green window before entering.'};
- if(clues<3)return {...clueSpots[clues],name:'CLUE '+(clues+1)+' / 3',hint:gateCleared[clues]?'The trail or ward is cleared! Return and read the scroll.':['Track the scent trail','Survive the sausage ambush','Disarm three timed laser terminals'][clues]};
+ if(clues<3)return {...clueSpots[clues],name:'CLUE '+(clues+1)+' / 3',hint:gateCleared[clues]?'📜 SCROLL UNSEALED! Return to the scroll and read it!':['Track the scent trail','Survive the sausage ambush','Disarm three timed laser terminals'][clues]};
  return {...fridge,name:'FRIDGE SHRINE',hint:'The fridge is waiting — find Tolly!'};
 }
 function updateObjective(){
  const target=currentObjective();
  const label=$('objective-label'),detail=$('objective-detail'),progress=$('objective-progress');
+ const cleared=phase==='explore'&&clues<3&&!gate&&gateCleared[clues]&&!duoActive;
+ $('scroll-return-notice').hidden=!cleared;
+ $('objective-strip').classList.toggle('scroll-unsealed',cleared);
  if(!target){label.textContent=phase==='boss'?'⚔ TOLLY · FRIDGE GUARDIAN':phase==='ended'?'🏆 QUEST COMPLETE':'🐾 READY FOR THE HUNT';detail.textContent=phase==='boss'?'Dodge the banana barrage and survive the Cone of Shame!':phase==='ended'?'Share your score with the party':'Choose a hero and begin your mission';progress.style.width=phase==='ended'?'100%':'0%';return;}
  const living=players.filter(p=>p.alive);const origin=living[0]||players[0]||{x:320,y:400};
  const steps=Math.round(Math.hypot(target.x-origin.x,target.y-origin.y)/8);
- label.textContent='🧭 '+target.name;
- detail.textContent=target.hint+' · ~'+steps+' steps away';
+ label.textContent=cleared?'📜 SCROLL UNSEALED · RETURN TO READ':'🧭 '+target.name;
+ detail.textContent=cleared?'The next chapter is waiting at the glowing scroll · ~'+steps+' steps away':target.hint+' · ~'+steps+' steps away';
+ if(cleared)$('scroll-return-distance').textContent='🧭 ~'+steps+' steps · follow the golden arrow';
  progress.style.width=(clues/3*78+(clues>=3?17:0))+'%';
 }
 function drawObjectiveMarker(){
@@ -1549,16 +1571,17 @@ function drawObjectiveMarker(){
  const sx=target.x-cam.x,sy=target.y-cam.y;
  const dx=sx-VIEWW/2,dy=sy-VIEWH/2;
  const angle=Math.atan2(dy,dx), inside=sx>62&&sx<VIEWW-62&&sy>94&&sy<VIEWH-60;
+ const readyToRead=phase==='explore'&&clues<3&&gateCleared[clues]&&!gate&&!duoActive;
  if(inside){
    cx.save();cx.beginPath();cx.arc(sx,sy,46+Math.sin(elapsed*3)*4,0,TAU);
    cx.strokeStyle='#ffe18b';cx.lineWidth=5;cx.setLineDash([6,8]);cx.stroke();cx.setLineDash([]);cx.restore();
-   txt('NEXT',sx,sy-54,16,'center','#fff1b1');return;
+   txt(readyToRead?'📜 READ SCROLL!':'NEXT',sx,sy-62,readyToRead?19:16,'center','#fff1b1');return;
  }
  const ratio=Math.min((VIEWW/2-65)/Math.max(1,Math.abs(dx)),(VIEWH/2-94)/Math.max(1,Math.abs(dy)));
  const x=VIEWW/2+dx*ratio,y=VIEWH/2+dy*ratio;
  cx.save();cx.translate(x,y);cx.rotate(angle);
  circle(0,0,28,'#382c39ee');cx.fillStyle='#ffe190';cx.beginPath();cx.moveTo(22,0);cx.lineTo(-12,-15);cx.lineTo(-12,15);cx.closePath();cx.fill();cx.restore();
- txt(duoActive?'🫧':clues<3?'📜':'❄',x,y+37,19,'center','#ffe9b4');
+ txt(readyToRead?'📜 SCROLL':duoActive?'🫧':clues<3?'📜':'❄',x,y+42,readyToRead?17:19,'center','#ffe9b4');
 }
 function syncHud(){
  // One shared progress meter: both teammates earn the same experience.
