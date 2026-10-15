@@ -756,6 +756,83 @@ function updateDuoVolley(e,dt){
   say('⚠ BOINK + BOCHT: RED WARNING! MACHINE-GUN BANANAS!',1.4);
  }
 }
+const PAIR_BANTER={
+ 'rosie|winnifred':[['rosie','...Are we friends?'],['winnifred','From a respectable distance, perhaps.']],
+ 'millie|rosie':[['millie','ROSIE! BALL! PLAY!'],['rosie','Tuesday and Thursday. Every week. A little quiet, please?']],
+ 'ellie|rosie':[['ellie','I must lick the puppy.'],['rosie','You are my puppy, Ellie. Fine, one lick.']],
+ 'millie|winnifred':[['millie','HELLO CAT! PLAY?'],['winnifred','Kindly keep your enthusiasm over there.']],
+ 'ellie|winnifred':[['ellie','I shall guard this area.'],['winnifred','Then I shall avoid that area.']],
+ 'ellie|millie':[['millie','RUUUUN!'],['ellie','ZOOMIES FOREVER!']]
+};
+function bubble(speaker,line,ttl=3.8){
+ worldBubbles.push({speaker,line,ttl});if(worldBubbles.length>8)worldBubbles.shift();
+}
+function updatePairBanter(dt){
+ if(players.length!==2||players.some(p=>!p.alive||p.hidden))return;
+ pairBanterClock-=dt;
+ if(pairBanterClock>0||dist(players[0],players[1])>165)return;
+ const lines=PAIR_BANTER[players.map(p=>p.id).sort().join('|')];
+ if(lines)for(const [speaker,line] of lines)bubble(speaker,line,4.5);
+ pairBanterClock=19;
+}
+function updateBushes(dt){
+ const reveal=winstonForcedReveal>0;winstonForcedReveal=Math.max(0,winstonForcedReveal-dt);
+ for(const p of players){
+  if(!p.alive){p.hidden=false;p.bushTime=0;p.bushId=-1;continue}
+  p.bushId=bushes.findIndex(b=>dist(p,b)<51);
+  p.hidden=p.bushId>=0&&!reveal;
+  p.bushTime=p.hidden?p.bushTime+dt:0;
+  if(p.hidden&&p.bushTime>=30&&!bushEggSeen&&phase==='explore'){
+   bushEggSeen=true;
+   showScene('bushEgg','THE THIRTY-SECOND BUSH CONVENTION',
+    'The forest has been waiting for someone to notice these leaves.');
+   return;
+  }
+ }
+ if(phase!=='boss'||!boss||boss.hp<=0)return;
+ const inside=players.some(p=>p.hidden);
+ if(inside&&!bossBushOccupied&&!winston?.complete){
+  bossBushVisits++;
+  if(bossBushVisits===1)bubble('tolly','...? Where have my enemies gone?',3.6);
+  if(bossBushVisits===2){winston={elapsed:0,step:0,complete:false,shaking:false};
+   bubble('tolly',"WHERE'S WINSTON?!",3.9);}
+ }
+ bossBushOccupied=inside;
+ if(!winston||winston.complete)return;
+ if(!inside){winston.elapsed=0;winston.step=0;return}
+ winston.elapsed+=dt;
+ const lines=[
+  {at:1.8,speaker:'rosie',line:'Guys... we are in trouble.'},
+  {at:3.5,speaker:players.find(p=>p.id==='winnifred')?'winnifred':players.find(p=>p.id==='ellie')?'ellie':'millie',line:'ROSIE! DO NOT GIVE US AWAY!'},
+  {at:5.5,speaker:'tolly',line:"WHERE'S WINSTON?!!?"}
+ ];
+ while(winston.step<lines.length&&winston.elapsed>=lines[winston.step].at){
+  const line=lines[winston.step++];bubble(line.speaker,line.line,3.4);
+ }
+ if(winston.elapsed>=8)winston.shaking=true;
+ if(winston.elapsed>=10){
+  winston.complete=true;winstonForcedReveal=4;
+  players.forEach(p=>{p.hidden=false;p.bushTime=0;p.inv=Math.max(p.inv,1.1)});
+  bubble('rosie','OH NO! MY WIGGLE BOTTOM GAVE US AWAY!',3.8);
+  bubble('tolly','AHAHAHAH! WORKS EVERY TIME!!',4.2);
+  emit('❗ BUSH TRICK EXPOSED!',boss.x,boss.y-135,'#fff1aa');
+  boss.attack=Math.max(.8,boss.attack);
+ }
+}
+function drawWorldBubbles(){
+ for(const b of worldBubbles){
+  const p=b.speaker==='tolly'?boss:players.find(p=>p.id===b.speaker&&p.alive)
+   ||bushes.find((b,i)=>players.some(q=>q.bushId===i));
+  if(!p)continue;
+  const x=p.x,y=p.y-(b.speaker==='tolly'?152:82);
+  const line=b.line.length>46?b.line.slice(0,44)+'…':b.line;
+  const w=Math.min(430,Math.max(140,line.length*8.5+20));
+  cx.save();cx.globalAlpha=Math.min(1,b.ttl);rect(x-w/2,y-31,w,45,'#19243bea');
+  cx.strokeStyle=b.speaker==='tolly'?'#ffb7c6':'#b8ffe4';
+  cx.lineWidth=3;cx.strokeRect(x-w/2,y-31,w,45);
+  txt(line,x,y-4,Math.min(17,490/line.length),'center','#fff4d5');cx.restore();
+ }
+}
 function update(dt){
  if(phase==='ended'||phase==='cutscene'||phase==='upgrade')return;
  elapsed+=dt;messageClock-=dt;
@@ -768,7 +845,10 @@ function update(dt){
   sloganClock=phase==='boss'?6.5:9.5;
  }
  movePlayers(dt);
+ updateBushes(dt);
  if(phase==='ended'||phase==='cutscene')return;
+ updatePairBanter(dt);
+ worldBubbles.forEach(b=>b.ttl-=dt);worldBubbles=worldBubbles.filter(b=>b.ttl>0);
  updateRevives(dt);
  updateEllieAuras(dt);
  spawnClock-=dt;
@@ -789,7 +869,18 @@ function update(dt){
  for(const beam of beams)beam.t-=dt;beams=beams.filter(b=>b.t>0);
  foes=foes.filter(e=>e.hp>0);
  for(const e of foes){
-    const p=nearest(e,players,Infinity);if(!p)continue;
+    const p=nearest(e,players,Infinity);
+    if(!p){
+     e.searchTime=(e.searchTime||0)+dt;e.searching=true;
+     if(e.searchTime>4){
+      const b=bushes.find((b,i)=>players.some(q=>q.hidden&&q.bushId===i));
+      if(b&&dist(e,b)>110){const a=Math.atan2(b.y-e.y,b.x-e.x);
+       e.x=clamp(e.x+Math.cos(a)*e.speed*.22*dt,24,WIDTH-24);
+       e.y=clamp(e.y+Math.sin(a)*e.speed*.22*dt,24,HEIGHT-24);}
+     }
+     continue;
+    }
+    e.searchTime=0;e.searching=false;
     // Elite twins separate whenever pursuit would otherwise stack their sprites.
     if(e.elite&&duoActive&&['boink','bocht'].includes(e.kind)){
       const other=foes.find(q=>q!==e&&q.elite&&q.hp>0&&['boink','bocht'].includes(q.kind));
@@ -1194,6 +1285,7 @@ for(const e of foes){
  if(e.kind==='boink'&&e.telegraph>0){cx.beginPath();cx.arc(0,0,e.size+12,0,TAU);cx.strokeStyle='#ffe197';cx.lineWidth=5;cx.setLineDash([6,6]);cx.stroke();cx.setLineDash([]);txt('BOINK!',0,-e.size-22,14,'center','#ffe6a7')}
  if(e.kind==='bocht'){cx.beginPath();cx.arc(0,0,e.size+5,0,TAU);cx.strokeStyle='#b4f3fa';cx.lineWidth=2;cx.stroke()}
  if(e.slow>0){cx.beginPath();cx.arc(0,0,e.size+8,0,TAU);cx.strokeStyle='#a7edff';cx.lineWidth=4;cx.stroke()}
+ if(e.searching)txt('?',0,-e.size-49,30,'center','#fff2a3');
  if(e.elite){
    if(e.volleyWarmup>0){cx.save();cx.globalAlpha=Math.floor(e.volleyWarmup*16)%2?.96:.45;
     circle(0,0,e.size+17,'#ff40578c');cx.strokeStyle='#ff5c5c';cx.lineWidth=6;
