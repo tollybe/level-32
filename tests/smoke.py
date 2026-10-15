@@ -39,13 +39,13 @@ hook='''window.__rosieTest={
  killBoss(){damage(boss,boss.hp+9999,players[0]);return this.state()},
  lose(){resetEnd(false);return this.state()},
  dragonPierceCheck(){
-  const saved={foes,shots,boss,phase,fx};
+  const saved={foes,shots,boss,phase,fx,ambush:players[0].ambushReady};players[0].ambushReady=0;
   const targets=[320,365,410].map(x=>({x,y:200,hp:200,maxHp:200,size:12,kind:'bleepling'}));
   const shot={x:290,y:200,vx:3000,vy:0,ttl:1,kind:'dragon',damage:17,owner:0,pierce:1,hitTargets:new Set()};
   foes=targets;shots=[shot];boss=null;phase='explore';fx=[];
   advanceProjectiles(.045);
   const value={hp:targets.map(t=>t.hp),hits:shot.hitTargets.size,left:shots.length};
-  foes=saved.foes;shots=saved.shots;boss=saved.boss;phase=saved.phase;fx=saved.fx;
+  foes=saved.foes;shots=saved.shots;boss=saved.boss;phase=saved.phase;fx=saved.fx;players[0].ambushReady=saved.ambush;
   return value;
  },
  triggerDaanSpite(){
@@ -128,7 +128,7 @@ hook='''window.__rosieTest={
      foes=[];gate=null;spawnDuo();
      const elites=foes.filter(e=>e.elite);
      // Force the same scripted attack phase; only Extreme should fire.
-     for(const e of elites){e.volleyWarmup=.04;updateDuoVolley(e,.05);updateDuoVolley(e,.085)}
+     for(const e of elites){e.volleyWarmup=.04;updateDuoVolley(e,.05);updateDuoVolley(e,.001)}
      const banana=hazards.filter(h=>h.kind==='duo-banana');
      const signature=banana.map(h=>({source:h.source,vx:h.vx,vy:h.vy}));
      results.push({mode,hero,heroHp:p.maxHp,baseHp:roster[hero].hp,
@@ -151,31 +151,79 @@ hook='''window.__rosieTest={
  duoMachineGunProbe(){
   const prev={hazards:hazards.slice(),duoActive,mode:difficulty};
   const two=foes.filter(e=>e.elite&&['boink','bocht'].includes(e.kind)&&e.hp>0);
-  if(two.length!==2)return {error:'missing twin elites'};
-  difficulty='extreme';duoActive=true;hazards=[];
-  const older=two.map(e=>({e,volleyWarmup:e.volleyWarmup,volleyCooldown:e.volleyCooldown,
+  if(two.length!==2)return {error:'missing two elites'};
+  const original=two.map(e=>({e,volleyWarmup:e.volleyWarmup,volleyCooldown:e.volleyCooldown,
    volleyShots:e.volleyShots,volleyShotClock:e.volleyShotClock,volleyShotIndex:e.volleyShotIndex}));
-  for(const e of two){e.volleyWarmup=.5;e.volleyCooldown=0;e.volleyShots=0;e.volleyShotClock=0;e.volleyShotIndex=0}
-  const before=hazards.length;
-  two.forEach(e=>updateDuoVolley(e,.25));
-  const redWarn=two.every(e=>e.volleyWarmup>.24&&e.volleyShots===0);
-  two.forEach(e=>updateDuoVolley(e,.26));
-  const synced=two.every(e=>e.volleyShots===12);
-  for(let j=0;j<13;j++)two.forEach(e=>updateDuoVolley(e,.085));
+  difficulty='extreme';duoActive=true;hazards=[];
+  const staggered=two[0].volleyCooldown<two[1].volleyCooldown;
+  for(const e of two){e.volleyWarmup=0;e.volleyCooldown=e.kind==='boink'?.4:1.0;
+   e.volleyShots=0;e.volleyShotClock=0;e.volleyShotIndex=0}
+  let warningFirst=false,overlap=false;
+  for(let i=0;i<150;i++){
+   two.forEach(e=>updateDuoVolley(e,.02));
+   if(two[0].volleyWarmup>0&&two[1].volleyWarmup===0)warningFirst=true;
+   if(two.every(e=>e.volleyShots>0))overlap=true;
+  }
   const fired=hazards.filter(h=>h.kind==='duo-banana');
   const count=Object.fromEntries(two.map(e=>[e.kind,fired.filter(h=>h.source===e.kind).length]));
-  const cooldown=two.every(e=>e.volleyShots===0&&e.volleyCooldown>1.4&&e.volleyCooldown<=2);
-  const directional=fired.every(h=>{
-    const x=Math.abs(h.vx),y=Math.abs(h.vy);
-    return h.source==='boink'?Math.min(x,y)<.00001:Math.abs(x-y)<.00001;
-  });
-  for(const o of older)Object.assign(o.e,{volleyWarmup:o.volleyWarmup,volleyCooldown:o.volleyCooldown,volleyShots:o.volleyShots,volleyShotClock:o.volleyShotClock,volleyShotIndex:o.volleyShotIndex});
+  const cooldown=two.every(e=>e.volleyShots===0&&e.volleyCooldown>.5&&e.volleyCooldown<=5.7);
+  const directional=fired.every(h=>{const x=Math.abs(h.vx),y=Math.abs(h.vy);
+    return h.source==='boink'?Math.min(x,y)<1e-6:Math.abs(x-y)<1e-6});
+  const random=Math.random;let loB,loC,hiB,hiC;
+  try{
+   Math.random=()=>0;loB=nextDuoCooldown('boink');loC=nextDuoCooldown('bocht');
+   Math.random=()=>.999;hiB=nextDuoCooldown('boink');hiC=nextDuoCooldown('bocht');
+  }finally{Math.random=random}
+  const ranges=loB>=2.1&&loB<2.11&&hiB>5&&hiB<5.1&&
+    loC>=2.7&&loC<2.71&&hiC>5.6&&hiC<5.7;
+  for(const o of original)Object.assign(o.e,{volleyWarmup:o.volleyWarmup,volleyCooldown:o.volleyCooldown,
+   volleyShots:o.volleyShots,volleyShotClock:o.volleyShotClock,volleyShotIndex:o.volleyShotIndex});
   hazards=prev.hazards;duoActive=prev.duoActive;difficulty=prev.mode;
-  return {redWarn,synced,count,cooldown,directional,before};
+  return {staggered,warningFirst,overlap,count,cooldown,directional,ranges};
+ },
+ bushAmbushProbe(){
+  const old={phase,foes,shots,beams,boss,hazards,laserUnlocked,worldBubbles:worldBubbles.slice(),
+   poses:players.map(p=>({x:p.x,y:p.y,hp:p.hp,inv:p.inv,hidden:p.hidden,bushTime:p.bushTime,
+    bushId:p.bushId,ambushReady:p.ambushReady,cool:p.cool,laserCooldown:p.laserCooldown}))};
+  phase='explore';foes=[];shots=[];beams=[];boss=null;hazards=[];laserUnlocked=false;
+  const b=bushes[0],p=players[0];
+  players.forEach(q=>{q.x=b.x;q.y=b.y;q.cool=0;q.inv=0;q.laserCooldown=0});
+  updateBushes(.6);
+  const mob={x:b.x+125,y:b.y,hp:1000,maxHp:1000,size:18,kind:'bleepling',
+   speed:0,attack:999,damage:1,slow:0,age:0};
+  foes=[mob];
+  shots.push({owner:0,x:b.x,y:b.y,vx:400,vy:0,ttl:1,kind:'ball',damage:10,pierce:0,hitTargets:new Set()});
+  beams.push({owner:0,x1:b.x,y1:b.y,x2:b.x+90,y2:b.y,t:.2});
+  update(.02);
+  const noAttacks=shots.length===0&&beams.length===0&&mob.hp===1000&&players.every(q=>q.hidden);
+  p.x=b.x+90;updateBushes(.02);const armed=p.ambushReady>0;
+  const hp=mob.hp;damage(mob,10,p);const crit=mob.hp===hp-20&&p.ambushReady===0;
+  p.ambushReady=2;
+  const elite={x:p.x,y:p.y,hp:200,maxHp:200,kind:'boink',elite:true,size:22};
+  damage(elite,10,p);const eliteImmune=elite.hp===190&&p.ambushReady===2;
+  boss={x:p.x,y:p.y,hp:1000,maxHp:1000,hitFlash:0,rage:false};
+  damage(boss,10,p);const bossImmune=boss.hp===990&&p.ambushReady===2;
+  boss=null;p.x=b.x;p.y=b.y;p.inv=0;updateBushes(.6);p.ambushReady=0;
+  hazards=[{kind:'duo-banana',source:'bocht',x:b.x-10,y:b.y,vx:255,vy:0,damage:8,size:18,ttl:1}];
+  const hp2=p.hp;update(.02);
+  const knocked=!p.hidden&&p.bushId===-1&&dist(p,b)>51&&p.hp===hp2-2&&p.ambushReady===0;
+  const ow=worldBubbles.some(x=>x.speaker===p.id&&x.line.startsWith('OW!'));
+  const consumed=hazards.length===0;
+  phase=old.phase;foes=old.foes;shots=old.shots;beams=old.beams;
+  boss=old.boss;hazards=old.hazards;laserUnlocked=old.laserUnlocked;worldBubbles=old.worldBubbles;
+  players.forEach((q,i)=>Object.assign(q,old.poses[i]));
+  return {noAttacks,armed,crit,eliteImmune,bossImmune,knocked,ow,consumed};
+ },
+ nicknameProbe(){
+  const was=difficulty,names=Object.values(TOLLY_NICKNAMES);
+  difficulty='extreme';renderSceneLines('phase3');
+  const lines=[...document.querySelectorAll('#scene-dialogues .scene-line')].map(el=>el.textContent);
+  difficulty=was;
+  return {names,lines,theme:ROSIE_THEME};
  },
  bushStealthProbe(){
   const was={phase,gate,foes:foes.slice(),boss,bushEggSeen,
-   pos:players.map(p=>({x:p.x,y:p.y,hidden:p.hidden,bushTime:p.bushTime,bushId:p.bushId}))};
+   pos:players.map(p=>({x:p.x,y:p.y,hidden:p.hidden,bushTime:p.bushTime,bushId:p.bushId,ambushReady:p.ambushReady}))};
   const b=bushes[0];phase='explore';gate=null;boss=null;foes=[];
   players.forEach(p=>{p.x=b.x;p.y=b.y;p.inv=9999});
   updateBushes(.1);
@@ -228,6 +276,23 @@ hook='''window.__rosieTest={
   }
   players=saved.players;worldBubbles=saved.worldBubbles;pairBanterClock=saved.pairBanterClock;
   return details;
+ },
+ gardenProbe(){
+  const original={trees:cherryTrees,grass:grassTufts,seed:gardenSeed};
+  const runs=[],seen=new Set();
+  for(let i=0;i<8;i++){
+   generateGarden();
+   const valid=cherryTrees.every((p,index)=>treeSiteSafe(p,cherryTrees.slice(0,index)));
+   const mark=cherryTrees.slice(0,3).map(p=>Math.floor(p.x)+':'+Math.floor(p.y)).join(',');
+   runs.push({count:cherryTrees.length,grass:grassTufts.length,valid});
+   seen.add(mark);
+  }
+  const stationary=grassLean({x:100,y:100},[{alive:true,spriteMoving:false,x:90,y:100}]);
+  const moving=grassLean({x:100,y:100},[{alive:true,spriteMoving:true,x:90,y:100}]);
+  const far=grassLean({x:100,y:100},[{alive:true,spriteMoving:true,x:400,y:400}]);
+  cherryTrees=original.trees;grassTufts=original.grass;gardenSeed=original.seed;
+  return {runs,distinct:seen.size,stationary,moving,far,treeAsset:treeArt.src.includes('cherry-tree.svg')||
+   treeArt.src.startsWith('data:image/svg+xml')};
  },
  getEnemyList(){return [...new Set(foes.map(e=>e.kind))]},
  state(){return {phase,clues,duoActive,duoDefeated,laserUnlocked,laserIndex:laserChallenge.index,scentStep,score,kills,coneWindup,elapsed,hp:players.map(p=>p.hp),sceneName,cutsceneNext,bossHp:boss?.hp||0,daanActive,bossRage:boss?.rage||false,bossMaxHp:boss?.maxHp||0,liteFx,guardWave:gate?.wave??null,guardians:foes.filter(e=>e.guardian&&e.hp>0).length,cleared:gateCleared.slice(),mode:difficulty,overlay:!$('overlay').classList.contains('hidden'),imgSrc:$('overlay-art').getAttribute('src').slice(0,90),dialogueImages:[...$('scene-dialogues').querySelectorAll('img')].map(im=>im.getAttribute('src').slice(0,80)),missionUnlock:$('mission-unlock').classList.contains('show'),objectText:$('objective-label').textContent}}
@@ -311,7 +376,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
             assert all(x<y<z for x,y,z in zip(story['eliteHp'],adventure['eliteHp'],extreme['eliteHp'])),tiers
             assert not story['banana'] and not adventure['banana'],tiers
             pattern=extreme['banana']
-            assert len(pattern)==4,pattern
+            assert len(pattern)==2,pattern
             for shot in pattern:
                 vx,vy=abs(shot['vx']),abs(shot['vy'])
                 if shot['source']=='boink': assert min(vx,vy)<1e-6,shot
@@ -321,6 +386,20 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     assert set(['duo','boss1','boss2','boss3']).issubset(soundtrack['modes']),soundtrack
     assert soundtrack['legendaryBpm']>=170,soundtrack
     s=page.evaluate('window.__rosieTest.start()')
+    if not mobile and mode=='challenge' and not solo:
+        ambush=page.evaluate('window.__rosieTest.bushAmbushProbe()')
+        assert all(ambush.values()),ambush
+        nick=page.evaluate('window.__rosieTest.nicknameProbe()')
+        assert set(nick['names'])=={'Rosie the Dog','Silly Millie','Ellie Bellie',
+          'Princess Winnifred, floof of her name'},nick
+        assert all(any(lyric[1] in line for line in nick['lines']) for lyric in nick['theme']),nick
+        print('Ambush crit, bush-hit ejection and new Rosie/Daan lyrics: PASS')
+        garden=page.evaluate('window.__rosieTest.gardenProbe()')
+        assert garden['treeAsset'] and garden['distinct']>1,garden
+        assert all(5<=run['count']<=9 and run['grass']==180 and run['valid']
+          for run in garden['runs']),garden
+        assert garden['stationary']==0 and garden['far']==0 and abs(garden['moving'])>1,garden
+        print('Eight random cherry groves, free quest paths and reactive grass: PASS')
     if not mobile and mode=='challenge' and not solo:
         stealth=page.evaluate('window.__rosieTest.bushStealthProbe()')
         assert all(stealth.values()),stealth
@@ -426,9 +505,9 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     assert page.evaluate('window.__rosieTest.duoGap()')>350, 'Boink and Bocht must spawn apart'
     if mode=='extreme':
         burst=page.evaluate('window.__rosieTest.duoMachineGunProbe()')
-        assert burst['redWarn'] and burst['synced'] and burst['cooldown'] and burst['directional'],burst
+        assert all(burst[k] for k in ('staggered','warningFirst','overlap','cooldown','directional','ranges')),burst
         assert burst['count']=={'boink':12,'bocht':12},burst
-        print('Impossible synchronized red warning and 24 total machine-gun shots: PASS')
+        print('Impossible independent and sometimes-overlapping Boink/Bocht bursts: PASS')
     assert page.evaluate('window.__rosieTest.musicModeNow()')=='duo'
     s=page.evaluate('window.__rosieTest.killsDuo()')
     assert s['duoDefeated'] and not s['duoActive'],s
@@ -481,8 +560,8 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
         daan_line=page.locator('#scene-dialogues [data-speaker="daan"]')
         # The phase-three dialogue was dismissed before the fight; the avatar
         # and speaker content are still in the scene DOM.
-        assert daan_line.count()==1
-        assert 'DAAN' in daan_line.inner_text()
+        assert daan_line.count()>=2 and 'DOOOOOOG' in daan_line.all_inner_texts()[-1],daan_line.all_inner_texts()
+        assert 'DAAN' in daan_line.first.inner_text()
         heal=page.evaluate('window.__rosieTest.daanHealProbe()')
         assert heal['active'] and all(heal['warnings']) and heal['capped'],heal
         assert heal['casts'][1]>heal['casts'][0]>0,heal

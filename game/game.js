@@ -10,7 +10,7 @@ let selected=['rosie','winnifred'],players=[],foes=[],shots=[],drops=[],fx=[],ha
 let cutsceneNext=null,sceneName=null,reviveSeconds=1.85,hudClock=0,sceneOpenedAt=0,perkOffer=null,perkReturnPhase='explore',scenePresentationToken=0,perksAwarded=0;
 let liteFx=typeof matchMedia==='function'&&matchMedia('(pointer:coarse)').matches;
 let duoActive=false,duoDefeated=false,laserUnlocked=false,beams=[],bushEggSeen=false,bossBushVisits=0,bossBushOccupied=false,winston=null,winstonForcedReveal=0,pairBanterClock=12,worldBubbles=[],coneCooldown=6.8,coneWindup=0,coneAngle=0,bossPulseCooldown=4,bossPulseWindup=0,bananaWindup=0;
-let gate=null,gateCleared=[false,false,false],difficulty='challenge',daanActive=false,daanPulse=0,daanActionTimer=0,daanHealCooldown=0,daanHealWindup=0,daanHealsRemaining=0,daanHealFlash=0;
+let bossNicknameClock=13,bossNicknameIndex=0,gate=null,gateCleared=[false,false,false],difficulty='challenge',daanActive=false,daanPulse=0,daanActionTimer=0,daanHealCooldown=0,daanHealWindup=0,daanHealsRemaining=0,daanHealFlash=0;
 const GATE_WAVES={challenge:[[3,3,2],[3,3,3],[4,3,3]],story:[[2,2,2],[2,2,2],[2,2,3]],extreme:[[5,5,5],[6,5,6],[6,7,7]]};
 const daanPortrait=new Image();daanPortrait.src='assets/daan.svg';
 // Day 4 uses a distinct static art asset, never a chibi sprite. The graphic is a
@@ -44,6 +44,89 @@ let laserChallenge={index:0,timer:0,zapCooldown:0};
 const laserSafe=()=>laserChallenge.timer%3.5>=1.55;
 const bushes=[{x:545,y:430},{x:970,y:740},{x:1445,y:1130},{x:2020,y:1520},{x:2365,y:1525}];
 const bushArt=new Image();bushArt.src='assets/sprites/bush.svg';
+// Decorative cherry trees and waving grass: no colliders, no pathfinding changes.
+const treeArt=new Image();treeArt.src='assets/sprites/cherry-tree.svg';
+let cherryTrees=[],grassTufts=[],gardenSeed=0;
+const pathSections=[
+ [{x:300,y:400},{x:600,y:350},{x:620,y:760},{x:1050,y:900}],
+ [{x:1050,y:900},{x:1430,y:1050},{x:1440,y:1500},{x:2180,y:1440}]
+];
+function bezierPoint([a,b,c,d],t){
+ const u=1-t;return{x:u*u*u*a.x+3*u*u*t*b.x+3*u*t*t*c.x+t*t*t*d.x,
+ y:u*u*u*a.y+3*u*u*t*b.y+3*u*t*t*c.y+t*t*t*d.y};
+}
+const pathSamples=pathSections.flatMap(seg=>Array.from({length:51},(_,i)=>bezierPoint(seg,i/50)));
+const treeExclusions=[...clueSpots,...scentTrail,...laserNodes,...bushes,fridge,
+ {x:320,y:400},{x:370,y:455},{x:475,y:925},
+ {x:480,y:390},{x:870,y:920},{x:1440,y:1250},{x:2070,y:1340}];
+function treeSiteSafe(p,placed){
+ return p.x>155&&p.x<WIDTH-155&&p.y>175&&p.y<HEIGHT-155&&
+ !treeExclusions.some(q=>dist(p,q)<175)&&
+ !pathSamples.some(q=>dist(p,q)<155)&&
+ !placed.some(q=>dist(p,q)<240);
+}
+function generateGarden(){
+ gardenSeed=Math.floor(Math.random()*4294967295);
+ let n=gardenSeed;
+ const random=()=>{n=(Math.imul(n,1664525)+1013904223)>>>0;return n/4294967296};
+ cherryTrees=[];grassTufts=[];
+ for(let attempts=0;attempts<700&&cherryTrees.length<9;attempts++){
+  const p={x:155+random()*(WIDTH-310),y:175+random()*(HEIGHT-330),
+   scale:.85+random()*.4,phase:random()*TAU};
+  if(treeSiteSafe(p,cherryTrees))cherryTrees.push(p);
+ }
+ for(let i=0;i<180;i++)grassTufts.push({
+  x:40+random()*(WIDTH-80),y:40+random()*(HEIGHT-80),
+  size:7+random()*8,phase:random()*TAU
+ });
+}
+function grassLean(g,squad=players){
+ let part=0;
+ for(const p of squad){
+  if(!p.alive||!p.spriteMoving)continue;
+  const d=dist(p,g);
+  if(d<60)part+=(g.x>=p.x?1:-1)*(1-d/60)*13;
+ }
+ return part;
+}
+function drawGrassMovement(){
+ const calm=matchMedia('(prefers-reduced-motion: reduce)').matches;
+ for(let i=0;i<grassTufts.length;i++){
+  if(liteFx&&i%3!==0)continue;
+  const g=grassTufts[i];
+  if(g.x<cam.x-40||g.x>cam.x+VIEWW+40||g.y<cam.y-40||g.y>cam.y+VIEWH+40)continue;
+  const part=grassLean(g);
+  const breeze=calm?0:Math.sin(elapsed*1.65+g.phase)*2;
+  cx.save();cx.strokeStyle=i%3===0?'#a1c69a':'#568d66';cx.lineWidth=2;cx.lineCap='round';
+  for(let k=-1;k<=1;k++){
+   cx.beginPath();cx.moveTo(g.x+k*4,g.y+2);
+   cx.quadraticCurveTo(g.x+k*4+part*.5+breeze*.5,g.y-g.size*.6,
+    g.x+k*6+part+breeze,g.y-g.size);
+   cx.stroke();
+  }
+  cx.restore();
+ }
+}
+function drawCherryGarden(){
+ const calm=matchMedia('(prefers-reduced-motion: reduce)').matches;
+ for(const t of cherryTrees){
+  if(t.x<cam.x-130||t.x>cam.x+VIEWW+130||t.y<cam.y-200||t.y>cam.y+VIEWH+100)continue;
+  const w=144*t.scale,h=190*t.scale;
+  if(treeArt.complete&&treeArt.naturalWidth)cx.drawImage(treeArt,t.x-w/2,t.y-h,w,h);
+  else{line(t.x,t.y-20,t.x,t.y-95,'#866159',11*t.scale);
+   circle(t.x,t.y-115,43*t.scale,'#edb5c7');circle(t.x-23,t.y-106,22*t.scale,'#f6d1dd')}
+  if(calm)continue;
+  for(let i=0;i<(liteFx?3:9);i++){
+   const seed=t.phase+i*2.399;
+   const progress=(elapsed*(.12+(i%3)*.017)+seed/TAU)%1;
+   const x=t.x+Math.sin(seed)*42+progress*36+Math.sin(elapsed+seed)*8;
+   const y=t.y-150*t.scale+progress*142*t.scale;
+   cx.save();cx.translate(x,y);cx.rotate(elapsed*1.6+seed);
+   cx.fillStyle=i%3===0?'#ffeded':'#f5b4ca';cx.globalAlpha=.75;
+   cx.beginPath();cx.ellipse(0,0,4.3,2.6,Math.PI/4,0,TAU);cx.fill();cx.restore();
+  }
+ }
+}
 const scenery=(()=>{let seed=9145;const r=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};return Array.from({length:450},()=>({x:r()*WIDTH,y:r()*HEIGHT,t:r(),s:10+r()*24}))})();
 const SCENE_ART={"clue1":"assets/scene-clue1.webp","clue2":"assets/scene-clue2.webp","clue3":"assets/scene-clue3.webp","intro":"assets/scene-intro.webp","phase2":"assets/scene-phase2.webp","phase3":"assets/scene-phase2.webp","victory":"assets/scene-victory.webp","defeat":"assets/scene-defeat.webp","bushEgg":"assets/scene-clue1.webp"};
 // Decode art before revealing the overlay: avoid one-frame stale backgrounds.
@@ -65,6 +148,15 @@ function presentSceneArt(kind,token){
 }
 // Never generate alternate faces for the pets: scene portraits reuse the actual
 // character-select images (and Tolly's existing portrait) for a consistent cast.
+// Tolly's names are character-specific, not generic labels.
+const TOLLY_NICKNAMES={
+ rosie:'Rosie the Dog',millie:'Silly Millie',
+ ellie:'Ellie Bellie',winnifred:'Princess Winnifred, floof of her name'
+};
+const ROSIE_THEME=[
+ ['rosie',"She's the rosiest of rosies, the tosiest of tosies..."],
+ ['daan',"The nosiest of nosies... IT'S ROSIE THE DOOOOOOG!"]
+];
 const EXTRA_BANTER={
  laser:[['winnifred','Pew. Pew. Pew.'],['rosie','AAAH! I HAVE BEEN SHOT!'],['millie','AAAAAH! ROSIE HAS BEEN SHOT!'],['ellie','Guys. She clearly meant the laser.'],['rosie','...Oh.'],['millie','...Oh. WAIT. IT MOVED! AAAAH!'],['winnifred','A pawsitively catastrophic misunderstanding.']],
  daan:[['tolly','DAAN! I REQUIRE REINFORCEMENTS!'],['millie','BALL?'],['ellie','That is not a ball, Millie.'],['millie','IT MOVED! AAAAAAH!'],['rosie','I will protect us! ...After the banana.'],['ellie','Guys! That is a terrible idea. WAIT FOR ME!']],
@@ -89,7 +181,12 @@ const CLUE_SCENES=[
 function renderSceneLines(kind){
  const host=$('scene-dialogues');host.replaceChildren();host.dataset.beat='0';
  const lines=[...(SCENE_LINES[kind]||[])];
- if(kind==='phase3'&&difficulty==='extreme'){lines.push(['daan','I have Tolly’s back! Dodge the boulder and watch the green healing beam!']);lines.push(...EXTRA_BANTER.daan)}
+ if(kind==='intro'){
+   const ids=[...new Set(players.map(p=>p.id))];
+   for(const id of ids)lines.push(['tolly',TOLLY_NICKNAMES[id]+'! You are NOT getting into this fridge!']);
+ }
+
+ if(kind==='phase3'&&difficulty==='extreme'){lines.push(['daan','I have Tolly’s back! Dodge the boulder and watch the green healing beam!']);lines.push(...EXTRA_BANTER.daan);lines.push(...ROSIE_THEME)}
  // Character-specific ending callbacks, always with the established portraits.
  if(kind==='victory'||kind==='defeat'){
   const lead=players[0],replies={rosie:'Can we discuss the banana situation on the way to the party?',
@@ -428,7 +525,7 @@ function spawnDuo(){
    hp,maxHp:hp,speed:conf.speed*(difficulty==='story'?1:1.10),
    damage:Math.round(conf.damage*(difficulty==='story'?1:1.16)),
    size:conf.size+8,attack:1.2,kind,elite:true,age:0,
-   telegraph:0,charge:-1,trailTimer:0,slow:0,volleyWarmup:0,volleyCooldown:difficulty==='extreme'?1.6:i===0?3.2:4.8,volleyShots:0,volleyShotClock:0,volleyShotIndex:0});
+   telegraph:0,charge:-1,trailTimer:0,slow:0,volleyWarmup:0,volleyCooldown:difficulty==='extreme'?(i===0?rnd(.7,1.3):rnd(1.65,2.4)):(i===0?3.2:4.8),volleyShots:0,volleyShotClock:0,volleyShotIndex:0});
  }
  say('⚠ BOINK & BOCHT! Defeat the terrible twosome to reveal the last clue!',4);
  playSfx('boink');
@@ -445,7 +542,7 @@ function continueScene(){
  $('scene-dialogues').hidden=true;
  $('pause').disabled=false;$('pause').textContent='Ⅱ PAWS';
  if(kind==='intro'){
-   bossBushVisits=0;bossBushOccupied=false;winston=null;winstonForcedReveal=0;
+   bossBushVisits=0;bossBushOccupied=false;winston=null;winstonForcedReveal=0;bossNicknameClock=8;bossNicknameIndex=0;
    const hp=(players.length===2?2040:1450)*(difficulty==='story'?.67:difficulty==='extreme'?EXTREME.bossHp:1);
    boss={x:fridge.x+45,y:fridge.y-80,hp,maxHp:hp,size:49,speed:difficulty==='story'?96:difficulty==='extreme'?137*EXTREME.bossSpeed:145,attack:1.1,hitFlash:0,rage:false};
    hazards=[];foes=foes.slice(-5);bossPhase=1;coneWarned=false;coneCooldown=6.6;coneWindup=0;bossPulseCooldown=1.65;bossPulseWindup=0;bananaWindup=0;daanActive=false;daanPulse=4;daanActionTimer=0;daanHealCooldown=0;daanHealWindup=0;daanHealsRemaining=0;daanHealFlash=0;
@@ -460,7 +557,7 @@ function continueScene(){
    bossPhase=3;boss.rage=true;playSfx('phase');
    players.filter(p=>p.alive).forEach(p=>p.inv=Math.max(p.inv,1.6));
    coneCooldown=2;bossPulseCooldown=1.2;
-   if(difficulty==='extreme'){daanActive=true;daanPulse=3;daanActionTimer=.7;daanHealCooldown=7;daanHealWindup=0;daanHealsRemaining=2;daanHealFlash=0;say('⚠ DAAN ARRIVES! WATCH THE BOULDER AND GREEN HEAL!',4)}
+   if(difficulty==='extreme'){daanActive=true;daanPulse=3;daanActionTimer=.7;daanHealCooldown=7;daanHealWindup=0;daanHealsRemaining=2;daanHealFlash=0;bubble('daan',"IT'S ROSIE THE DOOOOOG!",4);say('⚠ DAAN ARRIVES! WATCH THE BOULDER AND GREEN HEAL!',4)}
    else say('⚠ FINAL FRIDGE FRENZY!',4);
  }else if(kind==='clue2'){
    players.filter(p=>p.alive).forEach(p=>p.inv=Math.max(p.inv,1.2));
@@ -484,17 +581,18 @@ const ambientBanter=[
  'MILLIE: Did someone say throw? ...AAAAAH, IT MOVED!'
 ];
 function say(t,duration=3){$('game-message').textContent=t;messageClock=duration}
-function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5,spriteFacing:'down',spriteMoving:false,spriteAttackAt:-1,perkGlow:0,perkRarity:'',hidden:false,bushTime:0,bushId:-1}}
+function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5,spriteFacing:'down',spriteMoving:false,spriteAttackAt:-1,perkGlow:0,perkRarity:'',hidden:false,bushTime:0,bushId:-1,ambushReady:0}}
 function start(){
  ++scenePresentationToken;perkOffer=null;perksAwarded=0;$('perk-panel').hidden=true;
  $('scene-control-help').hidden=true;$('ending-invite').hidden=true;cancelAnimationFrame(raf);
- bushEggSeen=false;bossBushVisits=0;bossBushOccupied=false;winston=null;winstonForcedReveal=0;pairBanterClock=12;worldBubbles=[];
+ bushEggSeen=false;bossBushVisits=0;bossBushOccupied=false;winston=null;winstonForcedReveal=0;pairBanterClock=12;worldBubbles=[];bossNicknameClock=13;bossNicknameIndex=0;
  joystickAxes.forEach(a=>{a.x=0;a.y=0});document.querySelectorAll('.joystick-knob').forEach(k=>k.style.transform='translate(0px,0px)');
  players=[player(selected[0],0)];if($('coop').checked)players.push(player(selected[1],1));
  const startHealth=DIFFICULTY_BALANCE[$('difficulty').value].startingHealth;
  players.forEach(p=>{p.maxHp=Math.round(p.maxHp*startHealth);p.hp=p.maxHp;});
  foes=[];shots=[];drops=[];fx=[];hazards=[];beams=[];difficulty=$('difficulty').value;gate=null;gateCleared=[false,false,false];scentStep=0;duoActive=false;duoDefeated=false;laserUnlocked=false;coneCooldown=6.8;coneWindup=0;bossPulseCooldown=4;bossPulseWindup=0;bananaWindup=0;daanActive=false;daanPulse=0;daanActionTimer=0;daanHealCooldown=0;daanHealWindup=0;daanHealsRemaining=0;daanHealFlash=0;laserChallenge={index:0,timer:0,zapCooldown:0};phase='explore';paused=false;boss=null;cutsceneNext=null;sceneName=null;musicStep=0;musicMode='idle';musicBar=0;musicNextBarAt=0;
  elapsed=0;score=0;kills=0;level=1;xp=0;goal=35;clues=0;fridgeVisible=false;
+ generateGarden();
  spawnClock=.55;surgeClock=33;attackClock=0;hudClock=0;keys.clear();ensureAudio();
  $('scene-skip').hidden=true;$('share-result').classList.remove('show');$('mission-unlock').classList.remove('show');$('scene-dialogues').hidden=true;$('share-status').textContent='';$('overlay').classList.remove('cinematic');$('overlay').classList.add('hidden');$('pause').disabled=false;$('pause').textContent='Ⅱ PAWS';
  $('paws-panel').hidden=true;$('bossbar').classList.remove('show');$('boss-card').classList.remove('show');$('overlay-art').classList.remove('show');$('scene-dialogues').hidden=true;$('overlay-kicker').textContent='ARCADE MODE';
@@ -575,6 +673,13 @@ function processLevelUps(){
 }
 function damage(enemy,amount,p){
  if(phase==='ended'||phase==='cutscene'||enemy.hp<=0)return;
+ // The first ordinary mob hit after leaving cover is a double-damage crit.
+ // Tolly and elite minibosses are immune; Rosie keeps her 50% pierce.
+ if(p?.ambushReady>0&&enemy!==boss&&!enemy.elite){
+  amount*=2;p.ambushReady=0;
+  emit('SURPRISE CRIT ×2!',enemy.x,enemy.y-44,'#ffeca0');
+  playSfx('special');
+ }
  enemy.hp-=amount;
  if(enemy===boss){boss.hitFlash=.19;
    if(!boss.rage&&boss.hp>0&&boss.hp<=boss.maxHp*.33&&coneWarned){
@@ -627,8 +732,6 @@ function movePlayers(dt){
   }
   p.perkGlow=Math.max(0,(p.perkGlow||0)-dt);p.inv=Math.max(0,p.inv-dt);p.dash=Math.max(0,p.dash-dt);
   p.dashCooldown=Math.max(0,p.dashCooldown-dt);
-  p.cool-=dt;if(p.cool<=0){fire(p);p.cool=p.rate}
-  p.laserCooldown-=dt;if(laserUnlocked&&p.laserCooldown<=0){laserAttack(p);p.laserCooldown=5.3}
   for(let i=drops.length-1;i>=0;i--){let d=drops[i];if(dist(p,d)<29){
     if(d.kind==='xp'){gainXP(12);score+=5;emit('+XP',p.x,p.y,'#a9f4d1')}
     else{p.hp=Math.min(p.maxHp,p.hp+21);emit('+21 HP',p.x,p.y,'#a9ffc9');playSfx('heal')}
@@ -644,7 +747,7 @@ function laserAttack(p){
  const target=nearest(p,pool,310);if(!target)return;
  const angle=Math.atan2(target.y-p.y,target.x-p.x);
  const x2=p.x+Math.cos(angle)*335,y2=p.y+Math.sin(angle)*335;
- beams.push({x1:p.x,y1:p.y,x2,y2,t:.28});
+ beams.push({x1:p.x,y1:p.y,x2,y2,t:.28,owner:p.num});
  let hits=0;
  for(const e of pool){
   const projection=(e.x-p.x)*Math.cos(angle)+(e.y-p.y)*Math.sin(angle);
@@ -720,14 +823,18 @@ function advanceProjectiles(dt){
   if(phase==='cutscene'||phase==='ended')break;
  }
 }
-// Impossible 10/10: the two elites spawn and wind up simultaneously.
-// Red flashing warning for .5 s, then 12 rapid rounds at .085 s intervals.
-// Boink uses + cardinal axes; Bocht rotates the same burst to X diagonals.
-// Cooldown only begins when the final banana has been fired.
+// Independent elite mini-boss attacks: both enter the arena together, but
+// their red warning timers, burst cadence, and next-attack draws are separate.
+// Natural partial overlaps are possible; synchronization is never forced.
+function nextDuoCooldown(kind){
+ const recovery=kind==='boink'?1.1:1.7;
+ return recovery+rnd(1,4); // draw only AFTER the current burst has ended
+}
 function updateDuoVolley(e,dt){
  if(difficulty!=='extreme'||!duoActive||!e.elite||!['boink','bocht'].includes(e.kind))return;
  if(e.volleyShots>0){
   e.volleyShotClock-=dt;
+  const interval=e.kind==='boink'?.07:.115;
   while(e.volleyShotClock<=0&&e.volleyShots>0){
    const offset=e.kind==='bocht'?Math.PI/4:0;
    const n=e.volleyShotIndex++,angle=offset+(n%4)*Math.PI/2;
@@ -735,10 +842,10 @@ function updateDuoVolley(e,dt){
     vx:Math.cos(angle)*255,vy:Math.sin(angle)*255,
     damage:8,size:18,ttl:2.15});
    e.volleyShots--;
-   e.volleyShotClock+=.085;
+   e.volleyShotClock+=interval;
    if(n%4===0){emit('PEW!',e.x,e.y-49,'#ffe1a0');playSfx('laser')}
   }
-  if(e.volleyShots===0){e.volleyCooldown=2.0;e.volleyShotClock=0}
+  if(e.volleyShots===0){e.volleyCooldown=nextDuoCooldown(e.kind);e.volleyShotClock=0}
   return;
  }
  if(e.volleyWarmup>0){
@@ -753,7 +860,7 @@ function updateDuoVolley(e,dt){
  if(e.volleyCooldown<=0){
   e.volleyWarmup=.5;e.volleyCooldown=0;
   emit('⚠ '+(e.kind==='boink'?'+':'X')+' RED WARNING!',e.x,e.y-48,'#ff7c81');
-  say('⚠ BOINK + BOCHT: RED WARNING! MACHINE-GUN BANANAS!',1.4);
+  say('⚠ '+e.kind.toUpperCase()+': RED WARNING! MACHINE-GUN BANANAS!',1.4);
  }
 }
 const PAIR_BANTER={
@@ -779,9 +886,16 @@ function updateBushes(dt){
  const reveal=winstonForcedReveal>0;winstonForcedReveal=Math.max(0,winstonForcedReveal-dt);
  for(const p of players){
   if(!p.alive){p.hidden=false;p.bushTime=0;p.bushId=-1;continue}
+  const wasHidden=p.hidden,oldDuration=p.bushTime;
   p.bushId=bushes.findIndex(b=>dist(p,b)<51);
   p.hidden=p.bushId>=0&&!reveal;
   p.bushTime=p.hidden?p.bushTime+dt:0;
+  if(p.hidden)p.ambushReady=0;
+  else if(wasHidden&&!reveal&&oldDuration>=.3){
+   p.ambushReady=2.1;
+   p.cool=Math.min(0,p.cool);
+   emit('⚔ AMBUSH READY!',p.x,p.y-39,'#f8eda8');
+  }else p.ambushReady=Math.max(0,(p.ambushReady||0)-dt);
   if(p.hidden&&p.bushTime>=30&&!bushEggSeen&&phase==='explore'){
    bushEggSeen=true;
    showScene('bushEgg','THE THIRTY-SECOND BUSH CONVENTION',
@@ -819,9 +933,22 @@ function updateBushes(dt){
   boss.attack=Math.max(.8,boss.attack);
  }
 }
+function updateBossNicknames(dt){
+ if(phase!=='boss'||!boss||boss.hp<=0||winston&&!winston.complete)return;
+ bossNicknameClock-=dt;
+ if(bossNicknameClock>0)return;
+ const live=players.filter(p=>p.alive&&!p.hidden);
+ if(live.length){
+  const p=live[bossNicknameIndex%live.length];
+  bubble('tolly',TOLLY_NICKNAMES[p.id]+'! Keep away from my snacks!',3.6);
+  bossNicknameIndex++;
+ }
+ bossNicknameClock=15;
+}
 function drawWorldBubbles(){
  for(const b of worldBubbles){
-  const p=b.speaker==='tolly'?boss:players.find(p=>p.id===b.speaker&&p.alive)
+  const p=b.speaker==='tolly'?boss:b.speaker==='daan'&&boss?{x:boss.x+140,y:boss.y+30}
+  :players.find(p=>p.id===b.speaker&&p.alive)
    ||bushes.find((b,i)=>players.some(q=>q.bushId===i));
   if(!p)continue;
   const x=p.x,y=p.y-(b.speaker==='tolly'?152:82);
@@ -832,6 +959,28 @@ function drawWorldBubbles(){
   cx.lineWidth=3;cx.strokeRect(x-w/2,y-31,w,45);
   txt(line,x,y-4,Math.min(17,490/line.length),'center','#fff4d5');cx.restore();
  }
+}
+function updateAutoAttacks(dt){
+ for(const p of players){
+  if(!p.alive||p.hidden)continue;
+  p.cool-=dt;if(p.cool<=0){fire(p);p.cool=p.rate}
+  p.laserCooldown-=dt;
+  if(laserUnlocked&&p.laserCooldown<=0){laserAttack(p);p.laserCooldown=5.3}
+ }
+}
+function knockOutOfBush(p,h,bush){
+ const impact=Math.max(1,Math.ceil(h.damage*.25)); // bush soaks 75%
+ p.hp=Math.max(0,p.hp-impact);p.inv=.9;p.hidden=false;
+ p.bushTime=0;p.bushId=-1;p.ambushReady=0;
+ const speed=Math.hypot(h.vx||0,h.vy||0);
+ const dx=speed>0?h.vx/speed:1,dy=speed>0?h.vy/speed:0;
+ p.x=clamp(bush.x+dx*88,24,WIDTH-24);
+ p.y=clamp(bush.y+dy*88,24,HEIGHT-24);
+ emit('OW! -'+impact+' · BUSH BLOCK!',p.x,p.y-32,'#fff0a1');
+ bubble(p.id,'OW! THE BUSH TOOK MOST OF IT!',2.4);
+ playSfx('boink');
+ if(p.hp===0){p.alive=false;p.reviveProgress=0}
+ return impact;
 }
 function update(dt){
  if(phase==='ended'||phase==='cutscene'||phase==='upgrade')return;
@@ -847,7 +996,13 @@ function update(dt){
  movePlayers(dt);
  updateBushes(dt);
  if(phase==='ended'||phase==='cutscene')return;
+ // Entering cover cancels projectiles and lingering visual beams already
+ // launched: hiding cannot be used to keep dealing off-screen damage.
+ shots=shots.filter(s=>!players[s.owner]?.hidden);
+ beams=beams.filter(b=>!players[b.owner]?.hidden);
+ updateAutoAttacks(dt);
  updatePairBanter(dt);
+ updateBossNicknames(dt);
  worldBubbles.forEach(b=>b.ttl-=dt);worldBubbles=worldBubbles.filter(b=>b.ttl>0);
  updateRevives(dt);
  updateEllieAuras(dt);
@@ -869,6 +1024,9 @@ function update(dt){
  for(const beam of beams)beam.t-=dt;beams=beams.filter(b=>b.t>0);
  foes=foes.filter(e=>e.hp>0);
  for(const e of foes){
+    // These independent volleys continue even when players are concealed:
+    // stray bananas can still disturb a bush.
+    updateDuoVolley(e,dt);
     const p=nearest(e,players,Infinity);
     if(!p){
      e.searchTime=(e.searchTime||0)+dt;e.searching=true;
@@ -893,7 +1051,6 @@ function update(dt){
        }
       }
     }
-    updateDuoVolley(e,dt);
     e.age=(e.age||0)+dt;e.slow=Math.max(0,(e.slow||0)-dt);
     const baseAngle=Math.atan2(p.y-e.y,p.x-e.x),d=dist(e,p);
     const pace=e.slow>0?.62:1;
@@ -1119,6 +1276,10 @@ function update(dt){
     if(h.ttl<=0){hazards.splice(i,1);continue}
     let struck=false;
     for(const p of players){
+      const bush=p.hidden&&p.bushId>=0?bushes[p.bushId]:null;
+      const foliageHit=p.alive&&p.inv<=0&&bush&&h.kind==='duo-banana'&&
+       ['boink','bocht'].includes(h.source)&&dist(h,bush)<45;
+      if(foliageHit){knockOutOfBush(p,h,bush);struck=true;break}
       if(p.alive&&!p.hidden&&p.inv<=0&&dist(h,p)<(h.size||30)){
         if(h.kind==='goop'){p.slowTime=Math.max(p.slowTime||0,1.3);struck=false;break;}
         p.hp=Math.max(0,p.hp-h.damage);p.inv=.55;
@@ -1235,7 +1396,9 @@ cx.strokeStyle='#b6ab90';cx.lineWidth=95;cx.lineCap='round';cx.beginPath();cx.mo
 // water bridge
 rect(360,900,230,55,'#8e4d4e');for(let i=0;i<6;i++)rect(373+i*39,900,12,55,'#d28b71');line(365,885,585,885,'#7d4247',10);
 for(const [ix,ob] of scenery.entries()){if(liteFx&&ix%3!==0)continue;if(ob.x<cam.x-80||ob.x>cam.x+VIEWW+80||ob.y<cam.y-80||ob.y>cam.y+VIEWH+80)continue;if(ob.t<.40){circle(ob.x,ob.y,ob.s,'#315c4c');circle(ob.x+9,ob.y-9,ob.s*.78,ob.t<.20?'#e9a4b5':'#e3c0be');circle(ob.x-12,ob.y-5,ob.s*.63,'#f7c1c6')}else if(ob.t<.68){circle(ob.x,ob.y,ob.s*.4,'#e8d99e');circle(ob.x+10,ob.y+6,ob.s*.23,'#edd5a5')}else{circle(ob.x,ob.y,ob.s*.35,'#527d5b');circle(ob.x-9,ob.y,ob.s*.35,'#4d7559')}}
+drawGrassMovement();
 drawQuestDressing();
+drawCherryGarden();
 // Hideable sakura hedges in world space, never changing character assets.
 for(const b of bushes){
  if(b.x<cam.x-100||b.x>cam.x+VIEWW+100||b.y<cam.y-100||b.y>cam.y+VIEWH+100)continue;
@@ -1536,7 +1699,7 @@ $('start').addEventListener('click',start);$('overlay-start').addEventListener('
 });$('restart').addEventListener('click',start);$('pause').addEventListener('click',togglePause);$('mute').addEventListener('click',()=>{audioEnabled=!audioEnabled; if(audioCtx){audioEnabled?audioCtx.resume():audioCtx.suspend()} $('mute').textContent=audioEnabled?'🔊 MUSIC + SFX':'🔇 SOUND OFF'; if(audioEnabled) ensureAudio();});
 function tryDash(id){
  if(!['boss','explore'].includes(phase)||paused)return;
- const p=players[id];if(!p||!p.alive||p.hidden||p.dashCooldown>0)return;
+ const p=players[id];if(!p||!p.alive||p.hidden||bushes.some(b=>dist(p,b)<51)||p.dashCooldown>0)return;
  emit('DASH!',p.x,p.y-55,'#aaf5ff');p.dash=.18;p.dashCooldown=p.id==='ellie'?2.2:3.4;p.inv=Math.max(p.inv,.18);playSfx('dash');
 }
 // Device rotation is an opt-in enhancement. iOS/browser privacy restrictions can
