@@ -8,6 +8,7 @@ html=game_as_single_html()
 hook='''window.__rosieTest={
  start(){start();cancelAnimationFrame(raf);players.forEach(p=>p.inv=9999);spawnClock=9999;surgeClock=9999;return this.state()},
  place(i){players[0].x=clueSpots[i].x;players[0].y=clueSpots[i].y;update(.016);return this.state()},
+ track(){for(const spot of scentTrail){players[0].x=spot.x;players[0].y=spot.y;update(.016)}return this.state()},
  step(){update(.016);return this.state()},
  clearGuards(){for(let n=0;n<4&&gate;n++){
   foes.filter(e=>e.guardian&&e.hp>0).forEach(e=>e.hp=0);
@@ -66,13 +67,11 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge'):
     page.locator('#pause').click()
     assert page.locator('#paws-panel').is_hidden()
     assert s['phase']=='explore' and s['mode']==mode
-    s=page.evaluate('window.__rosieTest.place(0)')
-    assert s['phase']=='explore' and s['clues']==0 and s['guardWave']==0 and s['guardians']==(2 if mode=='story' else 3), s
-    # Running to a later scroll cannot bypass the current ward.
     skipped=page.evaluate('window.__rosieTest.place(1)')
-    assert skipped['clues']==0 and skipped['guardWave']==0
-    page.evaluate('window.__rosieTest.place(0)')
-    s=page.evaluate('window.__rosieTest.clearGuards()')
+    assert skipped['clues']==0
+    s=page.evaluate('window.__rosieTest.track()')
+    assert s['cleared'][0] and s['clues']==0
+    s=page.evaluate('window.__rosieTest.place(0)')
     assert s['phase']=='cutscene' and s['clues']==1 and s['cleared'][0], s
     assert s['sceneName']=='clue1' and s['imgSrc'].startswith('data:image/webp'),s
     assert len(s['dialogueImages'])==3,s
