@@ -243,6 +243,38 @@ const battleScores={
   intervals:[[0,3,7],[0,4,7],[0,3,7],[0,4,7]],
   motif:[[0,74,.75],[1,81,.75],[2,77,.43],[2.75,86,.4],[3.25,81,.65]]}
 };
+// Richer, original handheld-RPG-inspired boss sound. Lightweight WebAudio:
+// pitched drums, string ostinato, brass fanfares and shimmer (no sampled songs).
+function battleDrum(at,kind,loud=.035){
+ const ctx=audioCtx;if(!audioEnabled||!ctx)return;
+ const on=Math.max(at,ctx.currentTime+.003),osc=ctx.createOscillator(),env=ctx.createGain();
+ const kick=kind==='kick',hihat=kind==='hat';
+ osc.type=kick?'sine':hihat?'square':'triangle';
+ const freq=kick?155:hihat?2200:210;
+ osc.frequency.setValueAtTime(freq,on);
+ osc.frequency.exponentialRampToValueAtTime(kick?54:hihat?850:95,on+(kick?.18:.09));
+ env.gain.setValueAtTime(.0001,on);
+ env.gain.linearRampToValueAtTime(loud,on+.004);
+ env.gain.exponentialRampToValueAtTime(.0001,on+(kick?.21:hihat?.045:.11));
+ if(hihat){const lp=ctx.createBiquadFilter();lp.type='highpass';lp.frequency.value=850;osc.connect(lp);lp.connect(env)}
+ else osc.connect(env);
+ env.connect(ctx.destination);osc.start(on);osc.stop(on+(kick?.24:.14));
+}
+function battleString(pitch,at,dur,volume=.008){
+ const ctx=audioCtx;if(!audioEnabled||!ctx)return;
+ const on=Math.max(at,ctx.currentTime+.003),end=on+dur;
+ const env=ctx.createGain(),filter=ctx.createBiquadFilter();
+ filter.type='lowpass';filter.frequency.setValueAtTime(1100,on);
+ env.gain.setValueAtTime(.0001,on);env.gain.linearRampToValueAtTime(volume,on+.14);
+ env.gain.setValueAtTime(volume,Math.max(on+.14,end-.21));
+ env.gain.exponentialRampToValueAtTime(.0001,end);
+ filter.connect(env).connect(ctx.destination);
+ for(const detune of [-7,7]){
+  const osc=ctx.createOscillator();osc.type='sawtooth';
+  osc.frequency.setValueAtTime(noteHz(pitch),on);osc.detune.value=detune;
+  osc.connect(filter);osc.start(on);osc.stop(end+.02);
+ }
+}
 function currentMusic(){
  if(phase==='cutscene'||phase==='upgrade')return 'story';
  if(phase==='boss')return bossPhase>=3?'boss3':bossPhase===2?'boss2':'boss1';
@@ -263,15 +295,28 @@ function scheduleMusicBar(mode,index,startAt){
    const variation=index%4===2?-2:index%4===3?2:0;
    musicVoice(pitch+variation,startAt+beat*beatAt,beat*duration,mode==='boss3'?'brass':'pluck',mode==='boss3'?.026:.024);
   }
-  // Orchestral finale: slow layered string/brass chords and a high response.
-  if(mode==='boss3'||mode==='boss2'){
-   for(const pitch of notes)musicVoice(pitch,startAt,beat*3.65,
-     mode==='boss3'?'strings':'flute',mode==='boss3'?.009:.006);
-   if(index%2===1)musicVoice(root+36,startAt+beat*2.5,beat*1.1,'brass',.017);
-  }else if(mode==='boss1'&&index%2===0){
-   musicVoice(root+31,startAt+beat*2.5,beat*.8,'bell',.012);
+  // Drums create the tension/energy missing from the earlier gentle waltz.
+  const intensity=mode==='boss3'?1.25:mode==='boss2'?1.05:mode==='boss1'?.90:.60;
+  for(let j=0;j<4;j++){
+   battleDrum(startAt+beat*j,j%2===0?'kick':'snare',.038*intensity);
+   if(mode!=='duo'||j%2===0)battleDrum(startAt+beat*(j+.5),'hat',.005*intensity);
   }
-  if(mode==='duo')musicVoice(root+19,startAt+beat*2.5,beat*.35,'bell',.011);
+  if(mode==='boss3'){
+   // A legendary three-layer battle: heroic brass answers, strings sustain,
+   // ascending 8th-note ostinato. All phrases original to this game.
+   for(const pitch of notes)battleString(pitch,startAt,beat*3.85,.0065);
+   for(let j=0;j<8;j++)musicVoice(root+24+[0,7,12,7,3,7,12,15][j],
+     startAt+beat*j*.5,beat*.43,'pluck',.012);
+   musicVoice(root+31,startAt+beat*1.5,beat*1.15,'brass',.022);
+   if(index%2===1)musicVoice(root+36,startAt+beat*2.5,beat*1.1,'brass',.019);
+  }else if(mode==='boss2'){
+   for(const pitch of notes)battleString(pitch,startAt,beat*3.6,.004);
+   if(index%2===1)musicVoice(root+31,startAt+beat*2.5,beat*1.1,'brass',.012);
+  }else if(mode==='boss1'){
+   for(let j=0;j<8;j++)musicVoice(root+24+[0,3,7,12][j%4],
+     startAt+beat*.5*j,beat*.36,'pluck',.010);
+   if(index%2===0)musicVoice(root+31,startAt+beat*2.5,beat*.8,'brass',.014);
+  }else musicVoice(root+19,startAt+beat*2.5,beat*.35,'bell',.012);
   return beat*4;
  }
  const chord=gardenChords[index],melody=gardenMelody[index];
@@ -290,6 +335,9 @@ function tickMusic(){
  const mode=currentMusic(),now=audioCtx.currentTime;
  if(mode!==musicMode){
    musicMode=mode;musicBar=0;musicNextBarAt=now+.06;
+    const labels={garden:'SAKURA GARDEN',duo:'BOINK & BOCHT · TROUBLE',boss1:'TOLLY · FIRST ENCOUNTER',
+      boss2:'TOLLY · CONE OF SHAME',boss3:'LEGENDARY FRIDGE · FINAL DEFENCE',story:'STORYBOOK INTERLUDE'};
+    const status=$('music-status');if(status)status.textContent='♫ '+(labels[mode]||'ARCADE');
  }
  // Avoid a burst of catch-up notes on tab resume or after switching tabs.
  if(musicNextBarAt<now-.18)musicNextBarAt=now+.05;
