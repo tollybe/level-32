@@ -102,3 +102,14 @@ Historical checks above concerning **three guardian waves at each clue** no long
 - [ ] Existing five immutable portraits exactly preserved and no Day 5 sprites.
 - [ ] Win/lose/skip/during play birthday invitation links still work.
 - [ ] CI Chromium smoke suite passes and in-person owner review signs off.
+
+
+## Day 5 — Chibi Renaissance, Phase 5A (foundation only)
+
+- [x] Opt-in rendering flag defaults OFF; no invented sprite/portrait assets ship.
+- [x] Preview uses strict 64/96-pixel sheets, cardinal directions, original physics anchors, and unmodified canonical portrait fallback.
+- [ ] CI green: JavaScript syntax, standalone exporter, and synthetic-browser sprite frame/facing/flag checks.
+- [ ] Owner-approved faithful pet/Tolly sheets; Daan's real artwork still required.
+- [ ] Physical-device review and owner acceptance of Day 4.8 and of rendered artwork before general activation.
+- [ ] Verify sprite sheet exports, loading and failed-asset fallback with real approved files.
+- [ ] Re-check all birthday CTA/window/calendar links and canonical portrait hashes at final merge/release.
