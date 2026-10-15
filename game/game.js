@@ -1028,7 +1028,7 @@ function update(dt){
     if(bossPulseWindup>0){
       bossPulseWindup-=dt;
       if(bossPulseWindup<=0){
-        for(const q of players.filter(p=>p.alive&&dist(p,boss)<150)){
+        for(const q of players.filter(p=>p.alive&&!p.hidden&&dist(p,boss)<150)){
           const a=Math.atan2(q.y-boss.y,q.x-boss.x);
           q.x=clamp(q.x+Math.cos(a)*110,24,WIDTH-24);q.y=clamp(q.y+Math.sin(a)*110,24,HEIGHT-24);
           if(q.inv<=0){const amount=Math.round((q.id==='winnifred'?18:bossPhase===2?29:23)*(difficulty==='story'?.7:1));
@@ -1038,7 +1038,7 @@ function update(dt){
         }
         playSfx('cone');
       }
-    }else if(bossPulseCooldown<=0&&players.some(p=>p.alive&&dist(p,boss)<210)){
+    }else if(bossPulseCooldown<=0&&players.some(p=>p.alive&&!p.hidden&&dist(p,boss)<210)){
       bossPulseWindup=.9;bossPulseCooldown=boss.rage?2.05:bossPhase===2?2.8:3.6;
       say('⚠ TOLLY: NO CAMPING ON THE FRIDGE! MOVE OUT OF THE GOLD RING!',2.2);
     }
@@ -1050,7 +1050,7 @@ function update(dt){
          coneWindup-=dt;
          if(coneWindup<=0){
            for(const q of players){
-             if(!q.alive||q.inv>0||dist(q,boss)>275)continue;
+             if(!q.alive||q.hidden||q.inv>0||dist(q,boss)>275)continue;
              const direction=Math.atan2(q.y-boss.y,q.x-boss.x);
              const diff=Math.atan2(Math.sin(direction-coneAngle),Math.cos(direction-coneAngle));
              if(Math.abs(diff)<.65){q.hp=Math.max(0,q.hp-24);q.inv=.95;emit('CONE SWEEP -24',q.x,q.y-36,'#ffbeca');if(q.hp===0)q.alive=false;}
@@ -1080,7 +1080,7 @@ function update(dt){
             vx:Math.cos(dir)*speed,vy:Math.sin(dir)*speed,ttl:3.3,damage:Math.ceil((frenzy?20:17)*(difficulty==='story'?.72:1))});
        }
        for(const q of players){
-         if(q.alive&&dist(q,boss)<110&&q.inv<=0){
+         if(q.alive&&!q.hidden&&dist(q,boss)<110&&q.inv<=0){
            q.hp=Math.max(0,q.hp-Math.ceil((frenzy?25:19)*(difficulty==='story'?.7:1)));q.inv=.56;
            emit('BANANA BLAST',q.x,q.y-18,'#ffe8a0');
            if(q.hp===0)q.alive=false; else playSfx('special');
@@ -1104,7 +1104,7 @@ function update(dt){
      if(daanHazard.ttl<=0){
        hazards.push({kind:'daan-impact',x:daanHazard.x,y:daanHazard.y,ttl:.38,size:daanHazard.size});
        playSfx('cone');
-       for(const p of players.filter(p=>p.alive&&dist(p,daanHazard)<daanHazard.size)){
+       for(const p of players.filter(p=>p.alive&&!p.hidden&&dist(p,daanHazard)<daanHazard.size)){
          if(p.inv<=0){p.hp=Math.max(0,p.hp-24);p.inv=.8;if(p.hp===0)p.alive=false;emit('DAAN SHOCKWAVE -24',p.x,p.y-26,'#ffe3ab')}
        }
        hazards.splice(i,1);
@@ -1119,7 +1119,7 @@ function update(dt){
     if(h.ttl<=0){hazards.splice(i,1);continue}
     let struck=false;
     for(const p of players){
-      if(p.alive&&p.inv<=0&&dist(h,p)<(h.size||30)){
+      if(p.alive&&!p.hidden&&p.inv<=0&&dist(h,p)<(h.size||30)){
         if(h.kind==='goop'){p.slowTime=Math.max(p.slowTime||0,1.3);struck=false;break;}
         p.hp=Math.max(0,p.hp-h.damage);p.inv=.55;
         emit('-'+h.damage,p.x,p.y-23,'#ffe8ac');
@@ -1236,6 +1236,13 @@ cx.strokeStyle='#b6ab90';cx.lineWidth=95;cx.lineCap='round';cx.beginPath();cx.mo
 rect(360,900,230,55,'#8e4d4e');for(let i=0;i<6;i++)rect(373+i*39,900,12,55,'#d28b71');line(365,885,585,885,'#7d4247',10);
 for(const [ix,ob] of scenery.entries()){if(liteFx&&ix%3!==0)continue;if(ob.x<cam.x-80||ob.x>cam.x+VIEWW+80||ob.y<cam.y-80||ob.y>cam.y+VIEWH+80)continue;if(ob.t<.40){circle(ob.x,ob.y,ob.s,'#315c4c');circle(ob.x+9,ob.y-9,ob.s*.78,ob.t<.20?'#e9a4b5':'#e3c0be');circle(ob.x-12,ob.y-5,ob.s*.63,'#f7c1c6')}else if(ob.t<.68){circle(ob.x,ob.y,ob.s*.4,'#e8d99e');circle(ob.x+10,ob.y+6,ob.s*.23,'#edd5a5')}else{circle(ob.x,ob.y,ob.s*.35,'#527d5b');circle(ob.x-9,ob.y,ob.s*.35,'#4d7559')}}
 drawQuestDressing();
+// Hideable sakura hedges in world space, never changing character assets.
+for(const b of bushes){
+ if(b.x<cam.x-100||b.x>cam.x+VIEWW+100||b.y<cam.y-100||b.y>cam.y+VIEWH+100)continue;
+ if(bushArt.complete&&bushArt.naturalWidth)cx.drawImage(bushArt,b.x-59,b.y-56,118,112);
+ else{circle(b.x,b.y,53,'#316e51');circle(b.x-16,b.y-12,28,'#73b27b');
+  circle(b.x+20,b.y-17,30,'#3a8a67');}
+}
 // Laser terminals are world geometry, not character art.
 if(clues===2&&duoDefeated&&!gateCleared[2]){
  for(let i=laserChallenge.index;i<laserNodes.length;i++){
@@ -1385,6 +1392,8 @@ for(const p of players){
  if(p.inv>0&&Math.floor(elapsed*16)%2)continue;
  const moving=Math.hypot(joystickAxes[p.num].x,joystickAxes[p.num].y)>.1||
    (p.num===0?['w','a','s','d']:['arrowup','arrowdown','arrowleft','arrowright']).some(k=>keys.has(k));
+ const wiggle=winston?.shaking&&p.id==='rosie'&&p.hidden
+   ?Math.sin(elapsed*43)*13:0;
  const hop=moving?Math.sin(elapsed*15+p.num)*3:Math.sin(elapsed*2.7+p.num)*1.2;
  if(p.dash>0){cx.save();cx.globalAlpha=.36;circle(p.x-16,p.y+11,31,'#9be7ff');cx.restore();}
  circle(p.x,p.y+20,23,'#1b293a88');
@@ -1404,19 +1413,34 @@ for(const p of players){
   }
  const avatar=petImages[p.id];
  const spriteHero=window.Level32Sprites?.draw(cx,p.id,spritePose(p,moving),
-   p.x,p.y+hop,52,elapsed) || false;
+   p.x+wiggle,p.y+hop,52,elapsed) || false;
  if(!spriteHero&&avatar&&avatar.complete&&avatar.naturalWidth){
   // A readable, recognisable illustrated portrait for each actual furry friend.
   cx.save();cx.beginPath();cx.arc(p.x,p.y+hop,24,0,TAU);cx.clip();
   const scale=48/Math.min(avatar.naturalWidth,avatar.naturalHeight);
   const w=avatar.naturalWidth*scale,h=avatar.naturalHeight*scale;
-  cx.drawImage(avatar,p.x-w/2,p.y+hop-h/2,w,h);cx.restore();
+  cx.drawImage(avatar,p.x+wiggle-w/2,p.y+hop-h/2,w,h);cx.restore();
   cx.beginPath();cx.arc(p.x,p.y+hop,24,0,TAU);
   cx.strokeStyle=p.num===0?'#adf8db':'#ffc0c4';cx.lineWidth=3;cx.stroke();
  }else if(!spriteHero){circle(p.x,p.y,24,p.color);txt(p.emoji,p.x,p.y+16,37,'center')}
- txt('P'+(p.num+1),p.x,p.y-38,17,'center',p.num===0?'#a6ffe1':'#ffc7c3');
+ txt(p.hidden?'🌿 HIDDEN':'P'+(p.num+1),p.x,p.y-38,16,'center',p.hidden?'#dcffc9':p.num===0?'#a6ffe1':'#ffc7c3');
+ if(wiggle)txt('WIGGLE!',p.x+12,p.y+45,15,'center','#ffe3b5');
  // Health stays readable next to the character on phone and desktop.
  rect(p.x-28,p.y+29,56,7,'#152636');rect(p.x-27,p.y+30,54*clamp(p.hp/p.maxHp,0,1),5,p.hp/p.maxHp<.3?'#ff9995':'#9aebbb');
+}
+for(const p of players.filter(p=>p.alive&&p.hidden)){
+ const b=bushes[p.bushId];if(!b)continue;
+ cx.save();cx.globalAlpha=.86;
+ if(bushArt.complete&&bushArt.naturalWidth)cx.drawImage(bushArt,b.x-59,b.y-56,118,112);
+ else circle(b.x,b.y,49,'#3a7955cc');
+ cx.restore();txt('🌿 '+Math.floor(p.bushTime)+'s',b.x,b.y-61,15,'center','#ddffcc');
+}
+if(winston?.shaking&&!players.some(p=>p.id==='rosie')){
+ const b=bushes.find((b,i)=>players.some(p=>p.hidden&&p.bushId===i));
+ if(b){const jiggle=Math.sin(elapsed*46)*12;
+  window.Level32Sprites?.draw(cx,'rosie',{state:'hurt',direction:'down'},b.x+jiggle,b.y+9,46,elapsed);
+  txt('ROSIE · WIGGLE BOTTOM!',b.x,b.y-74,15,'center','#fff1b6');
+ }
 }
 for(const s of shots){txt(s.kind==='dragon'?'🐉':s.kind==='kong'?'🧊':'🔴',s.x,s.y+9,24,'center')}
 for(const h of hazards){
@@ -1448,6 +1472,7 @@ for(const h of hazards){
 if(boss&&boss.hp>0&&coneWindup>0){cx.save();cx.beginPath();cx.moveTo(boss.x,boss.y);cx.arc(boss.x,boss.y,275,coneAngle-.65,coneAngle+.65);cx.closePath();cx.fillStyle='#ff69735d';cx.fill();cx.strokeStyle='#ffeeb1';cx.lineWidth=5;cx.stroke();cx.restore()}
 for(const beam of beams){cx.save();cx.globalAlpha=Math.max(.1,beam.t/.28);cx.strokeStyle='#ff586a';cx.lineWidth=13;cx.shadowColor='#ff7373';cx.shadowBlur=17;cx.beginPath();cx.moveTo(beam.x1,beam.y1);cx.lineTo(beam.x2,beam.y2);cx.stroke();cx.strokeStyle='#fff2b5';cx.lineWidth=4;cx.stroke();cx.restore()}
 for(const f of fx){if(f.x<cam.x-60||f.x>cam.x+VIEWW+60||f.y<cam.y-60||f.y>cam.y+VIEWH+60)continue;txt(f.text,f.x,f.y,17,'center',f.col)}
+drawWorldBubbles();
 cx.restore();}
 function txt(t,x,y,size=20,align='left',color='#fff6de'){cx.textAlign=align;cx.font='bold '+size+'px system-ui, sans-serif';cx.fillStyle=color;if(!liteFx){cx.shadowColor='#28323b';cx.shadowBlur=3;}cx.fillText(t,x,y);cx.shadowBlur=0}
 function drawOffscreenArrows(){
@@ -1511,7 +1536,7 @@ $('start').addEventListener('click',start);$('overlay-start').addEventListener('
 });$('restart').addEventListener('click',start);$('pause').addEventListener('click',togglePause);$('mute').addEventListener('click',()=>{audioEnabled=!audioEnabled; if(audioCtx){audioEnabled?audioCtx.resume():audioCtx.suspend()} $('mute').textContent=audioEnabled?'🔊 MUSIC + SFX':'🔇 SOUND OFF'; if(audioEnabled) ensureAudio();});
 function tryDash(id){
  if(!['boss','explore'].includes(phase)||paused)return;
- const p=players[id];if(!p||!p.alive||p.dashCooldown>0)return;
+ const p=players[id];if(!p||!p.alive||p.hidden||p.dashCooldown>0)return;
  emit('DASH!',p.x,p.y-55,'#aaf5ff');p.dash=.18;p.dashCooldown=p.id==='ellie'?2.2:3.4;p.inv=Math.max(p.inv,.18);playSfx('dash');
 }
 // Device rotation is an opt-in enhancement. iOS/browser privacy restrictions can
