@@ -9,6 +9,8 @@ hook='''window.__rosieTest={
  start(){start();cancelAnimationFrame(raf);players.forEach(p=>p.inv=9999);spawnClock=9999;surgeClock=9999;return this.state()},
  place(i){players[0].x=clueSpots[i].x;players[0].y=clueSpots[i].y;update(.016);return this.state()},
  track(){for(const spot of scentTrail){players[0].x=spot.x;players[0].y=spot.y;update(.016)}return this.state()},
+ solveLaser(){laserChallenge.timer=2.0;for(const spot of laserNodes){players[0].x=spot.x;players[0].y=spot.y;update(.016)}return this.state()},
+ joystickCheck(){const p=players[0],before=p.x;joystickAxes[0].x=.35;joystickAxes[0].y=0;movePlayers(.1);const partial=p.x-before;joystickAxes[0].x=1;movePlayers(.1);const full=p.x-before-partial;joystickAxes[0].x=0;return {partial,full}},
  step(){update(.016);return this.state()},
  clearGuards(){for(let n=0;n<4&&gate;n++){
   foes.filter(e=>e.guardian&&e.hp>0).forEach(e=>e.hp=0);
@@ -32,7 +34,7 @@ hook='''window.__rosieTest={
  killBoss(){damage(boss,boss.hp+9999,players[0]);return this.state()},
  lose(){resetEnd(false);return this.state()},
  getEnemyList(){return [...new Set(foes.map(e=>e.kind))]},
- state(){return {phase,clues,duoActive,duoDefeated,laserUnlocked,score,kills,coneWindup,elapsed,hp:players.map(p=>p.hp),sceneName,cutsceneNext,bossHp:boss?.hp||0,guardWave:gate?.wave??null,guardians:foes.filter(e=>e.guardian&&e.hp>0).length,cleared:gateCleared.slice(),mode:difficulty,overlay:!$('overlay').classList.contains('hidden'),imgSrc:$('overlay-art').getAttribute('src').slice(0,90),dialogueImages:[...$('scene-dialogues').querySelectorAll('img')].map(im=>im.getAttribute('src').slice(0,80)),missionUnlock:$('mission-unlock').classList.contains('show'),objectText:$('objective-label').textContent}}
+ state(){return {phase,clues,duoActive,duoDefeated,laserUnlocked,laserIndex:laserChallenge.index,scentStep,score,kills,coneWindup,elapsed,hp:players.map(p=>p.hp),sceneName,cutsceneNext,bossHp:boss?.hp||0,guardWave:gate?.wave??null,guardians:foes.filter(e=>e.guardian&&e.hp>0).length,cleared:gateCleared.slice(),mode:difficulty,overlay:!$('overlay').classList.contains('hidden'),imgSrc:$('overlay-art').getAttribute('src').slice(0,90),dialogueImages:[...$('scene-dialogues').querySelectorAll('img')].map(im=>im.getAttribute('src').slice(0,80)),missionUnlock:$('mission-unlock').classList.contains('show'),objectText:$('objective-label').textContent}}
 };'''
 pos=html.rfind('})();')
 assert pos>0
@@ -67,6 +69,8 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge'):
     page.locator('#pause').click()
     assert page.locator('#paws-panel').is_hidden()
     assert s['phase']=='explore' and s['mode']==mode
+    analog=page.evaluate('window.__rosieTest.joystickCheck()')
+    assert analog['partial']>0 and analog['full']>analog['partial']*1.8,analog
     skipped=page.evaluate('window.__rosieTest.place(1)')
     assert skipped['clues']==0
     s=page.evaluate('window.__rosieTest.track()')
@@ -100,9 +104,12 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge'):
     print('mini-boss',page.evaluate('window.__rosieTest.getEnemyList()'))
     s=page.evaluate('window.__rosieTest.killsDuo()')
     assert s['duoDefeated'] and not s['duoActive'],s
+    # Third quest is now a green-window laser security puzzle, not guardian waves.
     s=page.evaluate('window.__rosieTest.place(2)')
-    assert s['phase']=='explore' and s['clues']==2 and s['guardians']>0
-    s=page.evaluate('window.__rosieTest.clearGuards()')
+    assert s['phase']=='explore' and s['clues']==2 and s['laserIndex']==0,s
+    s=page.evaluate('window.__rosieTest.solveLaser()')
+    assert s['cleared'][2] and s['laserIndex']==3,s
+    s=page.evaluate('window.__rosieTest.place(2)')
     assert s['phase']=='cutscene' and s['clues']==3 and s['sceneName']=='clue3' and s['imgSrc'].startswith('data:image/webp'),s
     s=page.evaluate('window.__rosieTest.continue()')
     assert s['laserUnlocked'] and s['phase']=='explore'
@@ -146,5 +153,6 @@ with sync_playwright() as p:
     browser_run(browser)
     browser_run(browser,screen=(390,844),mobile=True)
     browser_run(browser,screen=(390,844),mobile=True,mode='story')
+    browser_run(browser,screen=(844,390),mobile=True,mode='challenge')
     browser_run(browser,screen=(1280,900),mode='extreme')
     browser.close()
