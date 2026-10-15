@@ -342,10 +342,10 @@ function continueScene(){
    showQuestToast('FINAL BOSS · TOLLY!','Move away from the yellow shockwave and dash to safety!',4.6);
  }else if(kind==='mythic'){
    bossPhase=3;
-   const hp=Math.round(780*(players.length===2?1.58:1));
+   const hp=Math.round(950*(players.length===2?1.62:1));
    boss.maxHp=hp;boss.hp=hp;boss.speed=players.length===2?143:138;boss.attack=1.4;
    coneCooldown=5;coneWindup=0;bossPulseCooldown=2.1;bossPulseWindup=0;bananaWindup=0;
-   mythicArcWindup=0;mythicArcCooldown=3.5;daanRespawn=0;daan=null;hazards=[];
+   mythicArcWindup=0;mythicArcCooldown=3.5;daanRespawn=0;daan=null;hazards=[];spawnClock=1.2;surgeClock=16;
    summonDaan();
    players.filter(p=>p.alive).forEach(p=>p.inv=Math.max(p.inv,2.0));
    $('bossbar').classList.add('mythic');$('bossbar').firstChild.textContent='💠 MYTHIC · TOLLY + DAAN';
@@ -422,7 +422,7 @@ function resetEnd(win){
  $('ending-invite').hidden=false;phase='ended';paused=true;$('pause').disabled=true;let title=win?'🎉 TREATS LIBERATED!':'💀 THE FRIDGE PREVAILS';let detail=win?'Okay, you deserve the banana and cheese tax.':'Mwahahaha! You are a chonk and are of no match to the mighty Tolly!';if(score>best){best=score;try{localStorage.setItem(bestKey(),String(best))}catch{}detail+=' NEW PERSONAL BEST!'}$('overlay-kicker').textContent=win?'CUTSCENE · REWARD SCREEN':'GAME OVER · FRIDGE SEALED';$('overlay').classList.add('cinematic');$('overlay').querySelector('h3').textContent=title;$('boss-card').classList.remove('show');$('overlay').dataset.scene=win?'victory':'defeat';$('scene-skip').hidden=true;$('overlay-art').style.maxWidth='';$('overlay-art').src=win?SCENE_ART.victory:SCENE_ART.defeat;$('overlay-art').classList.add('show');renderSceneLines(win?'victory':'defeat');$('scene-dialogues').querySelectorAll('.scene-line').forEach(row=>row.hidden=false);$('mission-unlock').classList.add('show');$('overlay').querySelector('p').textContent=detail+' '+mode().label+' · Score ×'+mode().multiplier+' = '+score+(deathPenalty?' (full-wipe penalty −'+deathPenalty+')':'')+' · Snacklings boinked: '+kills+'.';$('overlay-start').textContent='↻ PLAY AGAIN';$('scene-counter').textContent='';$('share-result').classList.add('show');$('share-status').textContent='';$('overlay').classList.remove('hidden'); if(win){playSfx('victory'); say(pick(slogans.victory),3)} else {playSfx('defeat')} syncHud()}
 function spawnBleepling(){
  // Bound unrelated mobs so the required guardian fights remain challenging but fair.
- if(foes.length>=(gate?24:phase==='boss'?(bossPhase===3?24:48):65))return;
+ if(foes.length>=(gate?24:phase==='boss'?(bossPhase===3?16:48):65))return;
  const live=players.filter(p=>p.alive);if(!live.length)return;
  const focus=live[Math.floor(Math.random()*live.length)];
  const angle=rnd(0,TAU),radius=rnd(390,550),tier=Math.floor(elapsed/35);
@@ -616,14 +616,14 @@ function update(dt){
  updateRevives(dt);
  updateEllieAuras(dt);
  spawnClock-=dt;
- if(spawnClock<=0&&foes.length<(gate?23:duoActive?20:phase==='boss'?(bossPhase===3?23:48):62)){
-   const n=gate?1:duoActive?1:phase==='boss'?(difficulty==='story'?1:difficulty==='impossible'?3:2):elapsed>75?3:elapsed>18?2:1;
+ if(spawnClock<=0&&foes.length<(gate?23:duoActive?20:phase==='boss'?(bossPhase===3?15:48):62)){
+   const n=gate?1:duoActive?1:phase==='boss'?(bossPhase===3?1:difficulty==='story'?1:difficulty==='impossible'?3:2):elapsed>75?3:elapsed>18?2:1;
    for(let j=0;j<n&&foes.length<65;j++)spawnBleepling();
-   spawnClock=Math.max(.42,.93-elapsed*.0035)*mode().spawn*(gate?1.5:1)*(phase==='boss'?.9:1);
+   spawnClock=bossPhase===3&&phase==='boss'?1.2:Math.max(.42,.93-elapsed*.0035)*mode().spawn*(gate?1.5:1)*(phase==='boss'?.9:1);
  }
  surgeClock-=dt;
- if(surgeClock<=0&&!duoActive&&!gate&&foes.length<60){
-    let n=phase==='boss'?7:5;
+ if(surgeClock<=0&&!duoActive&&!gate&&foes.length<(bossPhase===3?17:60)){
+    let n=phase==='boss'?(bossPhase===3?3:7):5;
     for(let j=0;j<n&&foes.length<65;j++)spawnBleepling();
     say('🫧 BLEEPLING STAMPEDE! '+n+' extra bleps!',3.5); playSfx('wave');
     surgeClock=Math.max(23,34-elapsed*.022);
@@ -742,7 +742,7 @@ function update(dt){
         playSfx('cone');
       }
     }else if(bossPulseCooldown<=0&&players.some(p=>p.alive&&dist(p,boss)<175)){
-      bossPulseWindup=1.05;bossPulseCooldown=bossPhase===3?3.75:bossPhase===2?2.65:3.35;
+      bossPulseWindup=1.05;bossPulseCooldown=bossPhase===3?1.55:bossPhase===2?2.65:3.35;
       say('⚠ TOLLY: NO CAMPING ON THE FRIDGE! MOVE OUT OF THE GOLD RING!',2.2);
     }
     boss.attack-=dt;
