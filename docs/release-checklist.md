@@ -218,3 +218,5 @@ Historical checks above concerning **three guardian waves at each clue** no long
 
 - [ ] Day 8B CI: Remove dense top metadata chips; invitation is the visually primary direct link with a separate optional play action and a no-game-required explanation on desktop and phone.
 - [ ] Host non-gamer playtest: guests can find party schedule and add both events without clicking Play.
+
+- [ ] Guest-first onboarding CI: solo mode starts unchecked with Rosie still selected for P1; P2 controls are inactive until guests explicitly enable two-player mode; solo and duo playthroughs both green.
