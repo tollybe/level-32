@@ -55,6 +55,7 @@ hook='''window.__rosieTest={
  },
  phase3(){if(!boss)throw Error('no boss');damage(boss,boss.maxHp*.19,players[0]);return this.state()},
  duoGap(){const pair=foes.filter(e=>e.elite&&e.hp>0);return pair.length===2?dist(pair[0],pair[1]):0},
+ musicModeNow(){return currentMusic()},
  perkProbe(){
   const previous={level,xp,goal,phase,players:players.map(p=>({hp:p.hp,maxHp:p.maxHp,speed:p.speed,damage:p.damage,perkGlow:p.perkGlow,perkRarity:p.perkRarity}))};
   const oldLevel=level;level=4;xp=goal-1;gainXP(2);
@@ -147,7 +148,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     ratios=page.evaluate('window.__rosieTest.heroBalance()')
     assert ratios['winnifred']>ratios['rosie'] and ratios['millie']>ratios['ellie'],ratios
     levels=page.evaluate('window.__rosieTest.xpProbe()')
-    assert levels['firstFive']==10 and levels['afterFive']<10,levels
+    assert levels['firstFive']==10 and levels['afterFive']==(10 if mode=='story' else 6 if mode=='extreme' else 7.8),levels
     upgrade=page.evaluate('window.__rosieTest.perkProbe()')
     assert upgrade['offered'] and upgrade['choices']==2 and upgrade['closed'],upgrade
     assert all(x in ['normal','epic','legendary'] for x in upgrade['rarities']),upgrade
@@ -223,6 +224,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     assert s['duoActive'] and s['phase']=='explore',s
     print('mini-boss',page.evaluate('window.__rosieTest.getEnemyList()'))
     assert page.evaluate('window.__rosieTest.duoGap()')>350, 'Boink and Bocht must spawn apart'
+    assert page.evaluate('window.__rosieTest.musicModeNow()')=='duo'
     s=page.evaluate('window.__rosieTest.killsDuo()')
     assert s['duoDefeated'] and not s['duoActive'],s
     # Third quest is now a green-window laser security puzzle, not guardian waves.
@@ -254,6 +256,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     assert s['phase']=='cutscene' and s['sceneName']=='phase3',s
     s=page.evaluate('window.__rosieTest.continue()')
     assert s['phase']=='boss' and s['daanActive']==(mode=='extreme'),s
+    assert page.evaluate('window.__rosieTest.musicModeNow()')=='boss3'
     if mode=='extreme':
         spite=page.evaluate('window.__rosieTest.triggerDaanSpite()')
         assert spite['active'] and spite['warning'] and spite['action']>0,spite
