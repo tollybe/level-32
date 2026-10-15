@@ -207,3 +207,11 @@ Historical checks above concerning **three guardian waves at each clue** no long
 - [x] PR #21 CI passed: all four role-specific full-charge benefits trigger correctly without manual inventory or extra buttons.
 - [x] PR #21 CI passed: Sakura Breeze cannot appear before 100 kills, is guaranteed at 100, rare afterward, and attracts stars only.
 - [ ] Owner: physical phone test for meter visibility, magnet timing, effect pacing, and fair co-op behavior.
+
+## Day 8B — Cleared scroll and solo recovery
+
+- [ ] CI: Scroll-unsealed overlay visible and aligned for clues one, two and three, then hidden after reading or in boss phases.
+- [ ] CI: Solo open-ground +2.4 HP after each 5 damage-free seconds; taking damage resets timer.
+- [ ] CI: Bushes grant only 0.1 HP/s while hiding; entering cover does not bank recovery ticks.
+- [ ] CI: Max HP cap, no resurrection, co-op Ellie unchanged and no generic multiplayer regen.
+- [ ] Owner checks mobile visibility, pacing and boss survivability.
