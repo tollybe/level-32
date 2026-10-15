@@ -133,3 +133,6 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:3px solid #9cf
 /* Result invitation belongs above the artwork, so it is never buried below long dialogue. */
 .ending-invite{display:flex;width:min(100%,470px);margin:10px auto 14px;min-height:48px;background:#baf2d6;color:#1a3c30;border:2px solid #65947b;font-size:1rem}
 .ending-invite[hidden]{display:none!important}
+
+/* Day 4 10/10 mode: option accessible on smaller screens. */
+.difficulty-choice select{max-width:100%;min-width:0}
