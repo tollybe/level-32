@@ -144,7 +144,7 @@ Historical checks above concerning **three guardian waves at each clue** no long
 - [ ] Rosie secondary pierce exactly 50%, Millie ball single-hit, Winnifred highest DPS and melee, Ellie lowest DPS with slow/heal.
 - [ ] Tolly boss phase changes at 67%/33%; Daan Extreme-only in third phase; music tracks distinct and original.
 - [ ] Boink and Bocht spawn apart, remain distinct and challenging on Adventure.
-- [x] Automated coverage for first five-level offer, random player selection, rarity bounds and tiered XP; real playtest for levels 10/15 still pending.
+- [x] Automated coverage for first five-level offer, alternating co-op player selection, rarity bounds and tiered XP; real playtest for levels 10/15 still pending.
 - [ ] Super aura/health labels do not obscure telegraphs, mobile performance/reduced motion sound.
 - [ ] Real-device balance, invitation and ICS signoff.
 
@@ -159,8 +159,8 @@ Historical checks above concerning **three guardian waves at each clue** no long
 
 ## Day 6C — Rotating perks and Daan photo reference
 
-- [ ] GitHub Actions passes co-op P1/P2/P1 perk rotation (levels 5/10/15) and solo checks.
-- [ ] GitHub Actions verifies the new Daan sprite and phase-three dialogue portrait render.
-- [ ] GitHub Actions verifies Daan can heal Tolly at most twice, for at most 5% per cast, capped to 43% HP.
+- [x] GitHub Actions passed co-op P1/P2/P1 perk rotation (levels 5/10/15) and solo checks (PR #15).
+- [x] GitHub Actions verified new Daan sprite and phase-three dialogue portrait render (PR #15).
+- [x] GitHub Actions verified Daan heals Tolly at most twice, up to 5% per cast, capped at 43% HP (PR #15).
 - [ ] Owner validates Daan's appearance, boulder countdown, and green heal telegraph on physical devices.
 - [ ] Owner confirms Ellie/Winnifred upgrade fairness in an actual co-op session, and no perceived XP stall at level 10.
