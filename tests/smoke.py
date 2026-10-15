@@ -311,7 +311,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
             assert all(x<y<z for x,y,z in zip(story['eliteHp'],adventure['eliteHp'],extreme['eliteHp'])),tiers
             assert not story['banana'] and not adventure['banana'],tiers
             pattern=extreme['banana']
-            assert len(pattern)==2,pattern
+            assert len(pattern)==4,pattern
             for shot in pattern:
                 vx,vy=abs(shot['vx']),abs(shot['vy'])
                 if shot['source']=='boink': assert min(vx,vy)<1e-6,shot
