@@ -994,6 +994,22 @@ function tryDash(id){
  const p=players[id];if(!p||!p.alive||p.dashCooldown>0)return;
  p.dash=.18;p.dashCooldown=p.id==='ellie'?2.2:3.4;p.inv=Math.max(p.inv,.18);playSfx('dash');
 }
+// Device rotation is an opt-in enhancement. iOS/browser privacy restrictions can
+// reject landscape locks; the responsive web layout still works without them.
+$('focus-play').addEventListener('click',async()=>{
+ const status=$('focus-status');
+ try{
+  if(document.fullscreenElement){await document.exitFullscreen();status.textContent='Wide play closed.';return}
+  if(!$('game-section').requestFullscreen)throw Error('Fullscreen not supported here');
+  await $('game-section').requestFullscreen();
+  try{if(screen.orientation&&screen.orientation.lock)await screen.orientation.lock('landscape')}
+  catch{status.textContent='Fullscreen opened. Rotate your phone sideways if it did not turn automatically.';return}
+  status.textContent='Wide play enabled. Rotate your phone if needed.';
+ }catch{status.textContent='Your browser cannot open landscape fullscreen. Rotate your phone manually; the controls will adapt.'}
+});
+document.addEventListener('visibilitychange',()=>{
+ if(document.hidden&&!paused&&(phase==='explore'||phase==='boss'))togglePause();
+});
 window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();
  if(['arrowup','arrowleft','arrowright','arrowdown',' '].includes(k))e.preventDefault();
  if(k==='shift'||k==='enter')tryDash(k==='shift'?0:1);
