@@ -30,8 +30,14 @@ hook='''window.__rosieTest={
  hitBoss(){if(!boss)throw Error('no boss');damage(boss,Math.ceil(boss.maxHp*.52),players[0]);return this.state()},
  killBoss(){damage(boss,boss.hp+9999,players[0]);return this.state()},
  lose(){resetEnd(false);return this.state()},
+ mythic(){if(!boss)throw Error('boss missing');if(phase==='cutscene')this.continue();
+  if(bossPhase!==2)throw Error('Need to finish phase 2');
+  damage(boss,boss.hp+1,players[0]);return this.state()},
+ wipeScore(){score=1000;resetEnd(false);return {final:score,penalty:deathPenalty,phase}},
+ tutorial(){openBriefing();return {open:!$('control-briefing').hidden,solo:$('briefing-solo-hint').hidden===false}},
+ overhead(){return {players:players.length,bigEnemy:(hasOverheadEnemyHp({kind:'chunkling'})),smallEnemy:(hasOverheadEnemyHp({kind:'bleepling'}))}},
  getEnemyList(){return [...new Set(foes.map(e=>e.kind))]},
- state(){return {phase,clues,duoActive,duoDefeated,laserUnlocked,score,kills,coneWindup,elapsed,hp:players.map(p=>p.hp),sceneName,cutsceneNext,bossHp:boss?.hp||0,guardWave:gate?.wave??null,guardians:foes.filter(e=>e.guardian&&e.hp>0).length,cleared:gateCleared.slice(),mode:difficulty,overlay:!$('overlay').classList.contains('hidden'),imgSrc:$('overlay-art').getAttribute('src').slice(0,90),dialogueImages:[...$('scene-dialogues').querySelectorAll('img')].map(im=>im.getAttribute('src').slice(0,80)),missionUnlock:$('mission-unlock').classList.contains('show'),objectText:$('objective-label').textContent}}
+ state(){return {phase,clues,duoActive,duoDefeated,laserUnlocked,score,kills,bossPhase,daanHp:daan?.hp??0,deathPenalty,coneWindup,elapsed,hp:players.map(p=>p.hp),sceneName,cutsceneNext,bossHp:boss?.hp||0,guardWave:gate?.wave??null,guardians:foes.filter(e=>e.guardian&&e.hp>0).length,cleared:gateCleared.slice(),mode:difficulty,overlay:!$('overlay').classList.contains('hidden'),imgSrc:$('overlay-art').getAttribute('src').slice(0,90),dialogueImages:[...$('scene-dialogues').querySelectorAll('img')].map(im=>im.getAttribute('src').slice(0,80)),missionUnlock:$('mission-unlock').classList.contains('show'),objectText:$('objective-label').textContent}}
 };'''
 pos=html.rfind('})();')
 assert pos>0
@@ -48,7 +54,15 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge'):
     print('idle',s['phase'])
     page.locator('#mute').click()
     page.locator('#difficulty').select_option(mode)
+    tutorial=page.evaluate('window.__rosieTest.tutorial()')
+    assert tutorial['open']
+    assert page.locator('#briefing-p1-name').is_visible()
+    assert page.locator('#briefing-go').is_visible()
+    page.locator('#briefing-back').click()
+    assert page.locator('#control-briefing').is_hidden()
     assert page.locator('[data-dash]').count()==2
+    overhead=page.evaluate('window.__rosieTest.overhead()')
+    assert overhead['bigEnemy'] and not overhead['smallEnemy']
     assert page.locator('.select-invite').get_attribute('target')=='_blank'
     assert page.locator('.hero-invite-line a').get_attribute('target')=='_blank'
     assert page.locator('#ending-invite').is_hidden()
@@ -106,6 +120,13 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge'):
     s=page.evaluate('window.__rosieTest.continue()')
     assert s['phase']=='boss'
     s=page.evaluate('window.__rosieTest.killBoss()')
+    if mode=='impossible':
+        assert s['phase']=='cutscene' and s['sceneName']=='mythic', s
+        assert page.locator('#phase-transformation').is_visible()
+        s=page.evaluate('window.__rosieTest.continue()')
+        assert s['phase']=='boss' and s['bossPhase']==3 and s['daanHp']>0 and s['bossHp']>0, s
+        assert page.locator('#bossbar').get_attribute('class').find('mythic')>=0
+        s=page.evaluate('window.__rosieTest.killBoss()')
     assert s['phase']=='ended' and s['missionUnlock'] and s['overlay']
     assert len(s['dialogueImages'])>=2 and all(im.startswith('data:image/webp') for im in s['dialogueImages'])
     print('victory and invitation: PASS')
@@ -120,7 +141,8 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge'):
     assert page.locator('.footer-invite').count()==1
     # Fresh defeat ensures we show invitation even if nobody wins.
     s=page.evaluate('window.__rosieTest.start()')
-    s=page.evaluate('window.__rosieTest.lose()')
+    s=page.evaluate('window.__rosieTest.wipeScore()')
+    assert s['penalty']==int(1000*{'story':.20,'challenge':.35,'impossible':.50}[mode]) and s['final']==1000-s['penalty'], s
     assert s['phase']=='ended' and s['missionUnlock'],s
     assert page.locator('#party-details').is_visible()
     assert page.locator('#ending-invite').is_visible()
@@ -133,4 +155,5 @@ with sync_playwright() as p:
     browser_run(browser)
     browser_run(browser,screen=(390,844),mobile=True)
     browser_run(browser,screen=(390,844),mobile=True,mode='story')
+    browser_run(browser,screen=(1280,900),mode='impossible')
     browser.close()
