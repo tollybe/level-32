@@ -18,7 +18,7 @@ The homepage uses an encrypted password gate to send guests to the latest `/game
 | Revive a friend | Stand over them for 1.85 seconds | Same |
 | Pause | Escape | Escape |
 
-Mobile has touch controls. Off-screen arrows point toward separated teammates. Toggle original Web Audio music and sound effects with the sound button.
+Mobile has two independent virtual thumbsticks and dash buttons; in the current Day 4.6 branch the joysticks have analogue speed and the game offers optional fullscreen wide play. Off-screen arrows point toward separated teammates. Toggle original Web Audio music and sound effects with the sound button.
 
 ### Meet the heroes
 
@@ -105,8 +105,8 @@ This is an affectionate game about specific animals, created for one birthday pa
 
 Day 4 applies the [Iteration 4 roadmap](docs/iteration-4.md), motivated by playtest reports that the combat felt about 4/10 and the game could be rushed in under 30 seconds:
 
-- **Three stages of scroll guardians** at each of the three clues. Reaching the coordinates only starts a battle; players must finish all three waves and return to the scroll before the cutscene unlocks. Boink & Bocht still block the final clue after the second cutscene.
-- **Two selectable difficulties:** **Adventure** (default, aiming for 6–7/10) with more enemies, fast waves, stronger bosses; and **Story** (roughly the previous 4/10) with fewer guardians, reduced damage, and fewer wild spawns. Both grant the same birthday invitation.
+- **Original Day 4 implementation** used three stages of scroll guardians at each clue; this quest flow has since changed in Day 4.6. Reaching the coordinates only starts a battle; players must finish all three waves and return to the scroll before the cutscene unlocks. Boink & Bocht still block the final clue after the second cutscene.
+- **Original Day 4 had two modes, since extended to three:** **Adventure** (default, aiming for 6–7/10) with more enemies, fast waves, stronger bosses; and **Story** (roughly the previous 4/10) with fewer guardians, reduced damage, and fewer wild spawns. Both grant the same birthday invitation.
 - **No standing inside Tolly:** an explicit collision radius moves overlapping players outside her sprite. Tolly now pursues players more closely, uses a shorter-cooldown knockback ring, telegraphs her orange banana burst and retains the phase-two Cone of Shame. Melee characters still attack from just outside her collision ring.
 - **Better character-led finale:** the selected player hero adds personalized ending dialogue using the unchanged canonical portrait art.
 - **One-click guest journey:** the invitation is linked above the fold, next to character selection, below the game and at the result screen—regardless of victory, defeat or whether the game was played at all.
@@ -126,9 +126,16 @@ Day 4 applies the [Iteration 4 roadmap](docs/iteration-4.md), motivated by playt
 - See `docs/iteration-5.md` for Day 5, **documentation only**. Day 5 implementation is blocked on Day 4 testing and asset approval.
 
 
-### Day 4.5 — Paws, Puns & Polish (review branch)
+### Day 4.5 — Paws, Puns & Polish (merged)
 - PAWS button and themed overlay with resumption via the button or Escape.
 - Extra authored laser/character banter and occasional character quips during exploration.
 - Distinct clue-site ground details and birthday/fridge decorations, rendered without modifying canonical portraits.
 - Includes new desktop Extreme smoke test scenario; full browser/manual validation is still required.
 - Day 5 stays **documentation-only** until Day 4 and 4.5 are accepted. See `docs/iteration-4-5.md` and `docs/iteration-5.md`.
+
+
+### Day 4.6 — Playability & Personality (under review)
+
+The original three-waves-per-scroll design is **historical**, not the latest rules. In the Day 4.6 branch: Q1 follows three pawprints; Q2 has two ambush rounds, then Boink & Bocht; Q3 has three timed red/green laser terminals (no guardian waves). The joysticks gain proportional movement and a dead zone; the phone gets optional fullscreen wide play with graceful rotation fallback. Returning from another tab PAWSes the active game. Portraits remain canonical; banter, small reaction animations, visible in-world HP and off-screen scene culling improve the experience.
+
+**Start new AI sessions by reading [docs/AI-HANDOFF.md](docs/AI-HANDOFF.md).** See [Day 4.6 spec](docs/iteration-4-6.md), [Day 4.7 QA backlog](docs/iteration-4-7.md), and [Day 5 (not implemented)](docs/iteration-5.md). Day 4.6 is still a review/playtest change, not an official release. Daan's character emblem is temporary pending an approved portrait. The game's invitation links remain accessible regardless of progress.
