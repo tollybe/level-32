@@ -395,6 +395,96 @@ hook='''window.__rosieTest={
   xp=prev.xp;goal=prev.goal;level=prev.level;syncHud();
   return result;
  },
+ snackPowerProbe(){
+  const saved={players,foes,boss,shots,drops,fx,phase,elapsed,kills,score,level,xp,goal,
+   messageClock,gameMessage:$('game-message').textContent};
+  const result={};
+  try{
+   phase='explore';boss=null;foes=[];shots=[];drops=[];fx=[];
+   kills=0;score=0;level=1;xp=0;goal=10000;elapsed=0;
+   const pet=player('rosie',0);players=[pet];
+   collectDrop(pet,{kind:'heal'});
+   result.fullHpChocolate=pet.hp===pet.maxHp&&pet.snackCharge===42;
+   pet.snackCharge=0;pet.hp=pet.maxHp-9;
+   collectDrop(pet,{kind:'heal'});
+   result.partialChocolate=pet.hp===pet.maxHp&&pet.snackCharge===24;
+   pet.snackCharge=0;
+   const mob={x:pet.x+45,y:pet.y,hp:1000,maxHp:1000,kind:'bleepling',size:20};
+   foes=[mob];damage(mob,5,pet);
+   const firstCharge=pet.snackCharge;damage(mob,5,pet);
+   result.hitRateCapped=firstCharge===.75&&pet.snackCharge===.75;
+   elapsed+=.36;damage(mob,5,pet);
+   result.hitProgress=pet.snackCharge===1.5;
+   result.meter=(()=>{
+    pet.snackCharge=0;const empty=snackMeterGeometry(pet);
+    pet.snackCharge=50;const half=snackMeterGeometry(pet);
+    pet.snackCharge=100;const full=snackMeterGeometry(pet);
+    return {empty:empty.width,half:half.width,full:full.width,
+     underneath:empty.y>empty.hpBarY,constantWidth:empty.maxWidth===54&&
+      half.maxWidth===54&&full.maxWidth===54};
+   })();
+   pet.snackCharge=100;shots=[];fire(pet);
+   result.rosie=pet.snackCharge===0&&shots.length===1&&
+    shots[0].pierce===1&&shots[0].damage>(pet.damage+level*2);
+   const millie=player('millie',0);millie.x=pet.x;millie.y=pet.y;
+   millie.snackCharge=100;millie.dashCharges=1;millie.dashRecharge=[2.8];
+   players=[millie];shots=[];fire(millie);
+   result.millie=shots.length===1&&millie.snackCharge===0&&
+    shots[0].pierce===0&&millie.dashCharges===2&&millie.dashRecharge.length===0&&
+    shots[0].damage>(millie.damage+level*2);
+   const winni=player('winnifred',0);winni.x=pet.x;winni.y=pet.y;
+   winni.snackCharge=100;players=[winni];shots=[];
+   mob.x=winni.x+60;mob.y=winni.y;mob.hp=1000;
+   fire(winni);
+   result.winnifred=winni.snackCharge===0&&shots.length===0&&
+    1000-mob.hp>(winni.damage+level*2);
+   const ellie=player('ellie',0),friend=player('rosie',1);
+   players=[ellie,friend];foes=[];ellie.snackCharge=100;
+   friend.x=ellie.x+35;friend.y=ellie.y;friend.hp=friend.maxHp;
+   ellie.healClock=0;updateEllieAuras(.02);
+   result.ellieWaits=ellie.snackCharge===100;
+   friend.hp=friend.maxHp-60;ellie.healClock=0;
+   updateEllieAuras(.02);
+   result.ellie=friend.hp===friend.maxHp-38&&ellie.snackCharge>0&&
+    ellie.snackCharge<100; // 22 healed, charge creeps back in
+   // Guaranteed milestone; never a blossom at 99 or earlier.
+   drops=[];kills=99;
+   result.locked=maybeDropMagnet({x:400,y:500})===false&&drops.length===0;
+   kills=100;
+   result.milestone=maybeDropMagnet({x:400,y:500})===true&&
+    drops.length===1&&drops[0].kind==='magnet'&&
+    maybeDropMagnet({x:400,y:500})===false;
+   drops=[];kills=101;
+   const original=Math.random;
+   try{
+    Math.random=()=>.5;
+    result.postMilestoneNoDrop=maybeDropMagnet({x:400,y:500})===false&&drops.length===0;
+    Math.random=()=>0;
+    result.postMilestoneRare=maybeDropMagnet({x:400,y:500})===true&&drops[0].kind==='magnet';
+   }finally{Math.random=original}
+   // Sakura Breeze gathers XP only: never chocolates or other blossoms.
+   players=[pet];foes=[];pet.hidden=false;pet.magnetTime=4.2;
+   drops=[{kind:'xp',x:pet.x+110,y:pet.y},
+    {kind:'heal',x:pet.x+130,y:pet.y},
+    {kind:'magnet',x:pet.x+160,y:pet.y}];
+   const preXP=xp,preHealth=pet.hp,initialOther=drops.slice(1).map(d=>d.x);
+   updateSnackMagnet(.75);
+   result.magnetXP=xp===preXP+12&&!drops.some(d=>d.kind==='xp');
+   result.magnetDoesNotPullOther=drops.length===2&&
+    drops[0].x===initialOther[0]&&drops[1].x===initialOther[1]&&
+    pet.hp===preHealth;
+   pet.hidden=true;drops=[{kind:'xp',x:pet.x+80,y:pet.y}];
+   const beforeHidden=drops[0].x;updateSnackMagnet(.5);
+   result.noMagnetThroughBush=drops.length===1&&drops[0].x===beforeHidden;
+   return result;
+  }finally{
+   players=saved.players;foes=saved.foes;boss=saved.boss;shots=saved.shots;
+   drops=saved.drops;fx=saved.fx;phase=saved.phase;elapsed=saved.elapsed;
+   kills=saved.kills;score=saved.score;level=saved.level;xp=saved.xp;goal=saved.goal;
+   messageClock=saved.messageClock;$('game-message').textContent=saved.gameMessage;
+   syncHud();
+  }
+ },
  getEnemyList(){return [...new Set(foes.map(e=>e.kind))]},
  state(){return {phase,clues,duoActive,duoDefeated,laserUnlocked,laserIndex:laserChallenge.index,scentStep,score,kills,coneWindup,elapsed,hp:players.map(p=>p.hp),sceneName,cutsceneNext,bossHp:boss?.hp||0,daanActive,bossRage:boss?.rage||false,bossMaxHp:boss?.maxHp||0,liteFx,guardWave:gate?.wave??null,guardians:foes.filter(e=>e.guardian&&e.hp>0).length,cleared:gateCleared.slice(),mode:difficulty,overlay:!$('overlay').classList.contains('hidden'),imgSrc:$('overlay-art').getAttribute('src').slice(0,90),dialogueImages:[...$('scene-dialogues').querySelectorAll('img')].map(im=>im.getAttribute('src').slice(0,80)),missionUnlock:$('mission-unlock').classList.contains('show'),objectText:$('objective-label').textContent}}
 };'''
@@ -487,6 +577,17 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     assert set(['duo','boss1','boss2','boss3']).issubset(soundtrack['modes']),soundtrack
     assert soundtrack['legendaryBpm']>=170,soundtrack
     s=page.evaluate('window.__rosieTest.start()')
+    if not mobile and mode=='challenge' and not solo:
+        snack=page.evaluate('window.__rosieTest.snackPowerProbe()')
+        assert snack['fullHpChocolate'] and snack['partialChocolate'],snack
+        assert snack['hitRateCapped'] and snack['hitProgress'],snack
+        assert snack['meter']=={'empty':0,'half':27,'full':54,
+          'underneath':True,'constantWidth':True},snack
+        for key in ('rosie','millie','winnifred','ellieWaits','ellie',
+          'locked','milestone','postMilestoneNoDrop','postMilestoneRare',
+          'magnetXP','magnetDoesNotPullOther','noMagnetThroughBush'):
+            assert snack[key],(key,snack)
+        print('Snack meters, four role bonuses, healing, 100-kill blossom magnet: PASS')
     if not mobile and mode=='challenge' and not solo:
         tree=page.evaluate('window.__rosieTest.treeDepthProbe()')
         assert tree['blocked'] and tree['escaped'] and tree['slides'] and tree['steers'] and not tree['tunneled'],tree
