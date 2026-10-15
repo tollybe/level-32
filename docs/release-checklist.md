@@ -173,3 +173,12 @@ Historical checks above concerning **three guardian waves at each clue** no long
 - [x] CI proves first/second boss-bush visits, Winston dialogue, Rosie wiggle, ten-second forced reveal (PR #16).
 - [x] CI proves all six relationship-specific co-op dialogue pairs and retains previous birthday invite/quests (PR #16).
 - [ ] Owner confirms real-device attack pacing and bubble legibility; no stage overlaps or invitation regression.
+
+## Day 7B — Owner feedback: nicknames, independent crossfire, ambush
+
+- [ ] CI: Boink/Bocht warnings are independent yet may overlap; independently rolled 1–4s delay after distinct recovery and all twelve shots per enemy.
+- [ ] CI: every bush blocks normal weapons, active projectiles, laser, dash and Ellie support while hiding.
+- [ ] CI: one 2× critical after leaving cover against ordinary mobs; none for Tolly/elite duo.
+- [ ] CI: banana impact through bushes causes only 25% projectile damage, 'OW!' bubble, and a knockback outside concealment.
+- [ ] CI: Tolly nicknames and Rosie/Daan shared lyrics appear without disrupting existing cinematics.
+- [ ] Owner evaluates in real play: random volley fairness, bush hitboxes, song presentation and all four nicknames.
