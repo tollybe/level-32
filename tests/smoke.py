@@ -57,15 +57,55 @@ hook='''window.__rosieTest={
  duoGap(){const pair=foes.filter(e=>e.elite&&e.hp>0);return pair.length===2?dist(pair[0],pair[1]):0},
  musicModeNow(){return currentMusic()},
  perkProbe(){
-  const previous={level,xp,goal,phase,players:players.map(p=>({hp:p.hp,maxHp:p.maxHp,speed:p.speed,damage:p.damage,perkGlow:p.perkGlow,perkRarity:p.perkRarity}))};
+  const previous={level,xp,goal,phase,perksAwarded,players:players.map(p=>({hp:p.hp,maxHp:p.maxHp,speed:p.speed,damage:p.damage,perkGlow:p.perkGlow,perkRarity:p.perkRarity}))};
   const oldLevel=level;level=4;xp=goal-1;gainXP(2);
   const offered=phase==='upgrade'&&Boolean(perkOffer),choices=$('perk-choices').querySelectorAll('button').length;
   const rarities=perkOffer?.offers.map(x=>x.rarity)||[];
   acceptUpgrade(0);
   const closed=phase===previous.phase&&$('perk-panel').hidden&&!perkOffer;
-  level=previous.level;xp=previous.xp;goal=previous.goal;
+  level=previous.level;xp=previous.xp;goal=previous.goal;perksAwarded=previous.perksAwarded;
   players.forEach((p,i)=>Object.assign(p,previous.players[i]));
   return {offered,choices,rarities,closed,level:oldLevel};
+ },
+ perkAlternationProbe(){
+  const old={level,xp,goal,phase,perksAwarded,perkOffer,perkReturnPhase,
+   stats:players.map(p=>({hp:p.hp,maxHp:p.maxHp,speed:p.speed,damage:p.damage,
+      perkGlow:p.perkGlow,perkRarity:p.perkRarity}))};
+  let order=[],labels=[];
+  perksAwarded=0;
+  for(const wanted of [5,10,15]){
+   level=wanted-1;xp=goal-1;gainXP(2);
+   order.push(perkOffer?.player?.num??-1);
+   labels.push($('perk-who').textContent);
+   acceptUpgrade(0);
+  }
+  const count=perksAwarded;
+  level=old.level;xp=old.xp;goal=old.goal;phase=old.phase;perksAwarded=old.perksAwarded;
+  perkOffer=old.perkOffer;perkReturnPhase=old.perkReturnPhase;$('perk-panel').hidden=true;
+  players.forEach((p,i)=>Object.assign(p,old.stats[i]));
+  return {order,labels,count};
+ },
+ daanHealProbe(){
+  if(!daanActive||!boss)return {active:false};
+  const old={hp:boss.hp,daanHealCooldown,daanHealWindup,daanHealsRemaining,
+   daanHealFlash,daanPulse,daanActionTimer,hazards:hazards.slice()};
+  boss.hp=boss.maxHp*.25;daanHealsRemaining=2;daanHealWindup=0;daanHealCooldown=.01;
+  daanPulse=999; // test healing isolated from the boulder cooldown
+  let casts=[],warnings=[];
+  for(let i=0;i<2;i++){
+   daanHealCooldown=.01;update(.02);
+   warnings.push(daanHealWindup>1.35);
+   update(1.5);
+   casts.push(boss.hp);
+  }
+  daanHealCooldown=0;update(.02);
+  const capped=daanHealsRemaining===0&&daanHealWindup<=0&&
+    boss.hp<=boss.maxHp*.43+1e-5;
+  boss.hp=old.hp;daanHealCooldown=old.daanHealCooldown;
+  daanHealWindup=old.daanHealWindup;daanHealsRemaining=old.daanHealsRemaining;
+  daanHealFlash=old.daanHealFlash;daanPulse=old.daanPulse;
+  daanActionTimer=old.daanActionTimer;hazards=old.hazards;
+  return {active:true,casts,warnings,capped,maxHp:boss.maxHp};
  },
  xpProbe(){
   const old={level,xp,goal},modes={};
@@ -217,6 +257,9 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     assert ratios['winnifred']>ratios['rosie'] and ratios['millie']>ratios['ellie'],ratios
     levels=page.evaluate('window.__rosieTest.xpProbe()')
     assert levels['firstFive']==10 and abs(levels['afterFive']-(10 if mode=='story' else 6 if mode=='extreme' else 7.8))<0.00001,levels
+    turn=page.evaluate('window.__rosieTest.perkAlternationProbe()')
+    assert turn['order']==([0,1,0] if not solo else [0,0,0]),turn
+    assert all('TEAM LEVEL' in label and 'Next perk' in label for label in turn['labels']),turn
     upgrade=page.evaluate('window.__rosieTest.perkProbe()')
     assert upgrade['offered'] and upgrade['choices']==2 and upgrade['closed'],upgrade
     assert all(x in ['normal','epic','legendary'] for x in upgrade['rarities']),upgrade
@@ -337,7 +380,18 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
             {state:'special',direction:'right'},64,64,96,0);
         }""")
         assert drawn, 'Daan provisional sprite should render in Extreme'
-        print('Daan animated SPITE boulder slam: PASS')
+        # Daan's reference-based chibi renders as a valid 8×4 sheet.
+        assert page.evaluate("window.Level32Sprites.loadedCharacters.includes('daan')")
+        daan_line=page.locator('#scene-dialogues [data-speaker="daan"]')
+        # The phase-three dialogue was dismissed before the fight; the avatar
+        # and speaker content are still in the scene DOM.
+        assert daan_line.count()==1
+        assert 'DAAN' in daan_line.inner_text()
+        heal=page.evaluate('window.__rosieTest.daanHealProbe()')
+        assert heal['active'] and all(heal['warnings']) and heal['capped'],heal
+        assert heal['casts'][1]>heal['casts'][0]>0,heal
+        assert heal['casts'][1]-heal['casts'][0]<=heal['maxHp']*.051,heal
+        print('Daan two capped heals, special sprite and boulder slam: PASS')
     s=page.evaluate('window.__rosieTest.killBoss()')
     assert s['phase']=='ended' and s['missionUnlock'] and s['overlay']
     assert len(s['dialogueImages'])>=2 and all(im.startswith('data:image/webp') for im in s['dialogueImages'])
