@@ -25,6 +25,11 @@ let best=0;try{best=Number(localStorage.getItem('rosie-survivors-best'))||0}catc
 const rnd=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const clueSpots=[{x:730,y:660},{x:1240,y:1060},{x:1690,y:1420}];
 const scentTrail=[{x:440,y:500},{x:550,y:570},{x:660,y:620}];let scentStep=0;
+// Final quest: three timed laser terminals, not another wave-defense encounter.
+// A player can complete each terminal during its bright green safe window.
+const laserNodes=[{x:1450,y:1210},{x:1555,y:1320},{x:1680,y:1435}];
+let laserChallenge={index:0,timer:0,zapCooldown:0};
+const laserSafe=()=>laserChallenge.timer%3.5>=1.55;
 const scenery=(()=>{let seed=9145;const r=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};return Array.from({length:450},()=>({x:r()*WIDTH,y:r()*HEIGHT,t:r(),s:10+r()*24}))})();
 const SCENE_ART={"clue1":"assets/scene-clue1.webp","clue2":"assets/scene-clue2.webp","clue3":"assets/scene-clue3.webp","intro":"assets/scene-intro.webp","phase2":"assets/scene-phase2.webp","victory":"assets/scene-victory.webp","defeat":"assets/scene-defeat.webp"};
 // Never generate alternate faces for the pets: scene portraits reuse the actual
@@ -51,6 +56,7 @@ const CLUE_SCENES=[
 function renderSceneLines(kind){
  const host=$('scene-dialogues');host.replaceChildren();host.dataset.beat='0';
  const lines=[...(SCENE_LINES[kind]||[])];
+ if(kind==='phase2'&&difficulty==='extreme')lines.push(...EXTRA_BANTER.daan);
  // Character-specific ending callbacks, always with the established portraits.
  if(kind==='victory'||kind==='defeat'){
   const lead=players[0],replies={rosie:'Can we discuss the banana situation on the way to the party?',
@@ -61,6 +67,10 @@ function renderSceneLines(kind){
  }host.hidden=lines.length===0;
  lines.forEach(([id,words],index)=>{
   const row=document.createElement('div');row.className='scene-line';row.hidden=index!==0;
+  row.dataset.speaker=id;
+  if(kind==='clue3'&&(words.includes('SHOT')||words.includes('...Oh')))row.dataset.reaction='dramatic-collapse';
+  if(id==='millie'&&words.includes('AAAAH'))row.dataset.reaction='startled';
+  if(id==='winnifred'&&words.includes('pawsitively'))row.dataset.reaction='aristocat';
   const avatar=document.createElement('div');avatar.className='scene-face';
   const image=document.createElement('img');
   // Reuse the canonical art mounted in character select / the boss card.
@@ -277,7 +287,7 @@ function spawnGuardianWave(){
    kind,guardian:true,age:0,telegraph:0,charge:-1,trailTimer:0,slow:0});
  }
  gate.remainingDelay=3.3;
- say(gate.index===1?'🌭 SAUSAGE AMBUSH · Round '+(gate.wave+1)+'/3! Boink and dodge!':'⚠ FRIDGE SECURITY · WAVE '+(gate.wave+1)+'/3!',3.5);
+ say(gate.index===1?'🌭 SAUSAGE AMBUSH · ROUND '+(gate.wave+1)+'/2! Boink and dodge!':'⚠ SCROLL GUARDIANS · WAVE '+(gate.wave+1)+'/3!',3.5);
  playSfx('wave');
 }
 function beginGuardian(index){gate={index,wave:0,remainingDelay:0};spawnGuardianWave();}
@@ -286,7 +296,7 @@ function updateGuardian(dt){
  gate.remainingDelay=Math.max(0,gate.remainingDelay-dt);
  if(foes.some(e=>e.guardian&&e.hp>0))return;
  if(gate.remainingDelay>0)return;
- if(gate.wave<2){gate.wave++;spawnGuardianWave();return;}
+ if(gate.wave<(gate.index===1?1:2)){gate.wave++;spawnGuardianWave();return;}
  const index=gate.index;gate=null;gateCleared[index]=true;
  players.filter(p=>p.alive).forEach(p=>p.hp=Math.min(p.maxHp,p.hp+12));
  say('✨ THE SCROLL IS UNSEALED! Return to reveal the next chapter!',4);
@@ -349,7 +359,7 @@ function start(){
  $('ending-invite').hidden=true;cancelAnimationFrame(raf);
  joystickAxes.forEach(a=>{a.x=0;a.y=0});document.querySelectorAll('.joystick-knob').forEach(k=>k.style.transform='translate(0px,0px)');
  players=[player(selected[0],0)];if($('coop').checked)players.push(player(selected[1],1));
- foes=[];shots=[];drops=[];fx=[];hazards=[];beams=[];difficulty=$('difficulty').value;gate=null;gateCleared=[false,false,false];scentStep=0;duoActive=false;duoDefeated=false;laserUnlocked=false;coneCooldown=6.8;coneWindup=0;bossPulseCooldown=4;bossPulseWindup=0;bananaWindup=0;daanActive=false;daanPulse=0;phase='explore';paused=false;boss=null;cutsceneNext=null;sceneName=null;musicStep=0;musicMode='idle';musicBar=0;musicNextBarAt=0;
+ foes=[];shots=[];drops=[];fx=[];hazards=[];beams=[];difficulty=$('difficulty').value;gate=null;gateCleared=[false,false,false];scentStep=0;duoActive=false;duoDefeated=false;laserUnlocked=false;coneCooldown=6.8;coneWindup=0;bossPulseCooldown=4;bossPulseWindup=0;bananaWindup=0;daanActive=false;daanPulse=0;laserChallenge={index:0,timer:0,zapCooldown:0};phase='explore';paused=false;boss=null;cutsceneNext=null;sceneName=null;musicStep=0;musicMode='idle';musicBar=0;musicNextBarAt=0;
  elapsed=0;score=0;kills=0;level=1;xp=0;goal=35;clues=0;fridgeVisible=false;
  spawnClock=.55;surgeClock=33;attackClock=0;hudClock=0;keys.clear();ensureAudio();
  $('scene-skip').hidden=true;$('share-result').classList.remove('show');$('mission-unlock').classList.remove('show');$('scene-dialogues').hidden=true;$('share-status').textContent='';$('overlay').classList.remove('cinematic');$('overlay').classList.add('hidden');$('pause').disabled=false;$('pause').textContent='Ⅱ PAWS';
@@ -406,7 +416,9 @@ function movePlayers(dt){
   let k=p.num===0?['a','d','w','s']:['arrowleft','arrowright','arrowup','arrowdown'];
   let dx=Number(keys.has(k[1]))-Number(keys.has(k[0])),dy=Number(keys.has(k[3]))-Number(keys.has(k[2]));
   if(Math.hypot(joystickAxes[p.num].x,joystickAxes[p.num].y)>.08){dx=joystickAxes[p.num].x;dy=joystickAxes[p.num].y;}
-  let l=Math.hypot(dx,dy)||1;
+  // Keyboard diagonal is normalized, but a partially tilted thumbstick stays
+  // proportional instead of snapping to maximum running speed.
+  let l=Math.max(1,Math.hypot(dx,dy));
   p.slowTime=Math.max(0,(p.slowTime||0)-dt);const footing=p.slowTime>0?.63:1;
   p.x=clamp(p.x+dx/l*p.speed*footing*dt*(p.dash>0?2.3:1),24,WIDTH-24);
   p.y=clamp(p.y+dy/l*p.speed*footing*dt*(p.dash>0?2.3:1),24,HEIGHT-24);
@@ -564,6 +576,29 @@ function update(dt){
  }
  if(players.every(p=>!p.alive)){resetEnd(false);return}
  updateGuardian(dt);
+ if(phase==='explore'&&clues===2&&duoDefeated&&!gateCleared[2]){
+   laserChallenge.timer+=dt;
+   laserChallenge.zapCooldown=Math.max(0,laserChallenge.zapCooldown-dt);
+   const node=laserNodes[laserChallenge.index];
+   if(node){
+     const visitor=players.find(p=>p.alive&&dist(p,node)<66);
+     if(visitor){
+       if(laserSafe()){
+         laserChallenge.index++;score+=40;playSfx('clue');
+         if(laserChallenge.index===laserNodes.length){
+           gateCleared[2]=true;say('🔴 SECURITY OVERRIDDEN! The last scroll is readable!',4);
+         }else say('✅ SECURITY TERMINAL '+laserChallenge.index+'/3 DISARMED! Follow the next beacon.',3);
+       }else if(laserChallenge.zapCooldown<=0){
+         if(visitor.inv<=0){const amount=difficulty==='story'?7:difficulty==='extreme'?16:11;
+           visitor.hp=Math.max(1,visitor.hp-amount);visitor.inv=.65;
+           emit('ZAP! -'+amount,visitor.x,visitor.y-35,'#ffbfc6');
+         }
+         laserChallenge.zapCooldown=1.1;
+         say('⚠ LASER ACTIVE! Retreat until the terminal glows green.',2);
+       }
+     }
+   }
+ }
  if(phase==='explore'){
    // Quest 1 is a short tracking mission rather than a repeat of guardian-wave combat.
    if(clues===0&&!gateCleared[0]){
@@ -579,7 +614,7 @@ function update(dt){
     const spot=clueSpots[i];
     if(players.some(p=>p.alive&&dist(p,spot)<68)){
      if(!gateCleared[i]){
-      if(i!==0&&!gate)beginGuardian(i);
+      if(i===1&&!gate)beginGuardian(i);
       return;
      }
      clues++;score+=100;playSfx('clue');gate=null;
@@ -717,11 +752,12 @@ function currentObjective(){
  if(phase!=='explore')return null;
  if(duoActive){const d=foes.find(f=>f.elite&&f.hp>0);return d?{x:d.x,y:d.y,name:'BOINK & BOCHT',hint:'Defeat the terrible twosome to unlock the final scroll!'}:null;}
  if(gate){const remaining=foes.filter(e=>e.guardian&&e.hp>0).length;
-  return {...clueSpots[gate.index],name:'SCROLL '+(gate.index+1)+' · WAVE '+(gate.wave+1)+'/3',
+  return {...clueSpots[gate.index],name:'SAUSAGE AMBUSH · WAVE '+(gate.wave+1)+'/2',
    hint:remaining?'Defeat '+remaining+' scroll guardian'+(remaining===1?'':'s')+'!':'Next wave incoming — stay alert!'};
  }
  if(clues===0&&!gateCleared[0])return {...scentTrail[Math.min(scentStep,scentTrail.length-1)],name:'FOLLOW THE SCENT · '+scentStep+'/3',hint:'Follow the golden pawprints — investigate the next scent marker!'};
- if(clues<3)return {...clueSpots[clues],name:'CLUE '+(clues+1)+' / 3',hint:gateCleared[clues]?'The trail or ward is cleared! Return and read the scroll.':['Track the scent trail','Find the defended sausage clue','Face the final scroll guardians'][clues]};
+ if(clues===2&&duoDefeated&&!gateCleared[2])return {...laserNodes[Math.min(laserChallenge.index,2)],name:'LASER SECURITY · '+laserChallenge.index+'/3',hint:laserSafe()?'GREEN WINDOW! Touch the glowing terminal.':'RED LASER! Wait for a green window before entering.'};
+ if(clues<3)return {...clueSpots[clues],name:'CLUE '+(clues+1)+' / 3',hint:gateCleared[clues]?'The trail or ward is cleared! Return and read the scroll.':['Track the scent trail','Survive the sausage ambush','Disarm three timed laser terminals'][clues]};
  return {...fridge,name:'FRIDGE SHRINE',hint:'The fridge is waiting — find Tolly!'};
 }
 function updateObjective(){
@@ -773,6 +809,7 @@ function rect(x,y,w,h,col){cx.fillStyle=col;cx.fillRect(x,y,w,h)}function circle
 function drawQuestDressing(){
  // World-space illustration primitives: no changes to canonical character artwork.
  for(const [i,spot] of clueSpots.entries()){
+  if(spot.x<cam.x-200||spot.x>cam.x+VIEWW+200||spot.y<cam.y-200||spot.y>cam.y+VIEWH+200)continue;
   const motif=i===0?'PAWPRINT TRAIL':i===1?'THE SAUSAGE INCIDENT':'LASER PROPHECY';
   const ground=i===0?'#e6c99c':i===1?'#eab4a1':'#d1a8c5';
   circle(spot.x,spot.y,100,ground+'55');
@@ -782,21 +819,32 @@ function drawQuestDressing(){
   if(i===1){txt('🌭',spot.x+108,spot.y+32,26,'center');txt('🎾',spot.x-112,spot.y-18,22,'center')}
   if(i===2){line(spot.x-103,spot.y-75,spot.x+100,spot.y+73,'#ff8186',3);txt('⚡',spot.x+112,spot.y-40,24,'center')}
  }
- if(clues===0&&!gateCleared[0])for(let i=scentStep;i<scentTrail.length;i++){const s=scentTrail[i];circle(s.x,s.y,29,i===scentStep?'#fff09a99':'#f4db8b33');txt('🐾',s.x,s.y+12,28,'center')}
- const f=fridge;txt('NO BANANA',f.x,f.y-205,19,'center','#fff4ba');
- for(const a of [-1,1]){txt('🏮',f.x+a*139,f.y-52,39,'center');txt('🎀',f.x+a*112,f.y+68,24,'center')}
+ if(clues===0&&!gateCleared[0])for(let i=scentStep;i<scentTrail.length;i++){const s=scentTrail[i];if(Math.abs(s.x-cam.x)>VIEWW+80||Math.abs(s.y-cam.y)>VIEWH+80)continue;circle(s.x,s.y,29,i===scentStep?'#fff09a99':'#f4db8b33');txt('🐾',s.x,s.y+12,28,'center')}
+ const f=fridge;if(f.x>=cam.x-250&&f.x<=cam.x+VIEWW+250&&f.y>=cam.y-250&&f.y<=cam.y+VIEWH+250){txt('NO BANANA',f.x,f.y-205,19,'center','#fff4ba');
+ for(const a of [-1,1]){txt('🏮',f.x+a*139,f.y-52,39,'center');txt('🎀',f.x+a*112,f.y+68,24,'center')}}
 }
 function world(){rect(0,0,VIEWW,VIEWH,'#69816d');cx.save();cx.translate(-cam.x,-cam.y);
 // tiled moss and Japanese garden paths
-for(let x=0;x<WIDTH;x+=150)for(let y=0;y<HEIGHT;y+=150){rect(x,y,149,149,(Math.floor(x/150)+Math.floor(y/150))%2?'#78917a':'#718b72');circle(x+35,y+58,20,'#7d987c')}
+for(let x=Math.max(0,Math.floor(cam.x/150)*150);x<Math.min(WIDTH,cam.x+VIEWW+150);x+=150)for(let y=Math.max(0,Math.floor(cam.y/150)*150);y<Math.min(HEIGHT,cam.y+VIEWH+150);y+=150){rect(x,y,149,149,(Math.floor(x/150)+Math.floor(y/150))%2?'#78917a':'#718b72');circle(x+35,y+58,20,'#7d987c')}
 // mountain/stream ribbon
 cx.strokeStyle='#8dc2b2';cx.lineWidth=100;cx.beginPath();cx.moveTo(100,-100);cx.bezierCurveTo(480,600,100,1000,520,1920);cx.stroke();cx.strokeStyle='#c1e2d2';cx.lineWidth=6;cx.stroke();
 // main winding stone path towards fridge
 cx.strokeStyle='#b6ab90';cx.lineWidth=95;cx.lineCap='round';cx.beginPath();cx.moveTo(300,400);cx.bezierCurveTo(600,350,620,760,1050,900);cx.bezierCurveTo(1430,1050,1440,1500,2180,1440);cx.stroke();cx.strokeStyle='#ddd1a8';cx.lineWidth=6;cx.setLineDash([8,20]);cx.stroke();cx.setLineDash([]);
 // water bridge
 rect(360,900,230,55,'#8e4d4e');for(let i=0;i<6;i++)rect(373+i*39,900,12,55,'#d28b71');line(365,885,585,885,'#7d4247',10);
-for(const ob of scenery){if(ob.t<.40){circle(ob.x,ob.y,ob.s,'#315c4c');circle(ob.x+9,ob.y-9,ob.s*.78,ob.t<.20?'#e9a4b5':'#e3c0be');circle(ob.x-12,ob.y-5,ob.s*.63,'#f7c1c6')}else if(ob.t<.68){circle(ob.x,ob.y,ob.s*.4,'#e8d99e');circle(ob.x+10,ob.y+6,ob.s*.23,'#edd5a5')}else{circle(ob.x,ob.y,ob.s*.35,'#527d5b');circle(ob.x-9,ob.y,ob.s*.35,'#4d7559')}}
+for(const ob of scenery){if(ob.x<cam.x-80||ob.x>cam.x+VIEWW+80||ob.y<cam.y-80||ob.y>cam.y+VIEWH+80)continue;if(ob.t<.40){circle(ob.x,ob.y,ob.s,'#315c4c');circle(ob.x+9,ob.y-9,ob.s*.78,ob.t<.20?'#e9a4b5':'#e3c0be');circle(ob.x-12,ob.y-5,ob.s*.63,'#f7c1c6')}else if(ob.t<.68){circle(ob.x,ob.y,ob.s*.4,'#e8d99e');circle(ob.x+10,ob.y+6,ob.s*.23,'#edd5a5')}else{circle(ob.x,ob.y,ob.s*.35,'#527d5b');circle(ob.x-9,ob.y,ob.s*.35,'#4d7559')}}
 drawQuestDressing();
+// Laser terminals are world geometry, not character art.
+if(clues===2&&duoDefeated&&!gateCleared[2]){
+ for(let i=laserChallenge.index;i<laserNodes.length;i++){
+  const spot=laserNodes[i],on=i===laserChallenge.index,safe=laserSafe();
+  circle(spot.x,spot.y,on?55:26,on?(safe?'#86ffb06b':'#ff7f8d66'):'#af9fb066');
+  cx.save();cx.strokeStyle=on?(safe?'#b0ffd3':'#ffd5d2'):'#dfd2c3';cx.lineWidth=on?5:2;
+  cx.setLineDash(on?(safe?[8,8]:[3,4]):[]);cx.beginPath();cx.arc(spot.x,spot.y,on?55:27,0,TAU);cx.stroke();cx.restore();
+  txt(on?(safe?'SAFE · TOUCH!':'DANGER · WAIT!'):'LOCKED',spot.x,spot.y-65,16,'center','#fff5cf');
+  txt('🔴',spot.x,spot.y+12,27,'center');
+ }
+}
 // stone lanterns
 for(const [x,y] of [[480,390],[870,920],[1440,1250],[2070,1340]]){rect(x-6,y,13,35,'#77737a');rect(x-16,y-10,33,15,'#444750');rect(x-9,y-23,20,18,'#f1d58f');circle(x,y-17,6,'#fff3bb')}
 // Torii gate next to fridge
@@ -888,6 +936,8 @@ for(const p of players){
   cx.strokeStyle=p.num===0?'#adf8db':'#ffc0c4';cx.lineWidth=3;cx.stroke();
  }else{circle(p.x,p.y,24,p.color);txt(p.emoji,p.x,p.y+16,37,'center')}
  txt('P'+(p.num+1),p.x,p.y-38,17,'center',p.num===0?'#a6ffe1':'#ffc7c3');
+ // Health stays readable next to the character on phone and desktop.
+ rect(p.x-28,p.y+29,56,7,'#152636');rect(p.x-27,p.y+30,54*clamp(p.hp/p.maxHp,0,1),5,p.hp/p.maxHp<.3?'#ff9995':'#9aebbb');
 }
 for(const s of shots){txt(s.kind==='dragon'?'🐉':s.kind==='kong'?'🧊':'🔴',s.x,s.y+9,24,'center')}
 for(const h of hazards){if(h.kind==='daan-warning'){cx.save();cx.setLineDash([8,8]);circle(h.x,h.y,h.size,'#ffd35e38');cx.strokeStyle='#ffe4a3';cx.lineWidth=5;cx.beginPath();cx.arc(h.x,h.y,h.size,0,TAU);cx.stroke();cx.restore();txt('DAAN!',h.x,h.y-85,18,'center','#fff1ae')}else if(h.kind==='goop'){circle(h.x,h.y,22,'#88e5e977');circle(h.x,h.y,13,'#b0f6ff99')}else{circle(h.x,h.y,17,'#ffbd6144');txt('🍌',h.x,h.y+9,25,'center')}}
@@ -918,6 +968,7 @@ function loop(now){let dt=Math.min(.045,(now-lastTime)/1000||.016);lastTime=now;
 function togglePause(){
  if(phase==='idle'||phase==='ended'||phase==='cutscene')return;
  paused=!paused;
+ $('paws-quip').textContent=EXTRA_BANTER.paws[Math.floor(elapsed/7)%EXTRA_BANTER.paws.length].map((v,i)=>i===0?v.toUpperCase()+': ':v).join('');
  $('pause').textContent=paused?'▶ UNLEASH THE PAWSIBILITIES':'Ⅱ PAWS';
  $('paws-panel').hidden=!paused;
  if(!paused){lastTime=performance.now();raf=requestAnimationFrame(loop)}
@@ -943,6 +994,22 @@ function tryDash(id){
  const p=players[id];if(!p||!p.alive||p.dashCooldown>0)return;
  p.dash=.18;p.dashCooldown=p.id==='ellie'?2.2:3.4;p.inv=Math.max(p.inv,.18);playSfx('dash');
 }
+// Device rotation is an opt-in enhancement. iOS/browser privacy restrictions can
+// reject landscape locks; the responsive web layout still works without them.
+$('focus-play').addEventListener('click',async()=>{
+ const status=$('focus-status');
+ try{
+  if(document.fullscreenElement){await document.exitFullscreen();status.textContent='Wide play closed.';return}
+  if(!$('game-section').requestFullscreen)throw Error('Fullscreen not supported here');
+  await $('game-section').requestFullscreen();
+  try{if(screen.orientation&&screen.orientation.lock)await screen.orientation.lock('landscape')}
+  catch{status.textContent='Fullscreen opened. Rotate your phone sideways if it did not turn automatically.';return}
+  status.textContent='Wide play enabled. Rotate your phone if needed.';
+ }catch{status.textContent='Your browser cannot open landscape fullscreen. Rotate your phone manually; the controls will adapt.'}
+});
+document.addEventListener('visibilitychange',()=>{
+ if(document.hidden&&!paused&&(phase==='explore'||phase==='boss'))togglePause();
+});
 window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();
  if(['arrowup','arrowleft','arrowright','arrowdown',' '].includes(k))e.preventDefault();
  if(k==='shift'||k==='enter')tryDash(k==='shift'?0:1);
@@ -955,7 +1022,8 @@ for(const pad of document.querySelectorAll('[data-joystick]')){
  function position(e){
   const box=pad.getBoundingClientRect(),cx=box.left+box.width/2,cy=box.top+box.height/2;
   const radius=box.width*.36,dx=e.clientX-cx,dy=e.clientY-cy,m=Math.hypot(dx,dy),ratio=m>radius?radius/m:1;
-  axis.x=dx*ratio/radius;axis.y=dy*ratio/radius;
+  const magnitude=Math.min(1,m/radius),analog=Math.max(0,(magnitude-.13)/.87);
+  axis.x=m>.001?dx/m*analog:0;axis.y=m>.001?dy/m*analog:0;
   knob.style.transform='translate('+Math.round(dx*ratio)+'px,'+Math.round(dy*ratio)+'px)';
  }
  function release(e){if(active!==null&&(e.pointerId===active||!e.pointerId)){active=null;axis.x=axis.y=0;knob.style.transform='translate(0px,0px)'}}

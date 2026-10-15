@@ -1,6 +1,6 @@
 # Hackathon Day 5 — Chibi Renaissance (PLANNED ONLY)
 
-**Status: NOT IMPLEMENTED. Blocked on Day 4 + Day 4.5 acceptance (see `iteration-4-5.md`).**
+**Status: NOT IMPLEMENTED. Blocked on Day 4 + Day 4.5 + Day 4.6 / 4.7 acceptance (see `iteration-4-6.md` and `iteration-4-7.md`).**
 
 ## North star
 Convert the round gameplay representations into faithful chibi overworld sprites while maintaining the recognizable canonical characters and the purpose of the game: invite friends to the birthday. Portrait art remains used in dialogue, selection and dramatic scenes.
@@ -26,4 +26,4 @@ Convert the round gameplay representations into faithful chibi overworld sprites
 
 **Explicit non-goals for Day 5:** new story arcs, level mechanics, mode changes, RSVP backend, payment, online multiplayer, changing event details, rewriting combat balance.
 
-**No Day 5 code or art should be generated or merged until Day 4 is accepted.**
+**No Day 5 code or art should be generated or merged until Day 4, 4.5, 4.6 and 4.7 are accepted.**

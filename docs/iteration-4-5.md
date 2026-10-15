@@ -1,6 +1,6 @@
 # Hackathon Day 4.5 — Paws, Puns & Polish
 
-**Status:** Implemented on review branch; full acceptance pending. Day 5 is blocked.
+**Status:** Merged into main on 15 October 2026; acceptance/testing still pending. Day 4.6 changes are on a separate review branch. Day 5 remains blocked.
 
 ## North star
 A funny, welcoming invitation game, not an obstacle to viewing the birthday plan. The canonical character art is immutable. Every win, loss or non-player can open the independent invitation.

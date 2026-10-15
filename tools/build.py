@@ -43,13 +43,13 @@ def game_as_single_html() -> str:
         if not asset.is_file():
             raise FileNotFoundError(asset)
         ext = asset.suffix.lower()
-        mime = {".webp": "image/webp", ".png": "image/png", ".jpg": "image/jpeg"}.get(ext)
+        mime = {".webp": "image/webp", ".png": "image/png", ".jpg": "image/jpeg", ".svg": "image/svg+xml"}.get(ext)
         if not mime:
             raise ValueError("Unsupported asset: " + str(asset))
         return "data:" + mime + ";base64," + base64.b64encode(asset.read_bytes()).decode("ascii")
 
     # Handles all <img src="assets/..."> and JS scene URLs; leaves absolute URLs alone.
-    html = re.sub(r"assets/[\w-]+\.(?:webp|png|jpg)", lambda m: image_data_path(m.group(0)), html)
+    html = re.sub(r"assets/[\w-]+\.(?:webp|png|jpg|svg)", lambda m: image_data_path(m.group(0)), html)
     return html
 
 
@@ -58,7 +58,7 @@ def image_data_path(relative_path: str) -> str:
     if not path.is_file():
         raise FileNotFoundError(path)
     suffix = path.suffix.lower()
-    mime = {".webp": "image/webp", ".png": "image/png", ".jpg": "image/jpeg"}[suffix]
+    mime = {".webp": "image/webp", ".png": "image/png", ".jpg": "image/jpeg", ".svg": "image/svg+xml"}[suffix]
     return "data:" + mime + ";base64," + base64.b64encode(path.read_bytes()).decode("ascii")
 
 
