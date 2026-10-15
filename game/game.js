@@ -484,7 +484,7 @@ const ambientBanter=[
  'MILLIE: Did someone say throw? ...AAAAAH, IT MOVED!'
 ];
 function say(t,duration=3){$('game-message').textContent=t;messageClock=duration}
-function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5,spriteFacing:'down',spriteMoving:false,spriteAttackAt:-1,perkGlow:0,perkRarity:'',hidden:false,bushTime:0,bushId:-1}}
+function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5,spriteFacing:'down',spriteMoving:false,spriteAttackAt:-1,perkGlow:0,perkRarity:'',hidden:false,bushTime:0,bushId:-1,ambushReady:0}}
 function start(){
  ++scenePresentationToken;perkOffer=null;perksAwarded=0;$('perk-panel').hidden=true;
  $('scene-control-help').hidden=true;$('ending-invite').hidden=true;cancelAnimationFrame(raf);
@@ -575,6 +575,13 @@ function processLevelUps(){
 }
 function damage(enemy,amount,p){
  if(phase==='ended'||phase==='cutscene'||enemy.hp<=0)return;
+ // The first ordinary mob hit after leaving cover is a double-damage crit.
+ // Tolly and elite minibosses are immune; Rosie keeps her 50% pierce.
+ if(p?.ambushReady>0&&enemy!==boss&&!enemy.elite){
+  amount*=2;p.ambushReady=0;
+  emit('SURPRISE CRIT ×2!',enemy.x,enemy.y-44,'#ffeca0');
+  playSfx('special');
+ }
  enemy.hp-=amount;
  if(enemy===boss){boss.hitFlash=.19;
    if(!boss.rage&&boss.hp>0&&boss.hp<=boss.maxHp*.33&&coneWarned){
@@ -627,8 +634,6 @@ function movePlayers(dt){
   }
   p.perkGlow=Math.max(0,(p.perkGlow||0)-dt);p.inv=Math.max(0,p.inv-dt);p.dash=Math.max(0,p.dash-dt);
   p.dashCooldown=Math.max(0,p.dashCooldown-dt);
-  p.cool-=dt;if(p.cool<=0){fire(p);p.cool=p.rate}
-  p.laserCooldown-=dt;if(laserUnlocked&&p.laserCooldown<=0){laserAttack(p);p.laserCooldown=5.3}
   for(let i=drops.length-1;i>=0;i--){let d=drops[i];if(dist(p,d)<29){
     if(d.kind==='xp'){gainXP(12);score+=5;emit('+XP',p.x,p.y,'#a9f4d1')}
     else{p.hp=Math.min(p.maxHp,p.hp+21);emit('+21 HP',p.x,p.y,'#a9ffc9');playSfx('heal')}
@@ -783,9 +788,16 @@ function updateBushes(dt){
  const reveal=winstonForcedReveal>0;winstonForcedReveal=Math.max(0,winstonForcedReveal-dt);
  for(const p of players){
   if(!p.alive){p.hidden=false;p.bushTime=0;p.bushId=-1;continue}
+  const wasHidden=p.hidden,oldDuration=p.bushTime;
   p.bushId=bushes.findIndex(b=>dist(p,b)<51);
   p.hidden=p.bushId>=0&&!reveal;
   p.bushTime=p.hidden?p.bushTime+dt:0;
+  if(p.hidden)p.ambushReady=0;
+  else if(wasHidden&&!reveal&&oldDuration>=.3){
+   p.ambushReady=2.1;
+   p.cool=Math.min(0,p.cool);
+   emit('⚔ AMBUSH READY!',p.x,p.y-39,'#f8eda8');
+  }else p.ambushReady=Math.max(0,(p.ambushReady||0)-dt);
   if(p.hidden&&p.bushTime>=30&&!bushEggSeen&&phase==='explore'){
    bushEggSeen=true;
    showScene('bushEgg','THE THIRTY-SECOND BUSH CONVENTION',
@@ -837,6 +849,28 @@ function drawWorldBubbles(){
   txt(line,x,y-4,Math.min(17,490/line.length),'center','#fff4d5');cx.restore();
  }
 }
+function updateAutoAttacks(dt){
+ for(const p of players){
+  if(!p.alive||p.hidden)continue;
+  p.cool-=dt;if(p.cool<=0){fire(p);p.cool=p.rate}
+  p.laserCooldown-=dt;
+  if(laserUnlocked&&p.laserCooldown<=0){laserAttack(p);p.laserCooldown=5.3}
+ }
+}
+function knockOutOfBush(p,h,bush){
+ const impact=Math.max(1,Math.ceil(h.damage*.25)); // bush soaks 75%
+ p.hp=Math.max(0,p.hp-impact);p.inv=.9;p.hidden=false;
+ p.bushTime=0;p.bushId=-1;p.ambushReady=0;
+ const speed=Math.hypot(h.vx||0,h.vy||0);
+ const dx=speed>0?h.vx/speed:1,dy=speed>0?h.vy/speed:0;
+ p.x=clamp(bush.x+dx*88,24,WIDTH-24);
+ p.y=clamp(bush.y+dy*88,24,HEIGHT-24);
+ emit('OW! -'+impact+' · BUSH BLOCK!',p.x,p.y-32,'#fff0a1');
+ bubble(p.id,'OW! THE BUSH TOOK MOST OF IT!',2.4);
+ playSfx('boink');
+ if(p.hp===0){p.alive=false;p.reviveProgress=0}
+ return impact;
+}
 function update(dt){
  if(phase==='ended'||phase==='cutscene'||phase==='upgrade')return;
  elapsed+=dt;messageClock-=dt;
@@ -851,6 +885,7 @@ function update(dt){
  movePlayers(dt);
  updateBushes(dt);
  if(phase==='ended'||phase==='cutscene')return;
+ updateAutoAttacks(dt);
  updatePairBanter(dt);
  worldBubbles.forEach(b=>b.ttl-=dt);worldBubbles=worldBubbles.filter(b=>b.ttl>0);
  updateRevives(dt);
@@ -1125,6 +1160,10 @@ function update(dt){
     if(h.ttl<=0){hazards.splice(i,1);continue}
     let struck=false;
     for(const p of players){
+      const bush=p.hidden&&p.bushId>=0?bushes[p.bushId]:null;
+      const foliageHit=p.alive&&p.inv<=0&&bush&&h.kind==='duo-banana'&&
+       ['boink','bocht'].includes(h.source)&&dist(h,bush)<45;
+      if(foliageHit){knockOutOfBush(p,h,bush);struck=true;break}
       if(p.alive&&!p.hidden&&p.inv<=0&&dist(h,p)<(h.size||30)){
         if(h.kind==='goop'){p.slowTime=Math.max(p.slowTime||0,1.3);struck=false;break;}
         p.hp=Math.max(0,p.hp-h.damage);p.inv=.55;
