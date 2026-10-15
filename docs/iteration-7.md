@@ -78,3 +78,16 @@ The ground gains 180 little grass tufts that part when a moving player brushes p
 - Added a prominent **Add both missions to calendar** link on the separate invitation and the main game's party-details panel. Both download the same existing `game/birthday.ics` file, which contains **two** independent calendar events; guests open/import it to add them to their own calendar app. This is not an automatic calendar-account write.
 - Event 1: Broodnodig, Friday 13 November 2026, 18:15–20:15. Event 2: Lasergames Utrecht, starting 20:40 (no unconfirmed end time invented).
 - CI asserts that the public invite and game link to that same calendar file and the ICS has exactly two events with the correct start/end fields.
+
+## Day 8 — Snack Power and Sakura Breeze (100-kill unlock)
+
+**Intent:** one meaningful final gameplay layer without a new inventory screen or extra buttons.
+
+- Each playable pet now has a thin, growing amber **Snack Power meter immediately beneath its green HP bar** (zero to 100; golden at full). It belongs to that pet, not the whole team. The main HUD is unchanged.
+- **Chocolate first heals up to 21 HP.** Any unused healing capacity is converted into Snack Power at two points per excess HP; a full-health chocolate therefore charges 42/100. The normal chocolate pickup is never a wasted heal.
+- Direct ordinary mob hits add **0.75 Snack Power**, at most once per 0.35 seconds per pet, so fast multi-target attacks cannot exploit charging. Real HP that Ellie restores to a teammate slowly adds **0.45 Snack Power per HP healed**; healing full-health allies does not charge it.
+- At 100/100, the **next eligible signature action automatically consumes the meter**, requiring no new key: Rosie's dragon deals 40% extra damage and retains its two-target piercing; Millie's next single-target ball deals 50% extra damage and refills one missing dash charge; Winnifred's next close-range sausage swipe extends her reach by 20 units and deals 35% more damage; Ellie's next healing pulse with an injured character nearby heals 12 extra HP per target. All retain their core class roles.
+- A rare pink **Sakura Breeze** blossom pickup magnetically attracts *XP stars only* within 660 world units for 4.2 seconds; it does not attract chocolate or additional blossom powerups. **No magnet can drop before 100 mob kills. Kill 100 guarantees the first blossom**; after 100, a rare 1.8% chance per subsequent kill can create another if no blossom is already on the field. The pickup itself must still be collected normally.
+- Tests: overflow vs partial chocolate; 0, 50 and 100% meter width and placement below HP; hit-rate throttling; all four signature abilities; genuine Ellie healing; the 99/100/101-kill boundary; subsequent chance; magnet selectivity and no star pulling while hidden. Existing quest, cutscene, story/Adventure/Impossible, birthday invitation and offline build flows must remain green.
+
+**Owner acceptance outstanding:** snack-meter visibility on phones, full-charge combat feedback, the 100-kill timing in a real run, whether Sakura Breeze is rewarding but not excessive, and all prior release gates.
