@@ -428,7 +428,7 @@ function spawnDuo(){
    hp,maxHp:hp,speed:conf.speed*(difficulty==='story'?1:1.10),
    damage:Math.round(conf.damage*(difficulty==='story'?1:1.16)),
    size:conf.size+8,attack:1.2,kind,elite:true,age:0,
-   telegraph:0,charge:-1,trailTimer:0,slow:0,volleyWarmup:0,volleyCooldown:i===0?3.2:4.8});
+   telegraph:0,charge:-1,trailTimer:0,slow:0,volleyWarmup:0,volleyCooldown:difficulty==='extreme'?1.6:i===0?3.2:4.8,volleyShots:0,volleyShotClock:0,volleyShotIndex:0});
  }
  say('⚠ BOINK & BOCHT! Defeat the terrible twosome to reveal the last clue!',4);
  playSfx('boink');
@@ -720,28 +720,40 @@ function advanceProjectiles(dt){
   if(phase==='cutscene'||phase==='ended')break;
  }
 }
-// Extreme-only mini-boss attack: Boink fires an axis-aligned '+' volley;
-// Bocht fires a 45-degree 'X' volley. A readable .78s windup precedes each.
+// Impossible 10/10: the two elites spawn and wind up simultaneously.
+// Red flashing warning for .5 s, then 12 rapid rounds at .085 s intervals.
+// Boink uses + cardinal axes; Bocht rotates the same burst to X diagonals.
+// Cooldown only begins when the final banana has been fired.
 function updateDuoVolley(e,dt){
  if(difficulty!=='extreme'||!duoActive||!e.elite||!['boink','bocht'].includes(e.kind))return;
+ if(e.volleyShots>0){
+  e.volleyShotClock-=dt;
+  while(e.volleyShotClock<=0&&e.volleyShots>0){
+   const offset=e.kind==='bocht'?Math.PI/4:0;
+   const n=e.volleyShotIndex++,angle=offset+(n%4)*Math.PI/2;
+   hazards.push({kind:'duo-banana',source:e.kind,x:e.x,y:e.y,
+    vx:Math.cos(angle)*255,vy:Math.sin(angle)*255,
+    damage:8,size:18,ttl:2.15});
+   e.volleyShots--;
+   e.volleyShotClock+=.085;
+   if(n%4===0){emit('PEW!',e.x,e.y-49,'#ffe1a0');playSfx('laser')}
+  }
+  if(e.volleyShots===0){e.volleyCooldown=2.0;e.volleyShotClock=0}
+  return;
+ }
  if(e.volleyWarmup>0){
   e.volleyWarmup-=dt;
   if(e.volleyWarmup<=0){
-   const offset=e.kind==='bocht'?Math.PI/4:0;
-   for(let n=0;n<4;n++){
-    const angle=offset+n*Math.PI/2;
-    hazards.push({kind:'duo-banana',source:e.kind,x:e.x,y:e.y,
-      vx:Math.cos(angle)*220,vy:Math.sin(angle)*220,damage:11,size:19,ttl:2.3});
-   }
-   playSfx('special');
+   e.volleyWarmup=0;e.volleyShots=12;e.volleyShotClock=0;
+   e.volleyShotIndex=0;playSfx('special');
   }
   return;
  }
  e.volleyCooldown-=dt;
  if(e.volleyCooldown<=0){
-  e.volleyWarmup=.78;e.volleyCooldown=e.kind==='boink'?4.3:5.1;
-  say(e.kind==='boink'?'⚠ BOINK: + BANANA CROSS!':'⚠ BOCHT: X BANANA CROSS!',1.6);
-  emit(e.kind==='boink'?'⚠ +':'⚠ X',e.x,e.y-42,'#ffe4aa');
+  e.volleyWarmup=.5;e.volleyCooldown=0;
+  emit('⚠ '+(e.kind==='boink'?'+':'X')+' RED WARNING!',e.x,e.y-48,'#ff7c81');
+  say('⚠ BOINK + BOCHT: RED WARNING! MACHINE-GUN BANANAS!',1.4);
  }
 }
 function update(dt){
@@ -1161,7 +1173,7 @@ for(const e of foes){
  cx.save();cx.translate(e.x,e.y+bob);
  circle(0,e.size*.95,e.size*.84,'#2e465077');
  const spriteEnemy=window.Level32Sprites?.draw(cx,e.kind,
-   {state:e.telegraph>0?'attack':e.slow>0?'hurt':'walk',direction:'down'},
+   {state:e.volleyWarmup>0?'attack':e.volleyShots>0?'special':e.telegraph>0?'attack':e.slow>0?'hurt':'walk',direction:'down'},
    0,0,e.size*2.2,elapsed+(e.age||0)) || false;
  if(!spriteEnemy){
  if(e.kind==='bocht'){
@@ -1182,7 +1194,14 @@ for(const e of foes){
  if(e.kind==='boink'&&e.telegraph>0){cx.beginPath();cx.arc(0,0,e.size+12,0,TAU);cx.strokeStyle='#ffe197';cx.lineWidth=5;cx.setLineDash([6,6]);cx.stroke();cx.setLineDash([]);txt('BOINK!',0,-e.size-22,14,'center','#ffe6a7')}
  if(e.kind==='bocht'){cx.beginPath();cx.arc(0,0,e.size+5,0,TAU);cx.strokeStyle='#b4f3fa';cx.lineWidth=2;cx.stroke()}
  if(e.slow>0){cx.beginPath();cx.arc(0,0,e.size+8,0,TAU);cx.strokeStyle='#a7edff';cx.lineWidth=4;cx.stroke()}
- if(e.elite){txt('⚠ '+e.kind.toUpperCase(),0,-e.size-25,16,'center','#fff2ac')}
+ if(e.elite){
+   if(e.volleyWarmup>0){cx.save();cx.globalAlpha=Math.floor(e.volleyWarmup*16)%2?.96:.45;
+    circle(0,0,e.size+17,'#ff40578c');cx.strokeStyle='#ff5c5c';cx.lineWidth=6;
+    cx.beginPath();cx.arc(0,0,e.size+19,0,TAU);cx.stroke();cx.restore();
+    txt('RED WARNING '+e.volleyWarmup.toFixed(1)+'s',0,-e.size-35,17,'center','#fff1d3');
+   }else if(e.volleyShots>0)txt('PEW PEW PEW!',0,-e.size-34,17,'center','#fff1ac');
+   else txt('⚠ '+e.kind.toUpperCase(),0,-e.size-25,16,'center','#fff2ac');
+  }
  rect(-e.size,-e.size-11,e.size*2*clamp(e.hp/e.maxHp,0,1),4,'#d76c78');
  cx.restore();
 }
