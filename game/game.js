@@ -24,6 +24,7 @@ const ENEMY_TYPES={
 let best=0;try{best=Number(localStorage.getItem('rosie-survivors-best'))||0}catch{};
 const rnd=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const clueSpots=[{x:730,y:660},{x:1240,y:1060},{x:1690,y:1420}];
+const scentTrail=[{x:440,y:500},{x:550,y:570},{x:660,y:620}];let scentStep=0;
 const scenery=(()=>{let seed=9145;const r=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};return Array.from({length:450},()=>({x:r()*WIDTH,y:r()*HEIGHT,t:r(),s:10+r()*24}))})();
 const SCENE_ART={"clue1":"assets/scene-clue1.webp","clue2":"assets/scene-clue2.webp","clue3":"assets/scene-clue3.webp","intro":"assets/scene-intro.webp","phase2":"assets/scene-phase2.webp","victory":"assets/scene-victory.webp","defeat":"assets/scene-defeat.webp"};
 // Never generate alternate faces for the pets: scene portraits reuse the actual
@@ -276,7 +277,7 @@ function spawnGuardianWave(){
    kind,guardian:true,age:0,telegraph:0,charge:-1,trailTimer:0,slow:0});
  }
  gate.remainingDelay=3.3;
- say('⚠ SCROLL '+(gate.index+1)+': DEFENCE WAVE '+(gate.wave+1)+' / 3! Defeat its guardians!',3.5);
+ say(gate.index===1?'🌭 SAUSAGE AMBUSH · Round '+(gate.wave+1)+'/3! Boink and dodge!':'⚠ FRIDGE SECURITY · WAVE '+(gate.wave+1)+'/3!',3.5);
  playSfx('wave');
 }
 function beginGuardian(index){gate={index,wave:0,remainingDelay:0};spawnGuardianWave();}
@@ -348,7 +349,7 @@ function start(){
  $('ending-invite').hidden=true;cancelAnimationFrame(raf);
  joystickAxes.forEach(a=>{a.x=0;a.y=0});document.querySelectorAll('.joystick-knob').forEach(k=>k.style.transform='translate(0px,0px)');
  players=[player(selected[0],0)];if($('coop').checked)players.push(player(selected[1],1));
- foes=[];shots=[];drops=[];fx=[];hazards=[];beams=[];difficulty=$('difficulty').value;gate=null;gateCleared=[false,false,false];duoActive=false;duoDefeated=false;laserUnlocked=false;coneCooldown=6.8;coneWindup=0;bossPulseCooldown=4;bossPulseWindup=0;bananaWindup=0;daanActive=false;daanPulse=0;phase='explore';paused=false;boss=null;cutsceneNext=null;sceneName=null;musicStep=0;musicMode='idle';musicBar=0;musicNextBarAt=0;
+ foes=[];shots=[];drops=[];fx=[];hazards=[];beams=[];difficulty=$('difficulty').value;gate=null;gateCleared=[false,false,false];scentStep=0;duoActive=false;duoDefeated=false;laserUnlocked=false;coneCooldown=6.8;coneWindup=0;bossPulseCooldown=4;bossPulseWindup=0;bananaWindup=0;daanActive=false;daanPulse=0;phase='explore';paused=false;boss=null;cutsceneNext=null;sceneName=null;musicStep=0;musicMode='idle';musicBar=0;musicNextBarAt=0;
  elapsed=0;score=0;kills=0;level=1;xp=0;goal=35;clues=0;fridgeVisible=false;
  spawnClock=.55;surgeClock=33;attackClock=0;hudClock=0;keys.clear();ensureAudio();
  $('scene-skip').hidden=true;$('share-result').classList.remove('show');$('mission-unlock').classList.remove('show');$('scene-dialogues').hidden=true;$('share-status').textContent='';$('overlay').classList.remove('cinematic');$('overlay').classList.add('hidden');$('pause').disabled=false;$('pause').textContent='Ⅱ PAWS';
@@ -564,12 +565,21 @@ function update(dt){
  if(players.every(p=>!p.alive)){resetEnd(false);return}
  updateGuardian(dt);
  if(phase==='explore'){
+   // Quest 1 is a short tracking mission rather than a repeat of guardian-wave combat.
+   if(clues===0&&!gateCleared[0]){
+     const paw=scentTrail[scentStep];
+     if(paw&&players.some(p=>p.alive&&dist(p,paw)<78)){
+       scentStep++;playSfx('clue');score+=25;
+       say(scentStep===1?'ROSIE: I smell... banana?':scentStep===2?'MILLIE: BALL! AAAAAH! THE LEAVES MOVED!':'ELLIE: It is a pawprint trail. Guys, please keep up!',3.5);
+     }
+     if(scentStep>=scentTrail.length){gateCleared[0]=true;say('🐾 TRAIL FOUND! The first scroll is now readable!',4)}
+   }
    const i=clues;
    if(i<3&&!duoActive&&(i!==2||duoDefeated)){
     const spot=clueSpots[i];
     if(players.some(p=>p.alive&&dist(p,spot)<68)){
      if(!gateCleared[i]){
-      if(!gate)beginGuardian(i);
+      if(i!==0&&!gate)beginGuardian(i);
       return;
      }
      clues++;score+=100;playSfx('clue');gate=null;
@@ -710,7 +720,8 @@ function currentObjective(){
   return {...clueSpots[gate.index],name:'SCROLL '+(gate.index+1)+' · WAVE '+(gate.wave+1)+'/3',
    hint:remaining?'Defeat '+remaining+' scroll guardian'+(remaining===1?'':'s')+'!':'Next wave incoming — stay alert!'};
  }
- if(clues<3)return {...clueSpots[clues],name:'CLUE '+(clues+1)+' / 3',hint:gateCleared[clues]?'The ward is broken! Return and read the scroll.':['Reach the first guarded scroll','Find the defended sausage clue','Face the final scroll guardians'][clues]};
+ if(clues===0&&!gateCleared[0])return {...scentTrail[Math.min(scentStep,scentTrail.length-1)],name:'FOLLOW THE SCENT · '+scentStep+'/3',hint:'Follow the golden pawprints — investigate the next scent marker!'};
+ if(clues<3)return {...clueSpots[clues],name:'CLUE '+(clues+1)+' / 3',hint:gateCleared[clues]?'The trail or ward is cleared! Return and read the scroll.':['Track the scent trail','Find the defended sausage clue','Face the final scroll guardians'][clues]};
  return {...fridge,name:'FRIDGE SHRINE',hint:'The fridge is waiting — find Tolly!'};
 }
 function updateObjective(){
@@ -771,6 +782,7 @@ function drawQuestDressing(){
   if(i===1){txt('🌭',spot.x+108,spot.y+32,26,'center');txt('🎾',spot.x-112,spot.y-18,22,'center')}
   if(i===2){line(spot.x-103,spot.y-75,spot.x+100,spot.y+73,'#ff8186',3);txt('⚡',spot.x+112,spot.y-40,24,'center')}
  }
+ if(clues===0&&!gateCleared[0])for(let i=scentStep;i<scentTrail.length;i++){const s=scentTrail[i];circle(s.x,s.y,29,i===scentStep?'#fff09a99':'#f4db8b33');txt('🐾',s.x,s.y+12,28,'center')}
  const f=fridge;txt('NO BANANA',f.x,f.y-205,19,'center','#fff4ba');
  for(const a of [-1,1]){txt('🏮',f.x+a*139,f.y-52,39,'center');txt('🎀',f.x+a*112,f.y+68,24,'center')}
 }
