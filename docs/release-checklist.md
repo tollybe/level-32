@@ -43,3 +43,13 @@
 - [ ] Verify guardian wave times in solo and co-op; intended Adventure difficulty ≈6–7/10.
 - [ ] Confirm browser window links and `birthday.ics` import in common mobile calendar apps.
 - [ ] Ensure mobile dash and reduced-motion preferences work on a real touch device.
+
+
+## Day 4 extension — required before Day 5
+- [ ] Verify Extreme Mode appears as a third selectable difficulty in desktop and mobile UI.
+- [ ] Verify 10/10 guardian-wave progression, boss HP and increased pressure across solo and co-op.
+- [ ] Verify Daan's delayed shockwave in Tolly phase two has a visible safe escape and pauses in cutscenes.
+- [ ] Replace the temporary Daan emblem with an **approved** illustration (no fabricated likeness).
+- [ ] Run full browser smoke suite and actual physical-phone gameplay checks.
+- [ ] Test win, loss and direct invitation/calendar links in all three modes.
+- [ ] Accept Day 4 explicitly before starting Day 5: see [Day 5 plan](iteration-5.md).

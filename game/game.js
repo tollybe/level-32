@@ -9,8 +9,12 @@ const roster={rosie:{name:'Rosie',emoji:'🐕‍🦺',color:'#222a36',hp:130,spe
 let selected=['rosie','winnifred'],players=[],foes=[],shots=[],drops=[],fx=[],hazards=[],boss=null,phase='idle',paused=false,score=0,kills=0,level=1,xp=0,goal=35,spawnClock=0,surgeClock=33,elapsed=0,clues=0,fridgeVisible=false,fridge={x:2180,y:1440},cam={x:0,y:0},lastTime=0,raf=0,messageClock=0,attackClock=0,heldTouch={},audioCtx=null,audioEnabled=true,musicTimer=null,musicStep=0,musicMode='idle',musicBar=0,musicNextBarAt=0,sloganClock=8,bossPhase=1,coneWarned=false;
 let cutsceneNext=null,sceneName=null,reviveSeconds=1.85,hudClock=0;
 let duoActive=false,duoDefeated=false,laserUnlocked=false,beams=[],coneCooldown=6.8,coneWindup=0,coneAngle=0,bossPulseCooldown=4,bossPulseWindup=0,bananaWindup=0;
-let gate=null,gateCleared=[false,false,false],difficulty='challenge';
-const GATE_WAVES={challenge:[[3,3,2],[3,3,3],[4,3,3]],story:[[2,2,2],[2,2,2],[2,2,3]]};
+let gate=null,gateCleared=[false,false,false],difficulty='challenge',daanActive=false,daanPulse=0;
+const GATE_WAVES={challenge:[[3,3,2],[3,3,3],[4,3,3]],story:[[2,2,2],[2,2,2],[2,2,3]],extreme:[[5,5,5],[6,5,6],[6,7,7]]};
+const daanPortrait=new Image();daanPortrait.src='assets/daan.svg';
+// Day 4 uses a distinct static art asset, never a chibi sprite. The graphic is a
+// clearly labeled interim insignia pending approval of Daan's actual likeness.
+const EXTREME={guardianHp:1.65,guardianSpeed:1.17,guardianDamage:1.28,ambientDamage:1.35,bossHp:1.65,bossSpeed:1.22};
 const ENEMY_TYPES={
  bleepling:{hp:42,speed:117,damage:13,size:21,score:12,xp:7},
  boink:{hp:60,speed:114,damage:12,size:26,score:20,xp:9},
@@ -257,10 +261,10 @@ function spawnGuardianWave(){
  for(let i=0;i<count;i++){
   const kind=(i===0&&gate.wave===2)?'chunkling':(i%3===0?'boink':i%3===1?'bleepling':'bocht');
   const c=ENEMY_TYPES[kind],a=TAU*(i+.3+gate.wave*.27)/count,radius=190+(i%2)*38;
-  const hp=Math.round(c.hp*(difficulty==='story'?.84:1.2));
+  const hp=Math.round(c.hp*(difficulty==='story'?.84:difficulty==='extreme'?EXTREME.guardianHp:1.2));
   foes.push({x:clamp(origin.x+Math.cos(a)*radius,30,WIDTH-30),y:clamp(origin.y+Math.sin(a)*radius,30,HEIGHT-30),
-   hp,maxHp:hp,speed:c.speed*(difficulty==='story'?.9:1.04),
-   damage:Math.round(c.damage*(difficulty==='story'?.7:1)),size:c.size,attack:.85,
+   hp,maxHp:hp,speed:c.speed*(difficulty==='story'?.9:difficulty==='extreme'?EXTREME.guardianSpeed:1.04),
+   damage:Math.round(c.damage*(difficulty==='story'?.7:difficulty==='extreme'?EXTREME.guardianDamage:1)),size:c.size,attack:.85,
    kind,guardian:true,age:0,telegraph:0,charge:-1,trailTimer:0,slow:0});
  }
  gate.remainingDelay=3.3;
@@ -299,15 +303,16 @@ function continueScene(){
  $('scene-dialogues').hidden=true;
  $('pause').disabled=false;$('pause').textContent='Ⅱ PAUSE';
  if(kind==='intro'){
-   const hp=(players.length===2?1070:845)*(difficulty==='story'?.77:1);
-   boss={x:fridge.x+45,y:fridge.y-80,hp,maxHp:hp,size:49,speed:difficulty==='story'?96:137,attack:1.1};
-   hazards=[];foes=foes.slice(-5);bossPhase=1;coneWarned=false;coneCooldown=6.6;coneWindup=0;bossPulseCooldown=1.65;bossPulseWindup=0;bananaWindup=0;
+   const hp=(players.length===2?1070:845)*(difficulty==='story'?.77:difficulty==='extreme'?EXTREME.bossHp:1);
+   boss={x:fridge.x+45,y:fridge.y-80,hp,maxHp:hp,size:49,speed:difficulty==='story'?96:difficulty==='extreme'?137*EXTREME.bossSpeed:137,attack:1.1};
+   hazards=[];foes=foes.slice(-5);bossPhase=1;coneWarned=false;coneCooldown=6.6;coneWindup=0;bossPulseCooldown=1.65;bossPulseWindup=0;bananaWindup=0;daanActive=false;daanPulse=4;
    $('bossbar').classList.add('show');$('boss-card').classList.add('show');
    say('⚔ TOLLY: No Rosie, you’re on a diet — no more banana!',5);playSfx('boss');score+=200;
  }else if(kind==='phase2'){
    say('⚠ CONE OF SHAME PROTOCOL ACTIVATED! Watch the warning arc!',4);playSfx('phase');
    players.filter(p=>p.alive).forEach(p=>p.inv=Math.max(p.inv,1.3));
    coneCooldown=2.5;bossPulseCooldown=1.4;
+   if(difficulty==='extreme'){daanActive=true;daanPulse=3; say('⚠ EXTREME MODE · DAAN HAS JOINED TOLLY’S DEFENCE!',4)}
  }else if(kind==='clue2'){
    players.filter(p=>p.alive).forEach(p=>p.inv=Math.max(p.inv,1.2));
    spawnDuo();
@@ -326,7 +331,7 @@ function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+
 function start(){
  $('ending-invite').hidden=true;cancelAnimationFrame(raf);
  players=[player(selected[0],0)];if($('coop').checked)players.push(player(selected[1],1));
- foes=[];shots=[];drops=[];fx=[];hazards=[];beams=[];difficulty=$('difficulty').value;gate=null;gateCleared=[false,false,false];duoActive=false;duoDefeated=false;laserUnlocked=false;coneCooldown=6.8;coneWindup=0;bossPulseCooldown=4;bossPulseWindup=0;bananaWindup=0;phase='explore';paused=false;boss=null;cutsceneNext=null;sceneName=null;musicStep=0;musicMode='idle';musicBar=0;musicNextBarAt=0;
+ foes=[];shots=[];drops=[];fx=[];hazards=[];beams=[];difficulty=$('difficulty').value;gate=null;gateCleared=[false,false,false];duoActive=false;duoDefeated=false;laserUnlocked=false;coneCooldown=6.8;coneWindup=0;bossPulseCooldown=4;bossPulseWindup=0;bananaWindup=0;daanActive=false;daanPulse=0;phase='explore';paused=false;boss=null;cutsceneNext=null;sceneName=null;musicStep=0;musicMode='idle';musicBar=0;musicNextBarAt=0;
  elapsed=0;score=0;kills=0;level=1;xp=0;goal=35;clues=0;fridgeVisible=false;
  spawnClock=.55;surgeClock=33;attackClock=0;hudClock=0;keys.clear();ensureAudio();
  $('scene-skip').hidden=true;$('share-result').classList.remove('show');$('mission-unlock').classList.remove('show');$('scene-dialogues').hidden=true;$('share-status').textContent='';$('overlay').classList.remove('cinematic');$('overlay').classList.add('hidden');$('pause').disabled=false;$('pause').textContent='Ⅱ PAUSE';
@@ -349,7 +354,7 @@ function spawnBleepling(){
  const c=ENEMY_TYPES[kind],hp=Math.round(c.hp+tier*(kind==='chunkling'?11:6));
  foes.push({x:clamp(focus.x+Math.cos(angle)*radius,35,WIDTH-35),
   y:clamp(focus.y+Math.sin(angle)*radius,35,HEIGHT-35),hp,maxHp:hp,
-  speed:c.speed+Math.min(31,elapsed*.14),attack:rnd(.3,.8),size:c.size,kind,damage:Math.ceil((c.damage+Math.floor(tier*.75))*(difficulty==='story'?.7:1)),age:0,telegraph:0,charge:-1,trailTimer:0,slow:0});
+  speed:c.speed+Math.min(31,elapsed*.14),attack:rnd(.3,.8),size:c.size,kind,damage:Math.ceil((c.damage+Math.floor(tier*.75))*(difficulty==='story'?.7:difficulty==='extreme'?EXTREME.ambientDamage:1)),age:0,telegraph:0,charge:-1,trailTimer:0,slow:0});
 }
 function emit(text,x,y,col='#ffe1aa'){fx.push({text,x,y,col,t:1.1})}
 function nearest(origin,arr,r=Infinity){let item=null,bd=r;for(const o of arr){if(o.hp<=0||o.alive===false)continue;const d=dist(origin,o);if(d<bd){bd=d;item=o}}return item}
@@ -473,9 +478,9 @@ function update(dt){
  updateEllieAuras(dt);
  spawnClock-=dt;
  if(spawnClock<=0&&foes.length<(gate?23:duoActive?20:phase==='boss'?48:62)){
-   const n=gate?1:duoActive?1:phase==='boss'?(difficulty==='story'?1:2):elapsed>75?3:elapsed>18?2:1;
+   const n=gate?1:duoActive?1:phase==='boss'?(difficulty==='story'?1:difficulty==='extreme'?3:2):elapsed>75?3:elapsed>18?2:1;
    for(let j=0;j<n&&foes.length<65;j++)spawnBleepling();
-   spawnClock=Math.max(.42,.93-elapsed*.0035)*(difficulty==='story'?1.65:1)*(gate?1.5:1)*(phase==='boss'?.9:1);
+   spawnClock=Math.max(.42,.93-elapsed*.0035)*(difficulty==='story'?1.65:difficulty==='extreme'?.78:1)*(gate?1.5:1)*(phase==='boss'?.9:1);
  }
  surgeClock-=dt;
  if(surgeClock<=0&&!duoActive&&!gate&&foes.length<60){
@@ -560,6 +565,17 @@ function update(dt){
    }
  }
  if(phase==='boss'&&boss&&boss.hp>0){
+   // In 10/10 mode, Daan joins only during the second half of the finale.
+   // His distinctive warning is an additional dodgable challenge, never an invitation gate.
+   if(daanActive){
+     daanPulse-=dt;
+     if(daanPulse<=0){
+       const focus=nearest(boss,players);
+       if(focus){hazards.push({x:focus.x,y:focus.y,vx:0,vy:0,ttl:1.2,damage:0,kind:'daan-warning',size:78,triggered:false});
+         say('⚠ DAAN: MOVE, HEROES! A SECOND DEFENDER HAS ARRIVED!',2);}
+       daanPulse=5.3;
+     }
+   }
    bossPulseCooldown-=dt;
     if(bossPulseWindup>0){
       bossPulseWindup-=dt;
@@ -634,6 +650,17 @@ function update(dt){
    $('bossfill').style.width=100*clamp(boss.hp/boss.maxHp,0,1)+'%';
  }
  for(let i=hazards.length-1;i>=0;i--){
+   const daanHazard=hazards[i];
+   if(daanHazard.kind==='daan-warning'){
+     daanHazard.ttl-=dt;
+     if(daanHazard.ttl<=0){
+       for(const p of players.filter(p=>p.alive&&dist(p,daanHazard)<daanHazard.size)){
+         if(p.inv<=0){p.hp=Math.max(0,p.hp-24);p.inv=.8;if(p.hp===0)p.alive=false;emit('DAAN SHOCKWAVE -24',p.x,p.y-26,'#ffe3ab')}
+       }
+       hazards.splice(i,1);
+     }
+     continue;
+   }
     const h=hazards[i];if(h.kind!=='goop'){h.x+=h.vx*dt;h.y+=h.vy*dt;}h.ttl-=dt;
     if(h.ttl<=0){hazards.splice(i,1);continue}
     let struck=false;
@@ -739,6 +766,7 @@ for(const e of foes){
 }
 // birthday boss
 if(boss&&boss.hp>0){
+ if(daanActive&&daanPortrait.complete&&daanPortrait.naturalWidth){cx.drawImage(daanPortrait,boss.x+75,boss.y-100,90,90);txt('DAAN · EXTREME',boss.x+116,boss.y-110,14,'center','#ffe3a0')}
  circle(boss.x,boss.y+23,57,'#402f3a99');circle(boss.x,boss.y,52,'#e4b9bd');
  const portrait=$('boss-card').querySelector('img');
  if(portrait.complete&&portrait.naturalWidth){
@@ -794,7 +822,7 @@ for(const p of players){
  txt('P'+(p.num+1),p.x,p.y-38,17,'center',p.num===0?'#a6ffe1':'#ffc7c3');
 }
 for(const s of shots){txt(s.kind==='dragon'?'🐉':s.kind==='kong'?'🧊':'🔴',s.x,s.y+9,24,'center')}
-for(const h of hazards){if(h.kind==='goop'){circle(h.x,h.y,22,'#88e5e977');circle(h.x,h.y,13,'#b0f6ff99')}else{circle(h.x,h.y,17,'#ffbd6144');txt('🍌',h.x,h.y+9,25,'center')}}
+for(const h of hazards){if(h.kind==='daan-warning'){cx.save();cx.setLineDash([8,8]);circle(h.x,h.y,h.size,'#ffd35e38');cx.strokeStyle='#ffe4a3';cx.lineWidth=5;cx.beginPath();cx.arc(h.x,h.y,h.size,0,TAU);cx.stroke();cx.restore();txt('DAAN!',h.x,h.y-85,18,'center','#fff1ae')}else if(h.kind==='goop'){circle(h.x,h.y,22,'#88e5e977');circle(h.x,h.y,13,'#b0f6ff99')}else{circle(h.x,h.y,17,'#ffbd6144');txt('🍌',h.x,h.y+9,25,'center')}}
 if(boss&&boss.hp>0&&coneWindup>0){cx.save();cx.beginPath();cx.moveTo(boss.x,boss.y);cx.arc(boss.x,boss.y,275,coneAngle-.65,coneAngle+.65);cx.closePath();cx.fillStyle='#ff69735d';cx.fill();cx.strokeStyle='#ffeeb1';cx.lineWidth=5;cx.stroke();cx.restore()}
 for(const beam of beams){cx.save();cx.globalAlpha=Math.max(.1,beam.t/.28);cx.strokeStyle='#ff586a';cx.lineWidth=13;cx.shadowColor='#ff7373';cx.shadowBlur=17;cx.beginPath();cx.moveTo(beam.x1,beam.y1);cx.lineTo(beam.x2,beam.y2);cx.stroke();cx.strokeStyle='#fff2b5';cx.lineWidth=4;cx.stroke();cx.restore()}
 for(const f of fx)txt(f.text,f.x,f.y,17,'center',f.col);
@@ -817,7 +845,7 @@ function drawOffscreenArrows(){
   txt((p.alive?'P':'✚ P')+(p.num+1),x,y+35,15,'center',color);
  }
 }
-function render(){let live=players.filter(p=>p.alive);let center=live.length?{x:live.reduce((a,p)=>a+p.x,0)/live.length,y:live.reduce((a,p)=>a+p.y,0)/live.length}:{x:400,y:400};cam.x=clamp(center.x-VIEWW/2,0,WIDTH-VIEWW);cam.y=clamp(center.y-VIEWH/2,0,HEIGHT-VIEWH);world();drawObjectiveMarker();drawOffscreenArrows();rect(0,0,VIEWW,42,'#1a273ac9');txt('🌸 SAKURA GARDEN · '+(phase==='boss'?'FRIDGE DEFENCE':'THE GREAT SNACK RIFT'),15,28,18);txt('🐾 '+kills+'  ✨ LV '+level+'  🧾 '+clues+'/3  '+(difficulty==='story'?'🌼 STORY':'⚔ ADVENTURE'),VIEWW-17,28,17,'right');let dx=fridge.x-center.x,dy=fridge.y-center.y;if(clues>=3&&phase==='explore')txt('🧭 FRIDGE '+Math.round(Math.hypot(dx,dy))+'m',VIEWW/2,28,17,'center','#ffe6a4')}
+function render(){let live=players.filter(p=>p.alive);let center=live.length?{x:live.reduce((a,p)=>a+p.x,0)/live.length,y:live.reduce((a,p)=>a+p.y,0)/live.length}:{x:400,y:400};cam.x=clamp(center.x-VIEWW/2,0,WIDTH-VIEWW);cam.y=clamp(center.y-VIEWH/2,0,HEIGHT-VIEWH);world();drawObjectiveMarker();drawOffscreenArrows();rect(0,0,VIEWW,42,'#1a273ac9');txt('🌸 SAKURA GARDEN · '+(phase==='boss'?'FRIDGE DEFENCE':'THE GREAT SNACK RIFT'),15,28,18);txt('🐾 '+kills+'  ✨ LV '+level+'  🧾 '+clues+'/3  '+(difficulty==='story'?'🌼 STORY':difficulty==='extreme'?'⚠ EXTREME 10/10':'⚔ ADVENTURE'),VIEWW-17,28,17,'right');let dx=fridge.x-center.x,dy=fridge.y-center.y;if(clues>=3&&phase==='explore')txt('🧭 FRIDGE '+Math.round(Math.hypot(dx,dy))+'m',VIEWW/2,28,17,'center','#ffe6a4')}
 function loop(now){let dt=Math.min(.045,(now-lastTime)/1000||.016);lastTime=now;if(!paused&&phase!=='ended'&&phase!=='cutscene')update(dt);render();if(phase!=='ended')raf=requestAnimationFrame(loop)}
 function togglePause(){if(phase==='idle'||phase==='ended'||phase==='cutscene')return;paused=!paused;$('pause').textContent=paused?'▶ RESUME':'Ⅱ PAUSE';if(!paused){lastTime=performance.now();raf=requestAnimationFrame(loop)}else cancelAnimationFrame(raf);$('game-message').textContent=paused?'PAUSED':'QUEST RESUMED'}
 const inviteHref=location.pathname.includes('/game/')?'invitation.html':'game/invitation.html';
