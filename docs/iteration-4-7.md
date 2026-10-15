@@ -1,6 +1,6 @@
 # Day 4.7 — Stability, balancing, and art approval (next pass)
 
-**Status: PLANNED / NOT IMPLEMENTED as a completed iteration.** Day 4.6 code is a proposed review branch. Day 5 remains documentation-only.
+**Status: Day 4.7 automated-stability slice implemented in review branch (15 October 2026); real-device validation remains open.** Day 4.6 was merged into main as PR #6. Day 5 remains documentation-only.
 
 ## Immediate test and stability tasks
 1. Execute Playwright smoke suite automatically in GitHub Actions on every pull request and push to main, including 390×844 phone portrait and 844×390 landscape.
@@ -22,3 +22,15 @@ No chibi implementation yet. No online multiplayer, new collection back end, pri
 - [ ] Extreme Daan telegraph balanced and tested; approved Daan portrait.
 - [ ] Invitations fully functional without gameplay.
 - [ ] Day 5 still not started.
+
+
+## 15 October 2026: implemented 4.7 stability changes
+- Repaired YAML syntax in `.github/workflows/rosie-smoke.yml`: an unquoted colon in a workflow step title stopped GitHub Actions from creating jobs. A valid workflow now runs browser tests on PRs and branch pushes.
+- Automated Chromium smoke tests now cover desktop and mobile portrait/landscape, Adventure/Story/Extreme, solo and local co-op paths, two independent joystick axes, laser safety/failure/success, Daan's Extreme-only arrival, Tolly anti-camping, cutscene skipping, PAWS, and both winning/losing invitation links.
+- Fixed a **fullscreen regression** where the responsive stylesheet hid the boss HP bar and invitation action while playing in Wide Play. Both are explicitly visible now.
+- Added `docs/PLAYTEST.md` with a compact physical-phone scenario checklist and feedback matrix.
+- Unchanged canonical character asset blobs verified in PR #6. No new sprites or artwork introduced by 4.7.
+
+**Automated regression suite:** success in Chromium on branch after the test expansion; see GitHub Actions tab for latest run. This does **not** prove touch ergonomics on an actual Android/iPhone, real-world balance, an approved Daan portrait, or all mobile calendar behavior.
+
+**Remaining sign-off:** owner phone playtest, approved Daan character illustration, device and calendar validation, solo/co-op difficulty balance, and invitation logistics. Keep the project in playtest state until expressly released.
