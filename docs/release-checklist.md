@@ -147,3 +147,12 @@ Historical checks above concerning **three guardian waves at each clue** no long
 - [x] Automated coverage for first five-level offer, random player selection, rarity bounds and tiered XP; real playtest for levels 10/15 still pending.
 - [ ] Super aura/health labels do not obscure telegraphs, mobile performance/reduced motion sound.
 - [ ] Real-device balance, invitation and ICS signoff.
+
+## Day 6B — Player-feedback corrections
+
+- [ ] CI checks pass for displayed hero stats, decoded cutscene opening, and the 12-way hero × difficulty matrix.
+- [ ] Confirm Story 4/10 is approachable for first-time solo and local co-op guests.
+- [ ] Owner checks Adventure elite duo survives long enough to feel threatening, but not tedious.
+- [ ] Owner tests Extreme banana +/X telegraphs, collision and safe gaps on real devices.
+- [ ] Owner listens to original legendary-style battle arrangements and approves actual loudness/mood.
+- [ ] Existing invitation routes, all canonical art SHA checks, and Day 6 full regression suite remain green.

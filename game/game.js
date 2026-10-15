@@ -7,7 +7,7 @@ const WIDTH=2600,HEIGHT=1900, VIEWW=960,VIEWH=600, TAU=Math.PI*2, keys=new Set()
 const petImages=Object.fromEntries(Array.from(document.querySelectorAll('#heroes .hero'),el=>[el.dataset.hero,el.querySelector('.portrait img')]));
 const roster={rosie:{name:'Rosie',emoji:'🐕‍🦺',color:'#222a36',hp:130,speed:220,range:225,rate:.56,damage:17,weapon:'dragon'},millie:{name:'Millie',emoji:'🐕',color:'#31323d',hp:135,speed:205,range:220,rate:.56,damage:18,weapon:'ball'},winnifred:{name:'Winnifred',emoji:'🐈',color:'#e4d4bc',hp:128,speed:240,range:96,rate:.34,damage:30,weapon:'sausage'},ellie:{name:'Ellie',emoji:'🐶',color:'#121823',hp:150,speed:250,range:175,rate:.92,damage:8,weapon:'kong',auraRadius:135,healPulse:2.7,selfRegen:1.4}};
 let selected=['rosie','winnifred'],players=[],foes=[],shots=[],drops=[],fx=[],hazards=[],boss=null,phase='idle',paused=false,score=0,kills=0,level=1,xp=0,goal=35,spawnClock=0,surgeClock=33,elapsed=0,clues=0,fridgeVisible=false,fridge={x:2180,y:1440},cam={x:0,y:0},lastTime=0,raf=0,messageClock=0,attackClock=0,heldTouch={},joystickAxes=[{x:0,y:0},{x:0,y:0}],audioCtx=null,audioEnabled=true,musicTimer=null,musicStep=0,musicMode='idle',musicBar=0,musicNextBarAt=0,sloganClock=8,bossPhase=1,coneWarned=false;
-let cutsceneNext=null,sceneName=null,reviveSeconds=1.85,hudClock=0,sceneOpenedAt=0,perkOffer=null,perkReturnPhase='explore';
+let cutsceneNext=null,sceneName=null,reviveSeconds=1.85,hudClock=0,sceneOpenedAt=0,perkOffer=null,perkReturnPhase='explore',scenePresentationToken=0;
 let liteFx=typeof matchMedia==='function'&&matchMedia('(pointer:coarse)').matches;
 let duoActive=false,duoDefeated=false,laserUnlocked=false,beams=[],coneCooldown=6.8,coneWindup=0,coneAngle=0,bossPulseCooldown=4,bossPulseWindup=0,bananaWindup=0;
 let gate=null,gateCleared=[false,false,false],difficulty='challenge',daanActive=false,daanPulse=0,daanActionTimer=0;
@@ -16,6 +16,17 @@ const daanPortrait=new Image();daanPortrait.src='assets/daan.svg';
 // Day 4 uses a distinct static art asset, never a chibi sprite. The graphic is a
 // clearly labeled interim insignia pending approval of Daan's actual likeness.
 const EXTREME={guardianHp:1.65,guardianSpeed:1.17,guardianDamage:1.28,ambientDamage:1.35,bossHp:1.65,bossSpeed:1.22};
+// Threat knobs keep level one through five accessible across all four heroes.
+const DIFFICULTY_BALANCE={
+ story:{startingHealth:1.25,guardianHp:.67,guardianSpeed:.83,guardianDamage:.52,
+  mobDamage:.55,ambientInterval:2.45,ambientCap:12,earlySpawnGrace:6},
+ challenge:{startingHealth:1,guardianHp:1.2,guardianSpeed:1.04,guardianDamage:1,
+  mobDamage:1,ambientInterval:1,ambientCap:62,earlySpawnGrace:0},
+ extreme:{startingHealth:1,guardianHp:EXTREME.guardianHp,guardianSpeed:EXTREME.guardianSpeed,
+  guardianDamage:EXTREME.guardianDamage,mobDamage:EXTREME.ambientDamage,
+  ambientInterval:.78,ambientCap:62,earlySpawnGrace:0}
+};
+const difficultyBalance=()=>DIFFICULTY_BALANCE[difficulty];
 const ENEMY_TYPES={
  bleepling:{hp:42,speed:117,damage:13,size:21,score:12,xp:7},
  boink:{hp:60,speed:114,damage:12,size:26,score:20,xp:9},
@@ -33,6 +44,23 @@ let laserChallenge={index:0,timer:0,zapCooldown:0};
 const laserSafe=()=>laserChallenge.timer%3.5>=1.55;
 const scenery=(()=>{let seed=9145;const r=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};return Array.from({length:450},()=>({x:r()*WIDTH,y:r()*HEIGHT,t:r(),s:10+r()*24}))})();
 const SCENE_ART={"clue1":"assets/scene-clue1.webp","clue2":"assets/scene-clue2.webp","clue3":"assets/scene-clue3.webp","intro":"assets/scene-intro.webp","phase2":"assets/scene-phase2.webp","phase3":"assets/scene-phase2.webp","victory":"assets/scene-victory.webp","defeat":"assets/scene-defeat.webp"};
+// Decode art before revealing the overlay: avoid one-frame stale backgrounds.
+const sceneArtCache=Object.fromEntries(Object.entries(SCENE_ART).map(([key,url])=>{
+ const img=new Image();img.src=url;return [key,img];
+}));
+function presentSceneArt(kind,token){
+ const art=$('overlay-art'),img=sceneArtCache[kind];
+ const reveal=()=>{
+  if(token!==scenePresentationToken||phase!=='cutscene'||sceneName!==kind)return;
+  art.src=img?.src||SCENE_ART[kind];
+  art.classList.remove('scene-art-pending');
+  $('overlay').classList.remove('hidden');
+ };
+ if(img?.complete&&img.naturalWidth){reveal();return}
+ if(img?.decode)img.decode().then(reveal).catch(reveal);
+ else if(img){img.addEventListener('load',reveal,{once:true});img.addEventListener('error',reveal,{once:true})}
+ else reveal();
+}
 // Never generate alternate faces for the pets: scene portraits reuse the actual
 // character-select images (and Tolly's existing portrait) for a consistent cast.
 const EXTRA_BANTER={
@@ -215,6 +243,38 @@ const battleScores={
   intervals:[[0,3,7],[0,4,7],[0,3,7],[0,4,7]],
   motif:[[0,74,.75],[1,81,.75],[2,77,.43],[2.75,86,.4],[3.25,81,.65]]}
 };
+// Richer, original handheld-RPG-inspired boss sound. Lightweight WebAudio:
+// pitched drums, string ostinato, brass fanfares and shimmer (no sampled songs).
+function battleDrum(at,kind,loud=.035){
+ const ctx=audioCtx;if(!audioEnabled||!ctx)return;
+ const on=Math.max(at,ctx.currentTime+.003),osc=ctx.createOscillator(),env=ctx.createGain();
+ const kick=kind==='kick',hihat=kind==='hat';
+ osc.type=kick?'sine':hihat?'square':'triangle';
+ const freq=kick?155:hihat?2200:210;
+ osc.frequency.setValueAtTime(freq,on);
+ osc.frequency.exponentialRampToValueAtTime(kick?54:hihat?850:95,on+(kick?.18:.09));
+ env.gain.setValueAtTime(.0001,on);
+ env.gain.linearRampToValueAtTime(loud,on+.004);
+ env.gain.exponentialRampToValueAtTime(.0001,on+(kick?.21:hihat?.045:.11));
+ if(hihat){const lp=ctx.createBiquadFilter();lp.type='highpass';lp.frequency.value=850;osc.connect(lp);lp.connect(env)}
+ else osc.connect(env);
+ env.connect(ctx.destination);osc.start(on);osc.stop(on+(kick?.24:.14));
+}
+function battleString(pitch,at,dur,volume=.008){
+ const ctx=audioCtx;if(!audioEnabled||!ctx)return;
+ const on=Math.max(at,ctx.currentTime+.003),end=on+dur;
+ const env=ctx.createGain(),filter=ctx.createBiquadFilter();
+ filter.type='lowpass';filter.frequency.setValueAtTime(1100,on);
+ env.gain.setValueAtTime(.0001,on);env.gain.linearRampToValueAtTime(volume,on+.14);
+ env.gain.setValueAtTime(volume,Math.max(on+.14,end-.21));
+ env.gain.exponentialRampToValueAtTime(.0001,end);
+ filter.connect(env).connect(ctx.destination);
+ for(const detune of [-7,7]){
+  const osc=ctx.createOscillator();osc.type='sawtooth';
+  osc.frequency.setValueAtTime(noteHz(pitch),on);osc.detune.value=detune;
+  osc.connect(filter);osc.start(on);osc.stop(end+.02);
+ }
+}
 function currentMusic(){
  if(phase==='cutscene'||phase==='upgrade')return 'story';
  if(phase==='boss')return bossPhase>=3?'boss3':bossPhase===2?'boss2':'boss1';
@@ -235,15 +295,28 @@ function scheduleMusicBar(mode,index,startAt){
    const variation=index%4===2?-2:index%4===3?2:0;
    musicVoice(pitch+variation,startAt+beat*beatAt,beat*duration,mode==='boss3'?'brass':'pluck',mode==='boss3'?.026:.024);
   }
-  // Orchestral finale: slow layered string/brass chords and a high response.
-  if(mode==='boss3'||mode==='boss2'){
-   for(const pitch of notes)musicVoice(pitch,startAt,beat*3.65,
-     mode==='boss3'?'strings':'flute',mode==='boss3'?.009:.006);
-   if(index%2===1)musicVoice(root+36,startAt+beat*2.5,beat*1.1,'brass',.017);
-  }else if(mode==='boss1'&&index%2===0){
-   musicVoice(root+31,startAt+beat*2.5,beat*.8,'bell',.012);
+  // Drums create the tension/energy missing from the earlier gentle waltz.
+  const intensity=mode==='boss3'?1.25:mode==='boss2'?1.05:mode==='boss1'?.90:.60;
+  for(let j=0;j<4;j++){
+   battleDrum(startAt+beat*j,j%2===0?'kick':'snare',.038*intensity);
+   if(mode!=='duo'||j%2===0)battleDrum(startAt+beat*(j+.5),'hat',.005*intensity);
   }
-  if(mode==='duo')musicVoice(root+19,startAt+beat*2.5,beat*.35,'bell',.011);
+  if(mode==='boss3'){
+   // A legendary three-layer battle: heroic brass answers, strings sustain,
+   // ascending 8th-note ostinato. All phrases original to this game.
+   for(const pitch of notes)battleString(pitch,startAt,beat*3.85,.0065);
+   for(let j=0;j<8;j++)musicVoice(root+24+[0,7,12,7,3,7,12,15][j],
+     startAt+beat*j*.5,beat*.43,'pluck',.012);
+   musicVoice(root+31,startAt+beat*1.5,beat*1.15,'brass',.022);
+   if(index%2===1)musicVoice(root+36,startAt+beat*2.5,beat*1.1,'brass',.019);
+  }else if(mode==='boss2'){
+   for(const pitch of notes)battleString(pitch,startAt,beat*3.6,.004);
+   if(index%2===1)musicVoice(root+31,startAt+beat*2.5,beat*1.1,'brass',.012);
+  }else if(mode==='boss1'){
+   for(let j=0;j<8;j++)musicVoice(root+24+[0,3,7,12][j%4],
+     startAt+beat*.5*j,beat*.36,'pluck',.010);
+   if(index%2===0)musicVoice(root+31,startAt+beat*2.5,beat*.8,'brass',.014);
+  }else musicVoice(root+19,startAt+beat*2.5,beat*.35,'bell',.012);
   return beat*4;
  }
  const chord=gardenChords[index],melody=gardenMelody[index];
@@ -262,6 +335,9 @@ function tickMusic(){
  const mode=currentMusic(),now=audioCtx.currentTime;
  if(mode!==musicMode){
    musicMode=mode;musicBar=0;musicNextBarAt=now+.06;
+    const labels={garden:'SAKURA GARDEN',duo:'BOINK & BOCHT · TROUBLE',boss1:'TOLLY · FIRST ENCOUNTER',
+      boss2:'TOLLY · CONE OF SHAME',boss3:'LEGENDARY FRIDGE · FINAL DEFENCE',story:'STORYBOOK INTERLUDE'};
+    const status=$('music-status');if(status)status.textContent='♫ '+(labels[mode]||'ARCADE');
  }
  // Avoid a burst of catch-up notes on tab resume or after switching tabs.
  if(musicNextBarAt<now-.18)musicNextBarAt=now+.05;
@@ -287,17 +363,17 @@ document.querySelectorAll('[data-slot]').forEach(b=>b.addEventListener('click',(
 $('coop').addEventListener('change',()=>{if(!$('coop').checked)$('assign').value='0';setSelection()});setSelection();
 function showScene(kind,title,dialogue){
  $('ending-invite').hidden=true;sceneName=kind;cutsceneNext=kind;phase='cutscene';keys.clear();
- sceneOpenedAt=performance.now();joystickAxes.forEach(axis=>{axis.x=0;axis.y=0});
+ sceneOpenedAt=performance.now();const presentationToken=++scenePresentationToken;joystickAxes.forEach(axis=>{axis.x=0;axis.y=0});
  $('pause').disabled=true;
- $('overlay').classList.add('cinematic');$('overlay').classList.remove('hidden');$('overlay').dataset.scene=kind;
+ $('overlay').classList.add('cinematic');$('overlay').classList.add('hidden');$('overlay').dataset.scene=kind;
  $('overlay-kicker').textContent=kind.startsWith('clue')?'DISCOVERY · CLUE '+kind.slice(-1)+'/3':kind==='intro'?'THE FRIDGE HAS BEEN FOUND':kind==='phase3'?'FINAL PHASE · LEGENDARY DEFENCE':'PHASE TWO · CONE OF SHAME';
  $('overlay').querySelector('h3').textContent=title;
  $('overlay').querySelector('p').textContent=dialogue;
- const sceneArt=$('overlay-art');sceneArt.src=SCENE_ART[kind];sceneArt.classList.add('show');sceneArt.style.maxWidth='';
+ const sceneArt=$('overlay-art');sceneArt.classList.add('show','scene-art-pending');sceneArt.style.maxWidth='';
  if(kind==='clue3'){
   // Avoid upscaling the chapter-three art beyond its source pixel width.
-  const limitToNative=()=>{if(sceneName==='clue3'&&sceneArt.naturalWidth)sceneArt.style.maxWidth=Math.min(680,sceneArt.naturalWidth)+'px';};
-  if(sceneArt.complete)limitToNative();else sceneArt.addEventListener('load',limitToNative,{once:true});
+  const limitToNative=()=>{const image=sceneArtCache[kind];if(sceneName==='clue3'&&image?.naturalWidth)sceneArt.style.maxWidth=Math.min(680,image.naturalWidth)+'px';};
+  if(sceneArtCache[kind]?.complete)limitToNative();else sceneArtCache[kind]?.addEventListener('load',limitToNative,{once:true});
  }
  renderSceneLines(kind);$('mission-unlock').classList.remove('show');
  $('overlay-start').dataset.continueLabel='▶ '+(kind==='intro'?'FACE TOLLY':kind==='phase2'||kind==='phase3'?'CONTINUE THE BATTLE':kind==='clue2'?'FACE BOINK & BOCHT':'CONTINUE EXPLORING');
@@ -306,7 +382,8 @@ function showScene(kind,title,dialogue){
  $('scene-control-help').hidden=false;
  // New readers on a phone should see the first spoken line, not only the art.
  const visibleLine=$('scene-dialogues').querySelector('.scene-line:not([hidden])');
- if(visibleLine)$('overlay').querySelector('.overlay-inner').scrollTop=0; // Avoid jumping document on first dialogue beat.
+ if(visibleLine)$('overlay').querySelector('.overlay-inner').scrollTop=0;
+ presentSceneArt(kind,presentationToken);
 }
 // Quest wards require three short, visible guardian waves at every scroll.
 function spawnGuardianWave(){
@@ -315,10 +392,10 @@ function spawnGuardianWave(){
  for(let i=0;i<count;i++){
   const kind=(i===0&&gate.wave===2)?'chunkling':(i%3===0?'boink':i%3===1?'bleepling':'bocht');
   const c=ENEMY_TYPES[kind],a=TAU*(i+.3+gate.wave*.27)/count,radius=190+(i%2)*38;
-  const hp=Math.round(c.hp*(difficulty==='story'?.84:difficulty==='extreme'?EXTREME.guardianHp:1.2));
+  const tuning=difficultyBalance(),hp=Math.round(c.hp*tuning.guardianHp);
   foes.push({x:clamp(origin.x+Math.cos(a)*radius,30,WIDTH-30),y:clamp(origin.y+Math.sin(a)*radius,30,HEIGHT-30),
-   hp,maxHp:hp,speed:c.speed*(difficulty==='story'?.9:difficulty==='extreme'?EXTREME.guardianSpeed:1.04),
-   damage:Math.round(c.damage*(difficulty==='story'?.7:difficulty==='extreme'?EXTREME.guardianDamage:1)),size:c.size,attack:.85,
+   hp,maxHp:hp,speed:c.speed*tuning.guardianSpeed,
+   damage:Math.round(c.damage*tuning.guardianDamage),size:c.size,attack:.85,
    kind,guardian:true,age:0,telegraph:0,charge:-1,trailTimer:0,slow:0});
  }
  gate.remainingDelay=3.3;
@@ -341,14 +418,14 @@ function spawnDuo(){
  duoActive=true;duoDefeated=false;
  const pos=players.find(p=>p.alive)||players[0];
  for(const [i,kind] of ['boink','bocht'].entries()){
-  const conf=ENEMY_TYPES[kind],scale=difficulty==='story'?1.15:difficulty==='extreme'?2.15:1.7;
+  const conf=ENEMY_TYPES[kind],scale=difficulty==='story'?.9:difficulty==='extreme'?3.2:2.4;
   const x=i===0?pos.x+210:pos.x-210,y=i===0?pos.y-180:pos.y+170;
   const hp=Math.round(conf.hp*3*scale);
   foes.push({x:clamp(x,45,WIDTH-45),y:clamp(y,45,HEIGHT-45),
    hp,maxHp:hp,speed:conf.speed*(difficulty==='story'?1:1.10),
    damage:Math.round(conf.damage*(difficulty==='story'?1:1.16)),
    size:conf.size+8,attack:1.2,kind,elite:true,age:0,
-   telegraph:0,charge:-1,trailTimer:0,slow:0});
+   telegraph:0,charge:-1,trailTimer:0,slow:0,volleyWarmup:0,volleyCooldown:i===0?3.2:4.8});
  }
  say('⚠ BOINK & BOCHT! Defeat the terrible twosome to reveal the last clue!',4);
  playSfx('boink');
@@ -357,7 +434,7 @@ function continueScene(){
  if(phase!=='cutscene')return;
  if(advanceSceneBeat())return;
  const kind=cutsceneNext;
- cutsceneNext=null;keys.clear();
+ ++scenePresentationToken;cutsceneNext=null;keys.clear();
  $('scene-control-help').hidden=true;
  players.filter(p=>p.alive).forEach(p=>p.inv=Math.max(p.inv,1.7));
  phase=['intro','phase2','phase3'].includes(kind)?'boss':'explore';
@@ -405,10 +482,12 @@ const ambientBanter=[
 function say(t,duration=3){$('game-message').textContent=t;messageClock=duration}
 function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5,spriteFacing:'down',spriteMoving:false,spriteAttackAt:-1,perkGlow:0,perkRarity:''}}
 function start(){
- perkOffer=null;$('perk-panel').hidden=true;
+ ++scenePresentationToken;perkOffer=null;$('perk-panel').hidden=true;
  $('scene-control-help').hidden=true;$('ending-invite').hidden=true;cancelAnimationFrame(raf);
  joystickAxes.forEach(a=>{a.x=0;a.y=0});document.querySelectorAll('.joystick-knob').forEach(k=>k.style.transform='translate(0px,0px)');
  players=[player(selected[0],0)];if($('coop').checked)players.push(player(selected[1],1));
+ const startHealth=DIFFICULTY_BALANCE[$('difficulty').value].startingHealth;
+ players.forEach(p=>{p.maxHp=Math.round(p.maxHp*startHealth);p.hp=p.maxHp;});
  foes=[];shots=[];drops=[];fx=[];hazards=[];beams=[];difficulty=$('difficulty').value;gate=null;gateCleared=[false,false,false];scentStep=0;duoActive=false;duoDefeated=false;laserUnlocked=false;coneCooldown=6.8;coneWindup=0;bossPulseCooldown=4;bossPulseWindup=0;bananaWindup=0;daanActive=false;daanPulse=0;daanActionTimer=0;laserChallenge={index:0,timer:0,zapCooldown:0};phase='explore';paused=false;boss=null;cutsceneNext=null;sceneName=null;musicStep=0;musicMode='idle';musicBar=0;musicNextBarAt=0;
  elapsed=0;score=0;kills=0;level=1;xp=0;goal=35;clues=0;fridgeVisible=false;
  spawnClock=.55;surgeClock=33;attackClock=0;hudClock=0;keys.clear();ensureAudio();
@@ -432,7 +511,7 @@ function spawnBleepling(){
  const c=ENEMY_TYPES[kind],hp=Math.round(c.hp+tier*(kind==='chunkling'?11:6));
  foes.push({x:clamp(focus.x+Math.cos(angle)*radius,35,WIDTH-35),
   y:clamp(focus.y+Math.sin(angle)*radius,35,HEIGHT-35),hp,maxHp:hp,
-  speed:c.speed+Math.min(31,elapsed*.14),attack:rnd(.3,.8),size:c.size,kind,damage:Math.ceil((c.damage+Math.floor(tier*.75))*(difficulty==='story'?.7:difficulty==='extreme'?EXTREME.ambientDamage:1)),age:0,telegraph:0,charge:-1,trailTimer:0,slow:0});
+  speed:c.speed+Math.min(31,elapsed*.14),attack:rnd(.3,.8),size:c.size,kind,damage:Math.ceil((c.damage+Math.floor(tier*.75))*difficultyBalance().mobDamage),age:0,telegraph:0,charge:-1,trailTimer:0,slow:0});
 }
 function emit(text,x,y,col='#ffe1aa'){if(fx.length<(liteFx?45:90))fx.push({text,x,y,col,t:1.1})}
 function nearest(origin,arr,r=Infinity){let item=null,bd=r;for(const o of arr){if(o.hp<=0||o.alive===false)continue;const d=dist(origin,o);if(d<bd){bd=d;item=o}}return item}
@@ -501,6 +580,7 @@ function damage(enemy,amount,p){
   kills++;score+=(ENEMY_TYPES[enemy.kind]?.score||12);gainXP(ENEMY_TYPES[enemy.kind]?.xp||7);
   emit('+'+(ENEMY_TYPES[enemy.kind]?.score||12),enemy.x,enemy.y); playSfx('hit');
   if(enemy.elite&&['boink','bocht'].includes(enemy.kind)&&!foes.some(f=>f!==enemy&&f.elite&&f.hp>0)){
+    hazards=hazards.filter(h=>h.kind!=='duo-banana');
    duoActive=false;duoDefeated=true;score+=250;
    say('🎉 BOINK & BOCHT HAVE BEEN BOINKED! The last clue is revealed!',5);
    players.filter(q=>q.alive).forEach(q=>q.hp=Math.min(q.maxHp,q.hp+20));playSfx('victory');
@@ -630,6 +710,30 @@ function advanceProjectiles(dt){
   if(phase==='cutscene'||phase==='ended')break;
  }
 }
+// Extreme-only mini-boss attack: Boink fires an axis-aligned '+' volley;
+// Bocht fires a 45-degree 'X' volley. A readable .78s windup precedes each.
+function updateDuoVolley(e,dt){
+ if(difficulty!=='extreme'||!duoActive||!e.elite||!['boink','bocht'].includes(e.kind))return;
+ if(e.volleyWarmup>0){
+  e.volleyWarmup-=dt;
+  if(e.volleyWarmup<=0){
+   const offset=e.kind==='bocht'?Math.PI/4:0;
+   for(let n=0;n<4;n++){
+    const angle=offset+n*Math.PI/2;
+    hazards.push({kind:'duo-banana',source:e.kind,x:e.x,y:e.y,
+      vx:Math.cos(angle)*220,vy:Math.sin(angle)*220,damage:11,size:19,ttl:2.3});
+   }
+   playSfx('special');
+  }
+  return;
+ }
+ e.volleyCooldown-=dt;
+ if(e.volleyCooldown<=0){
+  e.volleyWarmup=.78;e.volleyCooldown=e.kind==='boink'?4.3:5.1;
+  say(e.kind==='boink'?'⚠ BOINK: + BANANA CROSS!':'⚠ BOCHT: X BANANA CROSS!',1.6);
+  emit(e.kind==='boink'?'⚠ +':'⚠ X',e.x,e.y-42,'#ffe4aa');
+ }
+}
 function update(dt){
  if(phase==='ended'||phase==='cutscene'||phase==='upgrade')return;
  elapsed+=dt;messageClock-=dt;
@@ -646,13 +750,13 @@ function update(dt){
  updateRevives(dt);
  updateEllieAuras(dt);
  spawnClock-=dt;
- if(spawnClock<=0&&foes.length<(gate?23:duoActive?20:phase==='boss'?48:62)){
+ if(spawnClock<=0&&elapsed>=difficultyBalance().earlySpawnGrace&&foes.length<(gate?23:duoActive?20:phase==='boss'?48:difficultyBalance().ambientCap)){
    const n=gate?1:duoActive?1:phase==='boss'?(difficulty==='story'?1:difficulty==='extreme'?3:2):elapsed>75?3:elapsed>18?2:1;
    for(let j=0;j<n&&foes.length<65;j++)spawnBleepling();
-   spawnClock=Math.max(.42,.93-elapsed*.0035)*(difficulty==='story'?1.65:difficulty==='extreme'?.78:1)*(gate?1.5:1)*(phase==='boss'?.9:1);
+   spawnClock=Math.max(.42,.93-elapsed*.0035)*difficultyBalance().ambientInterval*(gate?1.5:1)*(phase==='boss'?.9:1);
  }
  surgeClock-=dt;
- if(surgeClock<=0&&!duoActive&&!gate&&foes.length<60){
+ if(surgeClock<=0&&!duoActive&&!gate&&difficulty!=='story'&&foes.length<60){
     let n=phase==='boss'?7:5;
     for(let j=0;j<n&&foes.length<65;j++)spawnBleepling();
     say('🫧 BLEEPLING STAMPEDE! '+n+' extra bleps!',3.5); playSfx('wave');
@@ -676,6 +780,7 @@ function update(dt){
        }
       }
     }
+    updateDuoVolley(e,dt);
     e.age=(e.age||0)+dt;e.slow=Math.max(0,(e.slow||0)-dt);
     const baseAngle=Math.atan2(p.y-e.y,p.x-e.x),d=dist(e,p);
     const pace=e.slow>0?.62:1;
@@ -1153,7 +1258,7 @@ for(const p of players){
  rect(p.x-28,p.y+29,56,7,'#152636');rect(p.x-27,p.y+30,54*clamp(p.hp/p.maxHp,0,1),5,p.hp/p.maxHp<.3?'#ff9995':'#9aebbb');
 }
 for(const s of shots){txt(s.kind==='dragon'?'🐉':s.kind==='kong'?'🧊':'🔴',s.x,s.y+9,24,'center')}
-for(const h of hazards){if(h.kind==='daan-warning'){cx.save();cx.setLineDash([8,8]);circle(h.x,h.y,h.size,'#ffd35e38');cx.strokeStyle='#ffe4a3';cx.lineWidth=5;cx.beginPath();cx.arc(h.x,h.y,h.size,0,TAU);cx.stroke();cx.restore();txt('DAAN SPITE · MOVE!',h.x,h.y-85,18,'center','#fff1ae')}else if(h.kind==='goop'){circle(h.x,h.y,22,'#88e5e977');circle(h.x,h.y,13,'#b0f6ff99')}else{circle(h.x,h.y,17,'#ffbd6144');txt('🍌',h.x,h.y+9,25,'center')}}
+for(const h of hazards){if(h.kind==='duo-banana'){circle(h.x,h.y,17,'#e6a84b66');txt('🍌',h.x,h.y+9,23,'center');continue}if(h.kind==='daan-warning'){cx.save();cx.setLineDash([8,8]);circle(h.x,h.y,h.size,'#ffd35e38');cx.strokeStyle='#ffe4a3';cx.lineWidth=5;cx.beginPath();cx.arc(h.x,h.y,h.size,0,TAU);cx.stroke();cx.restore();txt('DAAN SPITE · MOVE!',h.x,h.y-85,18,'center','#fff1ae')}else if(h.kind==='goop'){circle(h.x,h.y,22,'#88e5e977');circle(h.x,h.y,13,'#b0f6ff99')}else{circle(h.x,h.y,17,'#ffbd6144');txt('🍌',h.x,h.y+9,25,'center')}}
 if(boss&&boss.hp>0&&coneWindup>0){cx.save();cx.beginPath();cx.moveTo(boss.x,boss.y);cx.arc(boss.x,boss.y,275,coneAngle-.65,coneAngle+.65);cx.closePath();cx.fillStyle='#ff69735d';cx.fill();cx.strokeStyle='#ffeeb1';cx.lineWidth=5;cx.stroke();cx.restore()}
 for(const beam of beams){cx.save();cx.globalAlpha=Math.max(.1,beam.t/.28);cx.strokeStyle='#ff586a';cx.lineWidth=13;cx.shadowColor='#ff7373';cx.shadowBlur=17;cx.beginPath();cx.moveTo(beam.x1,beam.y1);cx.lineTo(beam.x2,beam.y2);cx.stroke();cx.strokeStyle='#fff2b5';cx.lineWidth=4;cx.stroke();cx.restore()}
 for(const f of fx){if(f.x<cam.x-60||f.x>cam.x+VIEWW+60||f.y<cam.y-60||f.y>cam.y+VIEWH+60)continue;txt(f.text,f.x,f.y,17,'center',f.col)}
