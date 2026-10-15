@@ -44,6 +44,85 @@ let laserChallenge={index:0,timer:0,zapCooldown:0};
 const laserSafe=()=>laserChallenge.timer%3.5>=1.55;
 const bushes=[{x:545,y:430},{x:970,y:740},{x:1445,y:1130},{x:2020,y:1520},{x:2365,y:1525}];
 const bushArt=new Image();bushArt.src='assets/sprites/bush.svg';
+// Decorative cherry trees and waving grass: no colliders, no pathfinding changes.
+const treeArt=new Image();treeArt.src='assets/sprites/cherry-tree.svg';
+let cherryTrees=[],grassTufts=[],gardenSeed=0;
+const pathSections=[
+ [{x:300,y:400},{x:600,y:350},{x:620,y:760},{x:1050,y:900}],
+ [{x:1050,y:900},{x:1430,y:1050},{x:1440,y:1500},{x:2180,y:1440}]
+];
+function bezierPoint([a,b,c,d],t){
+ const u=1-t;return{x:u*u*u*a.x+3*u*u*t*b.x+3*u*t*t*c.x+t*t*t*d.x,
+ y:u*u*u*a.y+3*u*u*t*b.y+3*u*t*t*c.y+t*t*t*d.y};
+}
+const pathSamples=pathSections.flatMap(seg=>Array.from({length:51},(_,i)=>bezierPoint(seg,i/50)));
+const treeExclusions=[...clueSpots,...scentTrail,...laserNodes,...bushes,fridge,
+ {x:320,y:400},{x:370,y:455},{x:475,y:925},
+ {x:480,y:390},{x:870,y:920},{x:1440,y:1250},{x:2070,y:1340}];
+function treeSiteSafe(p,placed){
+ return p.x>155&&p.x<WIDTH-155&&p.y>175&&p.y<HEIGHT-155&&
+ !treeExclusions.some(q=>dist(p,q)<175)&&
+ !pathSamples.some(q=>dist(p,q)<155)&&
+ !placed.some(q=>dist(p,q)<240);
+}
+function generateGarden(){
+ gardenSeed=Math.floor(Math.random()*4294967295);
+ let n=gardenSeed;
+ const random=()=>{n=(Math.imul(n,1664525)+1013904223)>>>0;return n/4294967296};
+ cherryTrees=[];grassTufts=[];
+ for(let attempts=0;attempts<700&&cherryTrees.length<9;attempts++){
+  const p={x:155+random()*(WIDTH-310),y:175+random()*(HEIGHT-330),
+   scale:.85+random()*.4,phase:random()*TAU};
+  if(treeSiteSafe(p,cherryTrees))cherryTrees.push(p);
+ }
+ for(let i=0;i<180;i++)grassTufts.push({
+  x:40+random()*(WIDTH-80),y:40+random()*(HEIGHT-80),
+  size:7+random()*8,phase:random()*TAU
+ });
+}
+function drawGrassMovement(){
+ const calm=matchMedia('(prefers-reduced-motion: reduce)').matches;
+ for(let i=0;i<grassTufts.length;i++){
+  if(liteFx&&i%3!==0)continue;
+  const g=grassTufts[i];
+  if(g.x<cam.x-40||g.x>cam.x+VIEWW+40||g.y<cam.y-40||g.y>cam.y+VIEWH+40)continue;
+  let part=0;
+  for(const p of players){
+   if(!p.alive||!p.spriteMoving)continue;
+   const d=dist(p,g);
+   if(d<60)part+=(g.x>=p.x?1:-1)*(1-d/60)*13;
+  }
+  const breeze=calm?0:Math.sin(elapsed*1.65+g.phase)*2;
+  cx.save();cx.strokeStyle=i%3===0?'#a1c69a':'#568d66';cx.lineWidth=2;cx.lineCap='round';
+  for(let k=-1;k<=1;k++){
+   cx.beginPath();cx.moveTo(g.x+k*4,g.y+2);
+   cx.quadraticCurveTo(g.x+k*4+part*.5+breeze*.5,g.y-g.size*.6,
+    g.x+k*6+part+breeze,g.y-g.size);
+   cx.stroke();
+  }
+  cx.restore();
+ }
+}
+function drawCherryGarden(){
+ const calm=matchMedia('(prefers-reduced-motion: reduce)').matches;
+ for(const t of cherryTrees){
+  if(t.x<cam.x-130||t.x>cam.x+VIEWW+130||t.y<cam.y-200||t.y>cam.y+VIEWH+100)continue;
+  const w=144*t.scale,h=190*t.scale;
+  if(treeArt.complete&&treeArt.naturalWidth)cx.drawImage(treeArt,t.x-w/2,t.y-h,w,h);
+  else{line(t.x,t.y-20,t.x,t.y-95,'#866159',11*t.scale);
+   circle(t.x,t.y-115,43*t.scale,'#edb5c7');circle(t.x-23,t.y-106,22*t.scale,'#f6d1dd')}
+  if(calm)continue;
+  for(let i=0;i<(liteFx?3:9);i++){
+   const seed=t.phase+i*2.399;
+   const progress=(elapsed*(.12+(i%3)*.017)+seed/TAU)%1;
+   const x=t.x+Math.sin(seed)*42+progress*36+Math.sin(elapsed+seed)*8;
+   const y=t.y-150*t.scale+progress*142*t.scale;
+   cx.save();cx.translate(x,y);cx.rotate(elapsed*1.6+seed);
+   cx.fillStyle=i%3===0?'#ffeded':'#f5b4ca';cx.globalAlpha=.75;
+   cx.beginPath();cx.ellipse(0,0,4.3,2.6,Math.PI/4,0,TAU);cx.fill();cx.restore();
+  }
+ }
+}
 const scenery=(()=>{let seed=9145;const r=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};return Array.from({length:450},()=>({x:r()*WIDTH,y:r()*HEIGHT,t:r(),s:10+r()*24}))})();
 const SCENE_ART={"clue1":"assets/scene-clue1.webp","clue2":"assets/scene-clue2.webp","clue3":"assets/scene-clue3.webp","intro":"assets/scene-intro.webp","phase2":"assets/scene-phase2.webp","phase3":"assets/scene-phase2.webp","victory":"assets/scene-victory.webp","defeat":"assets/scene-defeat.webp","bushEgg":"assets/scene-clue1.webp"};
 // Decode art before revealing the overlay: avoid one-frame stale backgrounds.
@@ -509,6 +588,7 @@ function start(){
  players.forEach(p=>{p.maxHp=Math.round(p.maxHp*startHealth);p.hp=p.maxHp;});
  foes=[];shots=[];drops=[];fx=[];hazards=[];beams=[];difficulty=$('difficulty').value;gate=null;gateCleared=[false,false,false];scentStep=0;duoActive=false;duoDefeated=false;laserUnlocked=false;coneCooldown=6.8;coneWindup=0;bossPulseCooldown=4;bossPulseWindup=0;bananaWindup=0;daanActive=false;daanPulse=0;daanActionTimer=0;daanHealCooldown=0;daanHealWindup=0;daanHealsRemaining=0;daanHealFlash=0;laserChallenge={index:0,timer:0,zapCooldown:0};phase='explore';paused=false;boss=null;cutsceneNext=null;sceneName=null;musicStep=0;musicMode='idle';musicBar=0;musicNextBarAt=0;
  elapsed=0;score=0;kills=0;level=1;xp=0;goal=35;clues=0;fridgeVisible=false;
+ generateGarden();
  spawnClock=.55;surgeClock=33;attackClock=0;hudClock=0;keys.clear();ensureAudio();
  $('scene-skip').hidden=true;$('share-result').classList.remove('show');$('mission-unlock').classList.remove('show');$('scene-dialogues').hidden=true;$('share-status').textContent='';$('overlay').classList.remove('cinematic');$('overlay').classList.add('hidden');$('pause').disabled=false;$('pause').textContent='Ⅱ PAWS';
  $('paws-panel').hidden=true;$('bossbar').classList.remove('show');$('boss-card').classList.remove('show');$('overlay-art').classList.remove('show');$('scene-dialogues').hidden=true;$('overlay-kicker').textContent='ARCADE MODE';
@@ -1312,7 +1392,9 @@ cx.strokeStyle='#b6ab90';cx.lineWidth=95;cx.lineCap='round';cx.beginPath();cx.mo
 // water bridge
 rect(360,900,230,55,'#8e4d4e');for(let i=0;i<6;i++)rect(373+i*39,900,12,55,'#d28b71');line(365,885,585,885,'#7d4247',10);
 for(const [ix,ob] of scenery.entries()){if(liteFx&&ix%3!==0)continue;if(ob.x<cam.x-80||ob.x>cam.x+VIEWW+80||ob.y<cam.y-80||ob.y>cam.y+VIEWH+80)continue;if(ob.t<.40){circle(ob.x,ob.y,ob.s,'#315c4c');circle(ob.x+9,ob.y-9,ob.s*.78,ob.t<.20?'#e9a4b5':'#e3c0be');circle(ob.x-12,ob.y-5,ob.s*.63,'#f7c1c6')}else if(ob.t<.68){circle(ob.x,ob.y,ob.s*.4,'#e8d99e');circle(ob.x+10,ob.y+6,ob.s*.23,'#edd5a5')}else{circle(ob.x,ob.y,ob.s*.35,'#527d5b');circle(ob.x-9,ob.y,ob.s*.35,'#4d7559')}}
+drawGrassMovement();
 drawQuestDressing();
+drawCherryGarden();
 // Hideable sakura hedges in world space, never changing character assets.
 for(const b of bushes){
  if(b.x<cam.x-100||b.x>cam.x+VIEWW+100||b.y<cam.y-100||b.y>cam.y+VIEWH+100)continue;
