@@ -135,3 +135,15 @@ Historical checks above concerning **three guardian waves at each clue** no long
 - [ ] GitHub Actions Chromium tests green for Daan sprite, two-hit projectile, Story/Adventure/Extreme and invitation paths.
 - [ ] Two people retest on real phone: Tolly readability, Daan warning, mobile frame rate, cutscene/PAWS, dragon hit indication.
 - [ ] Owner supplies/approves Daan likeness; placeholder must never be presented as authentic portrait.
+
+
+## Day 6 — Dialogue, original music, combat balance and legendary progression
+
+- [ ] CI passing: first scene does not scroll document, controls C/Next/Skip still work.
+- [ ] Hero card stats hover/tap/focus properly, including keyboard and mobile.
+- [ ] Rosie secondary pierce exactly 50%, Millie ball single-hit, Winnifred highest DPS and melee, Ellie lowest DPS with slow/heal.
+- [ ] Tolly boss phase changes at 67%/33%; Daan Extreme-only in third phase; music tracks distinct and original.
+- [ ] Boink and Bocht spawn apart, remain distinct and challenging on Adventure.
+- [ ] Level 5/10/15 choices work with randomly chosen player, rarity weights and tiered XP.
+- [ ] Super aura/health labels do not obscure telegraphs, mobile performance/reduced motion sound.
+- [ ] Real-device balance, invitation and ICS signoff.
