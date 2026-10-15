@@ -963,11 +963,12 @@ if(boss&&boss.hp>0){
  const focus=nearest(boss,players);
  const facing=focus?(Math.abs(focus.x-boss.x)>Math.abs(focus.y-boss.y)
    ?(focus.x>boss.x?'right':'left'):(focus.y>boss.y?'down':'up')):'down';
+ // Render the ground shadow behind the chibi, never over her face/body.
+ circle(boss.x,boss.y+27,46,'#402f3a77');
  const spriteBoss=window.Level32Sprites?.draw(cx,'tolly',
     {state:boss.hitFlash>0?'hurt':bossPulseWindup>0||bananaWindup>0||coneWindup>0?'attack':
       boss.rage?'special':'walk',direction:facing},
     boss.x,boss.y+wobble-8,139,elapsed) || false;
- circle(boss.x,boss.y+27,46,'#402f3a77');
  if(!spriteBoss)circle(boss.x,boss.y+wobble,52,boss.hitFlash>0?'#fff0d1':'#e4b9bd');
  if(!spriteBoss&&portrait.complete&&portrait.naturalWidth){
    const crop=Math.min(portrait.naturalWidth,portrait.naturalHeight);
