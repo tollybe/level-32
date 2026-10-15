@@ -148,7 +148,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     ratios=page.evaluate('window.__rosieTest.heroBalance()')
     assert ratios['winnifred']>ratios['rosie'] and ratios['millie']>ratios['ellie'],ratios
     levels=page.evaluate('window.__rosieTest.xpProbe()')
-    assert levels['firstFive']==10 and levels['afterFive']==(10 if mode=='story' else 6 if mode=='extreme' else 7.8),levels
+    assert levels['firstFive']==10 and abs(levels['afterFive']-(10 if mode=='story' else 6 if mode=='extreme' else 7.8))<0.00001,levels
     upgrade=page.evaluate('window.__rosieTest.perkProbe()')
     assert upgrade['offered'] and upgrade['choices']==2 and upgrade['closed'],upgrade
     assert all(x in ['normal','epic','legendary'] for x in upgrade['rarities']),upgrade
