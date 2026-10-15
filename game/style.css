@@ -517,3 +517,159 @@ body.solo-play .mobile-keys{justify-content:flex-start}
  body.phone-play #game-section .mobile-quest{display:none}
  body.phone-play #game-section .team-xp-overlay{top:4px;left:48%;max-width:52%;min-width:0}
 }
+
+/* Day 8D: PHONE ONLY. Desktop and keyboard play remain unchanged. */
+@media(pointer:coarse){
+ /* Illustrated cutscenes are one-screen cards. No page scrolling or
+    disappearing Continue button: gameplay is frozen while the scene is open. */
+ body.phone-play #game-section .overlay.cinematic{
+  position:absolute;inset:0;z-index:70;display:grid;place-items:center;
+  padding:calc(env(safe-area-inset-top,0px) + 5px)
+    calc(env(safe-area-inset-right,0px) + 6px)
+    calc(env(safe-area-inset-bottom,0px) + 5px)
+    calc(env(safe-area-inset-left,0px) + 6px);
+  overflow:hidden;overscroll-behavior:contain;background:#181628e8
+ }
+ body.phone-play #game-section .overlay.cinematic.hidden{display:none!important}
+ body.phone-play #game-section .overlay.cinematic .overlay-inner{
+  display:flex;flex-direction:column;align-items:stretch;justify-content:center;
+  gap:3px;width:min(96%,530px);max-width:min(96%,530px);
+  max-height:100%;height:auto;min-height:0;margin:auto;padding:8px 10px;
+  overflow:hidden;box-sizing:border-box;border-width:2px
+ }
+ body.phone-play #game-section .overlay.cinematic #overlay-kicker{
+  order:0;font-size:.63rem;line-height:1.15;margin:0
+ }
+ body.phone-play #game-section .overlay.cinematic .overlay-inner h3{
+  order:1;margin:0;font-size:clamp(.86rem,2.5dvh,1.14rem);
+  line-height:1.2
+ }
+ body.phone-play #game-section .overlay.cinematic .overlay-art,
+ body.phone-play #game-section .overlay.cinematic[data-scene="clue3"] .overlay-art{
+  display:block;order:2;flex:0 1 auto;width:auto;max-width:100%;
+  height:auto;max-height:clamp(60px,26dvh,170px)!important;
+  object-fit:contain;margin:1px auto;border-width:1px;
+  box-shadow:none;border-radius:6px
+ }
+ body.phone-play #game-section .overlay.cinematic #scene-dialogues{
+  order:3;margin:2px 0;display:block;flex:0 0 auto;min-height:0
+ }
+ body.phone-play #game-section .overlay.cinematic #scene-dialogues[hidden]{display:none}
+ body.phone-play #game-section .overlay.cinematic .scene-line{
+  padding:3px 5px;gap:7px;min-height:0;box-shadow:none;border-width:1px
+ }
+ body.phone-play #game-section .overlay.cinematic .scene-face{
+  width:clamp(34px,9dvh,48px);height:clamp(34px,9dvh,48px);border-width:1px
+ }
+ body.phone-play #game-section .overlay.cinematic .scene-speech strong{
+  font-size:.62rem;letter-spacing:.03em
+ }
+ body.phone-play #game-section .overlay.cinematic .scene-speech span{
+  font-size:clamp(.65rem,2.1dvh,.81rem);line-height:1.18
+ }
+ body.phone-play #game-section .overlay.cinematic #scene-counter{
+  order:4;min-height:0;font-size:.66rem;line-height:1.1
+ }
+ body.phone-play #game-section .overlay.cinematic #scene-control-help{
+  order:5;padding:2px 4px;margin:1px;font-size:.62rem;
+  min-height:0;border-width:1px;line-height:1.2
+ }
+ body.phone-play #game-section .overlay.cinematic #scene-control-help kbd{display:none}
+ body.phone-play #game-section .overlay.cinematic #overlay-start{
+  order:6;margin:3px 0 0;flex-shrink:0;min-height:43px;
+  font-size:.85rem;padding:5px 10px;touch-action:manipulation
+ }
+ body.phone-play #game-section .overlay.cinematic #scene-skip{
+  order:7;margin:1px auto;padding:2px;line-height:1;
+  font-size:.69rem;touch-action:manipulation
+ }
+ body.phone-play #game-section .overlay.cinematic .overlay-inner>p,
+ body.phone-play #game-section .overlay.cinematic #mission-unlock,
+ body.phone-play #game-section .overlay.cinematic #share-result,
+ body.phone-play #game-section .overlay.cinematic #share-status,
+ body.phone-play #game-section .overlay.cinematic .soundtip{display:none!important}
+ /* The mobile control bar remains behind the scene and never intercepts taps. */
+ body.phone-play:has(.overlay.cinematic:not(.hidden)) #game-section .mobile-keys,
+ body.phone-play:has(.overlay.cinematic:not(.hidden)) #game-section .phone-play-bar{
+  visibility:hidden;pointer-events:none
+ }
+ /* One player: left thumb for movement, right thumb for Dash. */
+ body.phone-play.solo-play #game-section .mobile-keys .touch-player:first-child{
+  width:100%;max-width:none;flex:1 1 auto;flex-direction:row;
+  justify-content:space-between;align-items:center
+ }
+ body.phone-play.solo-play #game-section .touch-dash{min-width:80px;min-height:49px}
+ /* Two players sit on opposite edges of one phone. Player 1 is at the
+    bottom facing normally; Player 2 is at the top facing 180 degrees.
+    Each person's stick is left and Dash right from their own perspective. */
+ body.phone-play:not(.solo-play) #game-section .mobile-keys{
+  inset:0;left:calc(env(safe-area-inset-left,0px) + 7px);
+  right:calc(env(safe-area-inset-right,0px) + 7px);
+  top:0;bottom:0;align-items:stretch;justify-content:space-between
+ }
+ body.phone-play:not(.solo-play) #game-section .touch-player{
+  position:absolute;left:0;right:0;width:100%;max-width:none;
+  flex-direction:row;justify-content:space-between;align-items:center;
+  gap:6px;pointer-events:none
+ }
+ body.phone-play:not(.solo-play) #game-section .touch-player:first-child{
+  bottom:calc(env(safe-area-inset-bottom,0px) + 8px)
+ }
+ body.phone-play:not(.solo-play) #game-section .touch-player:nth-child(2){
+  top:calc(env(safe-area-inset-top,0px) + 8px);
+  transform:rotate(180deg);transform-origin:center
+ }
+ body.phone-play:not(.solo-play) #game-section .joystick{
+  width:clamp(64px,16dvh,100px);
+  height:clamp(64px,16dvh,100px);max-width:26vw;
+ }
+ body.phone-play:not(.solo-play) #game-section .touch-dash{min-height:42px;min-width:82px}
+ body.phone-play:not(.solo-play) #game-section .phone-play-bar{
+  left:auto;right:calc(env(safe-area-inset-right,0px) + 5px);
+  top:50%;transform:translateY(-50%);
+  display:flex;flex-direction:column;gap:4px
+ }
+ body.phone-play:not(.solo-play) #game-section .phone-play-bar>*{
+  min-height:29px;padding:3px 5px;font-size:.61rem
+ }
+ body.phone-play:not(.solo-play) #game-section .mobile-game-status{
+  position:absolute;inset:0;display:contents;pointer-events:none
+ }
+ body.phone-play:not(.solo-play) #game-section .mobile-health{
+  display:contents
+ }
+ body.phone-play:not(.solo-play) #game-section .mobile-health-card{
+  position:absolute;z-index:13;left:50%;transform:translateX(-50%);
+  width:min(140px,37vw);max-width:37vw;padding:4px 5px;
+  border-radius:6px;background:rgba(20,38,55,.28)
+ }
+ body.phone-play:not(.solo-play) #game-section .mobile-health-card:nth-child(1){
+  bottom:calc(env(safe-area-inset-bottom,0px) + 12px)
+ }
+ body.phone-play:not(.solo-play) #game-section .mobile-health-card:nth-child(2){
+  top:calc(env(safe-area-inset-top,0px) + 12px);
+  transform:translateX(-50%) rotate(180deg)
+ }
+ body.phone-play:not(.solo-play) #game-section .mobile-quest{display:none}
+ body.phone-play:not(.solo-play) #game-section .team-xp-overlay{
+  left:5px;top:50%;transform:translateY(-50%);min-width:0;
+  width:min(170px,32vw);max-width:32vw
+ }
+ body.phone-play:not(.solo-play) #game-section>.bossbar.show{
+  top:50%;right:8px;left:auto;transform:translateY(-50%);
+  width:min(190px,29vw)
+ }
+ body.phone-play:not(.solo-play) #game-section .scroll-return-notice{
+  bottom:auto;top:50%;transform:translate(-50%,-50%);
+  width:min(290px,48vw);max-width:48vw
+ }
+}
+@media (orientation:landscape) and (pointer:coarse){
+ body.phone-play #game-section .overlay.cinematic .overlay-art,
+ body.phone-play #game-section .overlay.cinematic[data-scene="clue3"] .overlay-art{
+  max-height:clamp(50px,23dvh,110px)!important
+ }
+ body.phone-play #game-section .overlay.cinematic .overlay-inner{width:min(78vw,520px);max-width:78vw;padding:5px 9px}
+ body.phone-play #game-section .overlay.cinematic #scene-control-help{display:none!important}
+ body.phone-play:not(.solo-play) #game-section .touch-player{flex-direction:row}
+}
