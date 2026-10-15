@@ -176,9 +176,9 @@ Historical checks above concerning **three guardian waves at each clue** no long
 
 ## Day 7B — Owner feedback: nicknames, independent crossfire, ambush
 
-- [ ] CI: Boink/Bocht warnings are independent yet may overlap; independently rolled 1–4s delay after distinct recovery and all twelve shots per enemy.
-- [ ] CI: every bush blocks normal weapons, active projectiles, laser, dash and Ellie support while hiding.
-- [ ] CI: one 2× critical after leaving cover against ordinary mobs; none for Tolly/elite duo.
-- [ ] CI: banana impact through bushes causes only 25% projectile damage, 'OW!' bubble, and a knockback outside concealment.
-- [ ] CI: Tolly nicknames and Rosie/Daan shared lyrics appear without disrupting existing cinematics.
+- [x] PR #17 CI: Boink/Bocht warnings are independent yet may overlap; independently rolled 1–4s delay after distinct recovery and all twelve shots per enemy.
+- [x] PR #17 CI: every bush blocks normal weapons, active projectiles, laser, dash and Ellie support while hiding.
+- [x] PR #17 CI: one 2× critical after leaving cover against ordinary mobs; none for Tolly/elite duo.
+- [x] PR #17 CI: banana impact through bushes causes only 25% projectile damage, 'OW!' bubble, and a knockback outside concealment.
+- [x] PR #17 CI: Tolly nicknames and Rosie/Daan shared lyrics appear without disrupting existing cinematics.
 - [ ] Owner evaluates in real play: random volley fairness, bush hitboxes, song presentation and all four nicknames.
