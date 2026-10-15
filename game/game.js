@@ -32,7 +32,7 @@ const laserNodes=[{x:1450,y:1210},{x:1555,y:1320},{x:1680,y:1435}];
 let laserChallenge={index:0,timer:0,zapCooldown:0};
 const laserSafe=()=>laserChallenge.timer%3.5>=1.55;
 const scenery=(()=>{let seed=9145;const r=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};return Array.from({length:450},()=>({x:r()*WIDTH,y:r()*HEIGHT,t:r(),s:10+r()*24}))})();
-const SCENE_ART={"clue1":"assets/scene-clue1.webp","clue2":"assets/scene-clue2.webp","clue3":"assets/scene-clue3.webp","intro":"assets/scene-intro.webp","phase2":"assets/scene-phase2.webp","victory":"assets/scene-victory.webp","defeat":"assets/scene-defeat.webp"};
+const SCENE_ART={"clue1":"assets/scene-clue1.webp","clue2":"assets/scene-clue2.webp","clue3":"assets/scene-clue3.webp","intro":"assets/scene-intro.webp","phase2":"assets/scene-phase2.webp","phase3":"assets/scene-phase2.webp","victory":"assets/scene-victory.webp","defeat":"assets/scene-defeat.webp"};
 // Never generate alternate faces for the pets: scene portraits reuse the actual
 // character-select images (and Tolly's existing portrait) for a consistent cast.
 const EXTRA_BANTER={
@@ -46,6 +46,7 @@ const SCENE_LINES={
  clue3:[['winnifred','A final note. From the fridge guardian herself.'],['rosie','Does it say BANANA?'],['winnifred','It says: NO MORE BANANA. In three different fonts.'],...EXTRA_BANTER.laser],
  intro:[['tolly','NO ROSIE. YOU ARE ON A DIET.'],['rosie','...I have come to negotiate the banana tax.'],['tolly','You brought a sausage sword.'],['winnifred','A very persuasive sausage sword.']],
  phase2:[['tolly','I HAVE BEEN TOO LENIENT.'],['ellie','That sounds like a cone-related sentence.'],['tolly','CONE OF SHAME: DEPLOYED.'],['rosie','I suddenly regret all of my life choices.']],
+ phase3:[['tolly','YOU HAVE TRIGGERED MY FINAL FORM.'],['winnifred','A third course? How unusual.'],['tolly','THERE SHALL BE NO BANANA.']],
  victory:[['tolly','Fine. You may have the banana and cheese tax.'],['rosie','Excellent. Now about the birthday...'],['winnifred','The REAL quest is an invitation. How unusually civilised.']],
  defeat:[['tolly','Mwahahaha! The fridge remains mine!'],['ellie','Okay, but can we still go to the party?'],['tolly','...Obviously. This is an invitation, not an exam.']]
 };
@@ -367,6 +368,7 @@ const ambientBanter=[
 function say(t,duration=3){$('game-message').textContent=t;messageClock=duration}
 function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5,spriteFacing:'down',spriteMoving:false,spriteAttackAt:-1,perkGlow:0,perkRarity:''}}
 function start(){
+ perkOffer=null;$('perk-panel').hidden=true;
  $('scene-control-help').hidden=true;$('ending-invite').hidden=true;cancelAnimationFrame(raf);
  joystickAxes.forEach(a=>{a.x=0;a.y=0});document.querySelectorAll('.joystick-knob').forEach(k=>k.style.transform='translate(0px,0px)');
  players=[player(selected[0],0)];if($('coop').checked)players.push(player(selected[1],1));
@@ -398,6 +400,53 @@ function spawnBleepling(){
 function emit(text,x,y,col='#ffe1aa'){if(fx.length<(liteFx?45:90))fx.push({text,x,y,col,t:1.1})}
 function nearest(origin,arr,r=Infinity){let item=null,bd=r;for(const o of arr){if(o.hp<=0||o.alive===false)continue;const d=dist(origin,o);if(d<bd){bd=d;item=o}}return item}
 function fire(p){const target=nearest(p,[...foes,...(boss?[boss]:[])],p.range);if(!target)return;p.spriteAttackAt=elapsed;if(p.weapon==='sausage'){for(const e of [...foes,...(boss?[boss]:[])])if(e.hp>0&&dist(p,e)<p.range){damage(e,p.damage+level*2,p);emit('⚔',e.x,e.y,'#fff0a7')}return}const angle=Math.atan2(target.y-p.y,target.x-p.x);shots.push({x:p.x,y:p.y,vx:Math.cos(angle)*410,vy:Math.sin(angle)*410,damage:p.damage+level*2,ttl:1.1,owner:p.num,kind:p.weapon,pierce:p.weapon==='dragon'?1:0,hitTargets:new Set()})}
+// XP remains standard for the first five levels in all difficulty modes.
+function gainXP(amount){
+ xp+=amount*(level<=5?1:difficulty==='story'?1:difficulty==='extreme'?.60:.78);
+ processLevelUps();
+}
+function rollRarity(){const n=Math.random();return n<.75?'normal':n<.96?'epic':'legendary'}
+function perkDetails(stat,rarity){
+ if(stat==='hp')return rarity==='legendary'?{name:'ROYAL HEART',desc:'+65 Max HP · no downside',hp:65,damage:0,speed:0}:
+  rarity==='epic'?{name:'TITAN HEART',desc:'+36 Max HP · -14 Speed',hp:36,damage:0,speed:-14}:
+  {name:'SNACK STASH',desc:'+16 Max HP · -4 Speed',hp:16,damage:0,speed:-4};
+ return rarity==='legendary'?{name:'DRAGON ASCENDANT',desc:'+14 Damage · no downside',hp:0,damage:14,speed:0}:
+  rarity==='epic'?{name:'BERSERKER FLOOF',desc:'+9 Damage · -16 Max HP',hp:-16,damage:9,speed:0}:
+  {name:'SHARPENED TOY',desc:'+4 Damage · -7 Max HP',hp:-7,damage:4,speed:0};
+}
+function offerUpgrade(){
+ perkReturnPhase=phase;phase='upgrade';
+ const p=players[Math.floor(Math.random()*players.length)];
+ perkOffer={player:p,offers:['hp','damage'].map(stat=>({stat,rarity:rollRarity()}))};
+ $('perk-who').textContent='P'+(p.num+1)+' · '+p.name+' reached level '+level+'. Choose ONE permanent stat boost.';
+ const choices=$('perk-choices');choices.replaceChildren();
+ perkOffer.offers.forEach((o,i)=>{
+  const d=perkDetails(o.stat,o.rarity),button=document.createElement('button');
+  button.type='button';button.className='perk-choice perk-'+o.rarity;
+  button.textContent=o.rarity.toUpperCase()+' · '+d.name+' — '+d.desc;
+  button.addEventListener('click',()=>acceptUpgrade(i));choices.append(button);
+ });
+ $('perk-panel').hidden=false;choices.querySelector('button')?.focus({preventScroll:true});
+}
+function acceptUpgrade(index){
+ if(!perkOffer||phase!=='upgrade'||![0,1].includes(index))return;
+ const {player:p,offers}=perkOffer,choice=offers[index],d=perkDetails(choice.stat,choice.rarity);
+ p.maxHp=Math.max(50,p.maxHp+d.hp);
+ p.hp=clamp(p.hp+Math.max(d.hp,0),1,p.maxHp);
+ p.damage+=d.damage;p.speed=Math.max(125,p.speed+d.speed);
+ p.perkGlow=8;p.perkRarity=choice.rarity;
+ perkOffer=null;$('perk-panel').hidden=true;phase=perkReturnPhase;
+ playSfx('heal');say('✨ '+p.name+' gains '+d.name+'!',3.4);syncHud();
+}
+function processLevelUps(){
+ if(perkOffer)return;
+ for(let count=0;xp>=goal&&count<40;count++){
+  xp-=goal;level++;goal=Math.round(goal*1.29);
+  players.forEach(p=>{p.damage+=1;p.maxHp+=2;p.hp=Math.min(p.maxHp,p.hp+5)});
+  if(level%5===0){offerUpgrade();return}
+  say('✨ LEVEL '+level+'! Your squad grows stronger.',2.6);playSfx('heal');
+ }
+}
 function damage(enemy,amount,p){
  if(phase==='ended'||phase==='cutscene'||enemy.hp<=0)return;
  enemy.hp-=amount;
@@ -412,7 +461,7 @@ function damage(enemy,amount,p){
  }
  if(enemy.hp<=0){
   if(enemy===boss){score+=900;emit('FRIDGE OPEN!',enemy.x,enemy.y-50);resetEnd(true);return}
-  kills++;score+=(ENEMY_TYPES[enemy.kind]?.score||12);xp+=(ENEMY_TYPES[enemy.kind]?.xp||7);
+  kills++;score+=(ENEMY_TYPES[enemy.kind]?.score||12);gainXP(ENEMY_TYPES[enemy.kind]?.xp||7);
   emit('+'+(ENEMY_TYPES[enemy.kind]?.score||12),enemy.x,enemy.y); playSfx('hit');
   if(enemy.elite&&['boink','bocht'].includes(enemy.kind)&&!foes.some(f=>f!==enemy&&f.elite&&f.hp>0)){
    duoActive=false;duoDefeated=true;score+=250;
@@ -421,10 +470,7 @@ function damage(enemy,amount,p){
   }
   if(Math.random()<.17&&drops.length<35)drops.push({x:enemy.x,y:enemy.y,kind:'xp',r:13});
   if(Math.random()<.052&&drops.length<35)drops.push({x:enemy.x,y:enemy.y,kind:'heal',r:15});
-  if(xp>=goal){xp-=goal;level++;goal=Math.round(goal*1.42);
-    players.forEach(q=>{q.damage+=2;q.maxHp+=3;q.hp=Math.min(q.maxHp,q.hp+8);q.rate=Math.max(.25,q.rate*.96)});
-    say('✨ LEVEL '+level+'! Tiny upgrade. The Bleeplings keep blepping.',3); playSfx('heal');
-  }
+
  }
 }
 function movePlayers(dt){
@@ -452,12 +498,12 @@ function movePlayers(dt){
     p.y=clamp(boss.y+Math.sin(a)*minimum,24,HEIGHT-24);
    }
   }
-  p.inv=Math.max(0,p.inv-dt);p.dash=Math.max(0,p.dash-dt);
+  p.perkGlow=Math.max(0,(p.perkGlow||0)-dt);p.inv=Math.max(0,p.inv-dt);p.dash=Math.max(0,p.dash-dt);
   p.dashCooldown=Math.max(0,p.dashCooldown-dt);
   p.cool-=dt;if(p.cool<=0){fire(p);p.cool=p.rate}
   p.laserCooldown-=dt;if(laserUnlocked&&p.laserCooldown<=0){laserAttack(p);p.laserCooldown=5.3}
   for(let i=drops.length-1;i>=0;i--){let d=drops[i];if(dist(p,d)<29){
-    if(d.kind==='xp'){xp+=12;score+=5;emit('+XP',p.x,p.y,'#a9f4d1')}
+    if(d.kind==='xp'){gainXP(12);score+=5;emit('+XP',p.x,p.y,'#a9f4d1')}
     else{p.hp=Math.min(p.maxHp,p.hp+21);emit('+21 HP',p.x,p.y,'#a9ffc9');playSfx('heal')}
     drops.splice(i,1);
   }}
@@ -548,7 +594,7 @@ function advanceProjectiles(dt){
  }
 }
 function update(dt){
- if(phase==='ended'||phase==='cutscene')return;
+ if(phase==='ended'||phase==='cutscene'||phase==='upgrade')return;
  elapsed+=dt;messageClock-=dt;
  if(messageClock<=0){$('game-message').textContent=phase==='explore'?'🫧 THE GREAT SNACK RIFT · Track the golden clues!':'⚠ BOSS RUSH · Dodge Tolly’s banana barrage!';messageClock=999}
  sloganClock-=dt;
@@ -1125,6 +1171,7 @@ document.addEventListener('visibilitychange',()=>{
  if(document.hidden&&!paused&&(phase==='explore'||phase==='boss'))togglePause();
 });
 window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();
+ if(phase==='upgrade'){e.preventDefault();return;}
  if(phase==='cutscene'){
    if(['arrowup','arrowdown','arrowleft','arrowright',' ','w','a','s','d','shift','enter'].includes(k))e.preventDefault();
    if(k==='c'){e.preventDefault();if(!e.repeat&&performance.now()-sceneOpenedAt>350)continueScene();}
