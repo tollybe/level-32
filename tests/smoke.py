@@ -587,6 +587,15 @@ hook='''window.__rosieTest={
   };
   view.alpha={health:rgbaAlpha($('mobile-health')),
    quest:rgbaAlpha($('mobile-quest')),xp:rgbaAlpha($('team-xp-overlay'))};
+  // The same large phone button must clearly show how to unpause.
+  $('phone-pause').click();
+  view.pause={paused,button:$('phone-pause').textContent,
+   pressed:$('phone-pause').getAttribute('aria-pressed'),
+   panel:!$('paws-panel').hidden};
+  $('phone-pause').click();
+  view.unpause={paused,button:$('phone-pause').textContent,
+   pressed:$('phone-pause').getAttribute('aria-pressed'),
+   panel:!$('paws-panel').hidden};
   // Measure the compact two-choice upgrade layout without altering level,
   // character stats or existing modal callback state.
   perk.hidden=false;choices.replaceChildren();
@@ -731,6 +740,8 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
         assert full['secondStick']==(not solo),full
         assert full['perk']['inside'] and full['perk']['compact'] and full['perk']['tappable'],full
         assert full['perk']['choices']==2,full
+        assert full['pause']=={'paused':True,'button':'▶ UNPAWS','pressed':'true','panel':True},full
+        assert full['unpause']=={'paused':False,'button':'Ⅱ PAWS','pressed':'false','panel':False},full
         if screen[0]>screen[1]:
             assert all(abs(value-.10)<.015 for value in full['alpha'].values()),full
         assert not page.evaluate("document.body.classList.contains('phone-play')")
