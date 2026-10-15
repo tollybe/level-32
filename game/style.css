@@ -282,3 +282,12 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:3px solid #9cf
  background:#1d3244;color:#f8e9ba;font-size:.67rem;font-weight:850;
  letter-spacing:.015em;line-height:1.25}
 @media(max-width:620px){.music-status{max-width:160px;font-size:.62rem}}
+
+/* Shared team XP shown on the actual game viewport. Never blocks controls. */
+.team-xp-overlay{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:2;pointer-events:none;width:min(55%,405px);padding:5px 9px 7px;border:1px solid #e0c18a;border-radius:8px;background:#182a40e8;color:#fff1d3;box-shadow:0 3px 12px #1720308c}
+.team-xp-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:2px 8px;font-size:.67rem;font-weight:750}
+.team-xp-head strong{color:#fbd99e}.team-xp-head #team-perk-label{color:#a8f2d1}
+.team-xp-track{height:9px;background:#101923;border:1px solid #b5b2aa;border-radius:8px;overflow:hidden;margin-top:5px}
+.team-xp-track span{display:block;height:100%;width:0;background:linear-gradient(90deg,#81dbc1,#fbe3a3);transition:width .12s}
+@media(max-width:620px){.team-xp-overlay{width:min(72%,315px);padding:3px 6px 5px;top:4px}.team-xp-head{font-size:.56rem}.team-xp-track{height:6px}}
+@media(prefers-reduced-motion:reduce){.team-xp-track span{transition:none}}
