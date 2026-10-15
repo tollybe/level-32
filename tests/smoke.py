@@ -49,6 +49,8 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge'):
     page.locator('#mute').click()
     page.locator('#difficulty').select_option(mode)
     assert page.locator('[data-dash]').count()==2
+    assert page.locator('[data-joystick]').count()==2
+    assert 'Daan joins' not in page.locator('#difficulty').inner_text()
     assert page.locator('.select-invite').get_attribute('target')=='_blank'
     assert page.locator('.hero-invite-line a').get_attribute('target')=='_blank'
     assert page.locator('#ending-invite').is_hidden()
