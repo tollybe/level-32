@@ -53,6 +53,13 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge'):
     assert page.locator('.hero-invite-line a').get_attribute('target')=='_blank'
     assert page.locator('#ending-invite').is_hidden()
     s=page.evaluate('window.__rosieTest.start()')
+    assert page.locator('#pause').inner_text().endswith('PAWS')
+    assert page.locator('#paws-panel').is_hidden()
+    page.locator('#pause').click()
+    assert page.locator('#paws-panel').is_visible()
+    assert 'PAWSIBILITIES' in page.locator('#pause').inner_text()
+    page.locator('#pause').click()
+    assert page.locator('#paws-panel').is_hidden()
     assert s['phase']=='explore' and s['mode']==mode
     s=page.evaluate('window.__rosieTest.place(0)')
     assert s['phase']=='explore' and s['clues']==0 and s['guardWave']==0 and s['guardians']==(2 if mode=='story' else 3), s
@@ -133,4 +140,5 @@ with sync_playwright() as p:
     browser_run(browser)
     browser_run(browser,screen=(390,844),mobile=True)
     browser_run(browser,screen=(390,844),mobile=True,mode='story')
+    browser_run(browser,screen=(1280,900),mode='extreme')
     browser.close()
