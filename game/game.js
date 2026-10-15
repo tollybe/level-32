@@ -536,7 +536,22 @@ function updatePlayerTabs(){
 function setSelection(){document.querySelectorAll('.hero').forEach(el=>{let id=el.dataset.hero;el.classList.toggle('selected-p1',selected[0]===id);el.classList.toggle('selected-p2',$('coop').checked&&selected[1]===id);const tag=el.querySelector('.tags');tag.replaceChildren();if(selected[0]===id){const b=document.createElement('span');b.className='tag';b.textContent='P1';tag.append(b)}if($('coop').checked&&selected[1]===id){const b=document.createElement('span');b.className='tag p2';b.textContent='P2';tag.append(b)}});$('selection-status').textContent='P1: '+roster[selected[0]].name+' (WASD)'+($('coop').checked?'   •   P2: '+roster[selected[1]].name+' (arrows)':'  •  SOLO MODE'); updatePlayerTabs();}
 document.querySelectorAll('.hero').forEach(el=>el.addEventListener('click',()=>{selected[Number($('assign').value)]=el.dataset.hero;$('hero-banter').textContent=heroLines[el.dataset.hero];setSelection()}));
 document.querySelectorAll('[data-slot]').forEach(b=>b.addEventListener('click',()=>{if(b.disabled)return;$('assign').value=b.dataset.slot;updatePlayerTabs()}));
-$('coop').addEventListener('change',()=>{if(!$('coop').checked)$('assign').value='0';setSelection()});setSelection();
+function syncTouchPlayers(){
+ const duo=$('coop').checked;
+ document.body.classList.toggle('solo-play',!duo);
+ document.querySelectorAll('.touch-player').forEach((el,i)=>{
+  const second=i===1&&!duo;
+  el.setAttribute('aria-hidden',second?'true':'false');
+  const joystick=el.querySelector('.joystick'),dash=el.querySelector('.touch-dash');
+  if(joystick)joystick.setAttribute('aria-disabled',second?'true':'false');
+  if(dash)dash.disabled=second;
+ });
+ if(!duo)joystickAxes[1].x=joystickAxes[1].y=0;
+}
+$('coop').addEventListener('change',()=>{
+ if(!$('coop').checked)$('assign').value='0';
+ setSelection();syncTouchPlayers();
+});setSelection();syncTouchPlayers();
 function showScene(kind,title,dialogue){
  $('ending-invite').hidden=true;sceneName=kind;cutsceneNext=kind;phase='cutscene';keys.clear();
  sceneOpenedAt=performance.now();const presentationToken=++scenePresentationToken;joystickAxes.forEach(axis=>{axis.x=0;axis.y=0});
@@ -715,6 +730,7 @@ function start(){
  bushEggSeen=false;bossBushVisits=0;bossBushOccupied=false;winston=null;winstonForcedReveal=0;pairBanterClock=12;pairConversation=null;pairBanterVisits={};worldBubbles=[];bossNicknameClock=13;bossNicknameIndex=0;
  joystickAxes.forEach(a=>{a.x=0;a.y=0});document.querySelectorAll('.joystick-knob').forEach(k=>k.style.transform='translate(0px,0px)');
  players=[player(selected[0],0)];if($('coop').checked)players.push(player(selected[1],1));
+ syncTouchPlayers();
  const startHealth=DIFFICULTY_BALANCE[$('difficulty').value].startingHealth;
  players.forEach(p=>{p.maxHp=Math.round(p.maxHp*startHealth);p.hp=p.maxHp;});
  foes=[];shots=[];drops=[];fx=[];hazards=[];beams=[];difficulty=$('difficulty').value;gate=null;gateCleared=[false,false,false];scentStep=0;duoActive=false;duoDefeated=false;laserUnlocked=false;coneCooldown=6.8;coneWindup=0;bossPulseCooldown=4;bossPulseWindup=0;bananaWindup=0;daanActive=false;daanPulse=0;daanActionTimer=0;daanHealCooldown=0;daanHealWindup=0;daanHealsRemaining=0;daanHealFlash=0;laserChallenge={index:0,timer:0,zapCooldown:0};phase='explore';paused=false;boss=null;cutsceneNext=null;sceneName=null;musicStep=0;musicMode='idle';musicBar=0;musicNextBarAt=0;
@@ -789,12 +805,13 @@ function offerUpgrade(){
  // between P1 and P2: level 5 -> P1, 10 -> P2, 15 -> P1.
  const p=players[perksAwarded%players.length];
  perkOffer={player:p,offers:['hp','damage'].map(stat=>({stat,rarity:rollRarity()}))};
- $('perk-who').textContent='TEAM LEVEL '+level+' · P'+(p.num+1)+' ('+p.name+') takes this perk turn. Next perk: '+(players[(p.num+1)%players.length]?.name||p.name)+'. Choose one boost.';
+ $('perk-who').textContent='TEAM LEVEL '+level+' · P'+(p.num+1)+' ('+p.name+') picks a boost. Next perk: '+(players[(p.num+1)%players.length]?.name||p.name)+'.';
  const choices=$('perk-choices');choices.replaceChildren();
  perkOffer.offers.forEach((o,i)=>{
   const d=perkDetails(o.stat,o.rarity),button=document.createElement('button');
   button.type='button';button.className='perk-choice perk-'+o.rarity;
   button.textContent=o.rarity.toUpperCase()+' · '+d.name+' — '+d.desc;
+  button.setAttribute('aria-label','Choose '+o.rarity+' '+d.name+': '+d.desc);
   button.addEventListener('click',()=>acceptUpgrade(i));choices.append(button);
  });
  $('perk-panel').hidden=false;choices.querySelector('button')?.focus({preventScroll:true});
