@@ -1,6 +1,6 @@
 # Hackathon Day 7 — Bush Stealth, Winston & Impossible Crossfire
 
-**Status: feature branch, under Chromium CI; no guest release.** Builds on Day 6C. Canonical five pet/Tolly portraits and approved game sprite files are unchanged; the bush asset is new and separate.
+**Status: merged to `main` in PR #16, Chromium syntax and gameplay regression CI green (15 October 2026); still a playtest, not a guest release.** Builds on Day 6C. Canonical five pet/Tolly portraits and approved game sprite files are unchanged; the bush asset is new and separate.
 
 ## World and bush stealth
 
@@ -31,9 +31,9 @@ Banter triggers when both heroes are alive, visible and within 165 world units. 
 
 ## Automated and owner acceptance gates
 
-- [ ] Green Chromium tests: 12-way existing hero/difficulty matrix, synchronized warning+rapid 24 shots, precise + and X vectors.
-- [ ] Green Chromium tests: concealed targeting and attack suppression, mob question marks, 30-second secret, safe exit, and all six co-op banter pairings.
-- [ ] Green Chromium tests: Tolly's first/second bush-entry dialogue and continuous ten-second Winston sequence through shaking and reveal, with no boss soft-lock.
-- [ ] Existing quest/cutscene/health/heal/level/ending/invitation and solo/mobile tests remain green.
+- [x] Green Chromium tests (PR #16): 12-way existing hero/difficulty matrix, synchronized warning+rapid 24 shots, precise + and X vectors.
+- [x] Green Chromium tests (PR #16): concealed targeting and attack suppression, mob question marks, 30-second secret, safe exit, and all six co-op banter pairings.
+- [x] Green Chromium tests (PR #16): Tolly's first/second bush-entry dialogue and continuous ten-second Winston sequence through shaking and reveal, with no boss soft-lock.
+- [x] Existing quest/cutscene/health/heal/level/ending/invitation and solo/mobile tests remain green (PR #16).
 - [ ] Owner playtests red warning visibility on real phones, visual concealment depth and bush sound/easter-egg pacing, balanced Impossible bullet density and pet chemistry.
 - [ ] Original game portraits/art SHA unchanged and game invitation remains independently accessible.
