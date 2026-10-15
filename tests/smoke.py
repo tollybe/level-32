@@ -304,6 +304,9 @@ hook='''window.__rosieTest={
    moveAroundTrees(moving,35,0,18);if(blockedByTree(moving.x,moving.y,18))tunneled=true;
   }
   const blocked=moving.x<tr.x-37&&Math.abs(moving.y-tr.y)<1;
+  const embedded={x:tr.x,y:tr.y};
+  moveAroundTrees(embedded,1,0,18);
+  const escaped=!blockedByTree(embedded.x,embedded.y,18);
   const sliding={x:tr.x-80,y:tr.y+5};
   for(let i=0;i<15;i++){
    moveAroundTrees(sliding,9,7,18);
@@ -320,7 +323,7 @@ hook='''window.__rosieTest={
   const mobFade=cherryCanopyOpacity(tree,[],[{x:tree.x,y:tree.y-95,hp:100}]);
   const normal=cherryCanopyOpacity(tree,[],[]);
   cherryTrees=saved;
-  return {blocked,slides:sliding.y>tr.y+15,steers:mob.x>tr.x+30,
+  return {blocked,escaped,slides:sliding.y>tr.y+15,steers:mob.x>tr.x+30,
     tunneled,playerFade,mobFade,normal};
  },
  millieDoubleDashProbe(){
@@ -451,7 +454,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     s=page.evaluate('window.__rosieTest.start()')
     if not mobile and mode=='challenge' and not solo:
         tree=page.evaluate('window.__rosieTest.treeDepthProbe()')
-        assert tree['blocked'] and tree['slides'] and tree['steers'] and not tree['tunneled'],tree
+        assert tree['blocked'] and tree['escaped'] and tree['slides'] and tree['steers'] and not tree['tunneled'],tree
         assert tree['playerFade']<tree['mobFade']<tree['normal'] and tree['normal']==1,tree
         dash=page.evaluate('window.__rosieTest.millieDoubleDashProbe()')
         assert (dash['before'],dash['first'],dash['second'],dash['third'],
