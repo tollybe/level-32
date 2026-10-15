@@ -313,3 +313,12 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:3px solid #9cf
 .mission-actions .btn{max-width:100%;white-space:normal}
 .calendar-help{font-size:.78rem;line-height:1.4;color:#cbd8d6;max-width:700px}
 @media(max-width:620px){.mission-actions{flex-direction:column;align-items:stretch}.mission-actions .btn{width:100%}}
+
+.scroll-return-notice{position:absolute;z-index:2;bottom:12px;left:50%;transform:translateX(-50%);max-width:calc(100% - 20px);width:max-content;pointer-events:none;text-align:center;color:#fff5c9;border:2px solid #ffdf83;background:#293143f2;box-shadow:0 0 0 3px #584a35,0 5px 18px #101522a6;border-radius:13px;padding:8px 17px;display:flex;flex-direction:column;gap:1px;line-height:1.3}
+.scroll-return-notice[hidden]{display:none!important}
+.scroll-return-notice strong{font-size:clamp(.92rem,2vw,1.3rem);color:#ffec93;letter-spacing:.035em}
+.scroll-return-notice span{font-size:clamp(.72rem,1.7vw,1rem);font-weight:950}
+.scroll-return-notice small{font-size:.76rem;color:#c4f6df;font-weight:700}
+.objective-strip.scroll-unsealed{background:linear-gradient(90deg,#6d4b2d,#38374d);border:2px solid #ffdb85;box-shadow:0 0 13px #efc85d6b}
+.objective-strip.scroll-unsealed .objective-main strong{font-weight:1000;color:#ffe5a2}
+@media(max-width:620px){.scroll-return-notice{bottom:6px;padding:6px 10px;max-width:calc(100% - 12px)}.scroll-return-notice strong{font-size:.85rem}.scroll-return-notice span{font-size:.68rem}.scroll-return-notice small{font-size:.64rem}}
