@@ -395,7 +395,7 @@ function scoreText(win){const squad=players.map(p=>p.name).join(' & ');const dur
 function resetEnd(win){hideQuestToast();$('ending-invite').hidden=false;phase='ended';paused=true;$('pause').disabled=true;let title=win?'🎉 TREATS LIBERATED!':'💀 THE FRIDGE PREVAILS';let detail=win?'Okay, you deserve the banana and cheese tax.':'Mwahahaha! You are a chonk and are of no match to the mighty Tolly!';if(score>best){best=score;try{localStorage.setItem('rosie-survivors-best',String(best))}catch{}detail+=' NEW PERSONAL BEST!'}$('overlay-kicker').textContent=win?'CUTSCENE · REWARD SCREEN':'GAME OVER · FRIDGE SEALED';$('overlay').classList.add('cinematic');$('overlay').querySelector('h3').textContent=title;$('boss-card').classList.remove('show');$('overlay').dataset.scene=win?'victory':'defeat';$('scene-skip').hidden=true;$('overlay-art').style.maxWidth='';$('overlay-art').src=win?SCENE_ART.victory:SCENE_ART.defeat;$('overlay-art').classList.add('show');renderSceneLines(win?'victory':'defeat');$('scene-dialogues').querySelectorAll('.scene-line').forEach(row=>row.hidden=false);$('mission-unlock').classList.add('show');$('overlay').querySelector('p').textContent=detail+' Score: '+score+' · Snacklings boinked: '+kills+'.';$('overlay-start').textContent='↻ PLAY AGAIN';$('scene-counter').textContent='';$('share-result').classList.add('show');$('share-status').textContent='';$('overlay').classList.remove('hidden'); if(win){playSfx('victory'); say(pick(slogans.victory),3)} else {playSfx('defeat')} syncHud()}
 function spawnBleepling(){
  // Bound unrelated mobs so the required guardian fights remain challenging but fair.
- if(foes.length>=(gate?24:phase==='boss'?48:65))return;
+ if(foes.length>=(gate?24:phase==='boss'?(bossPhase===3?24:48):65))return;
  const live=players.filter(p=>p.alive);if(!live.length)return;
  const focus=live[Math.floor(Math.random()*live.length)];
  const angle=rnd(0,TAU),radius=rnd(390,550),tier=Math.floor(elapsed/35);
@@ -409,7 +409,45 @@ function spawnBleepling(){
 }
 function emit(text,x,y,col='#ffe1aa'){fx.push({text,x,y,col,t:1.1})}
 function nearest(origin,arr,r=Infinity){let item=null,bd=r;for(const o of arr){if(o.hp<=0||o.alive===false)continue;const d=dist(origin,o);if(d<bd){bd=d;item=o}}return item}
-function fire(p){const target=nearest(p,[...foes,...(boss?[boss]:[])],p.range);if(!target)return;if(p.weapon==='sausage'){for(const e of [...foes,...(boss?[boss]:[])])if(e.hp>0&&dist(p,e)<p.range){damage(e,p.damage+level*2,p);emit('⚔',e.x,e.y,'#fff0a7')}return}const angle=Math.atan2(target.y-p.y,target.x-p.x);shots.push({x:p.x,y:p.y,vx:Math.cos(angle)*410,vy:Math.sin(angle)*410,damage:p.damage+level*2,ttl:1.1,owner:p.num,kind:p.weapon,pierce:p.weapon==='dragon'?1:0,hitTargets:new Set()})}
+function fire(p){const target=nearest(p,[...foes,...(boss&&boss.hp>0?[boss]:[]),...(daan&&daan.hp>0?[daan]:[])],p.range);if(!target)return;if(p.weapon==='sausage'){for(const e of [...foes,...(boss&&boss.hp>0?[boss]:[]),...(daan&&daan.hp>0?[daan]:[])])if(e.hp>0&&dist(p,e)<p.range){damage(e,p.damage+level*2,p);emit('⚔',e.x,e.y,'#fff0a7')}return}const angle=Math.atan2(target.y-p.y,target.x-p.x);shots.push({x:p.x,y:p.y,vx:Math.cos(angle)*410,vy:Math.sin(angle)*410,damage:p.damage+level*2,ttl:1.1,owner:p.num,kind:p.weapon,pierce:p.weapon==='dragon'?1:0,hitTargets:new Set()})}
+function summonDaan(){
+ if(phase!=='boss'||bossPhase!==3||!boss||boss.hp<=0)return;
+ const hp=Math.round(142*(players.length===2?1.45:1));
+ daan={x:clamp(boss.x+170,40,WIDTH-40),y:clamp(boss.y+85,40,HEIGHT-40),
+   hp,maxHp:hp,size:31,speed:136,attack:2.2,telegraph:0,targetX:0,targetY:0};
+ say('🧗 SUMMON DAAN! Watch his chalk-white landing target!',3.5);
+ emit('SUMMON DAAN!',daan.x,daan.y-52,'#9bffe8');
+}
+function updateDaan(dt){
+ if(bossPhase!==3||phase!=='boss')return;
+ if(!daan){daanRespawn-=dt;if(daanRespawn<=0)summonDaan();return;}
+ const focus=nearest(daan,players);if(!focus)return;
+ if(daan.telegraph>0){
+   daan.telegraph-=dt;
+   if(daan.telegraph<=0){
+     const landing={x:daan.targetX,y:daan.targetY};
+     daan.x=clamp(landing.x+68,35,WIDTH-35);daan.y=clamp(landing.y-30,35,HEIGHT-35);
+     for(const q of players.filter(p=>p.alive&&dist(p,landing)<108&&p.inv<=0)){
+       const points=Math.ceil((q.id==='winnifred'?19:25)*(players.length===2?1.06:1));
+       q.hp=Math.max(0,q.hp-points);q.inv=.92;
+       const a=Math.atan2(q.y-landing.y,q.x-landing.x);
+       q.x=clamp(q.x+Math.cos(a)*55,24,WIDTH-24);
+       q.y=clamp(q.y+Math.sin(a)*55,24,HEIGHT-24);
+       emit('DAAN LANDING -'+points,q.x,q.y-35,'#c5fff1');
+       if(q.hp===0)q.alive=false;
+     }
+     playSfx('boink');daan.attack=4.8;daan.telegraph=0;
+   }
+   return;
+ }
+ daan.attack-=dt;
+ const d=dist(daan,focus),a=Math.atan2(focus.y-daan.y,focus.x-daan.x);
+ if(d>120){daan.x=clamp(daan.x+Math.cos(a)*daan.speed*dt,35,WIDTH-35);daan.y=clamp(daan.y+Math.sin(a)*daan.speed*dt,35,HEIGHT-35);}
+ if(daan.attack<=0){
+   daan.telegraph=1.25;daan.targetX=focus.x;daan.targetY=focus.y;
+   say('⚠ DAAN LEAPS! MOVE OUT OF THE WHITE CIRCLE!',2.1);playSfx('phase');
+ }
+}
 function damage(enemy,amount,p){
  if(phase==='ended'||phase==='cutscene'||enemy.hp<=0)return;
  enemy.hp-=amount;
@@ -486,7 +524,7 @@ function movePlayers(dt){
 // Mission Two foreshadowing: the legendary laser pointer unlocks after clue three.
 function laserAttack(p){
  if(!laserUnlocked||!p.alive||phase!=='explore'&&phase!=='boss')return;
- const pool=[...foes,...(boss&&boss.hp>0?[boss]:[])].filter(e=>e.hp>0&&dist(p,e)<310);
+ const pool=[...foes,...(boss&&boss.hp>0?[boss]:[]),...(daan&&daan.hp>0?[daan]:[])].filter(e=>e.hp>0&&dist(p,e)<310);
  if(!pool.length)return;
  const target=nearest(p,pool,310);if(!target)return;
  const angle=Math.atan2(target.y-p.y,target.x-p.x);
@@ -551,7 +589,7 @@ function update(dt){
  updateRevives(dt);
  updateEllieAuras(dt);
  spawnClock-=dt;
- if(spawnClock<=0&&foes.length<(gate?23:duoActive?20:phase==='boss'?48:62)){
+ if(spawnClock<=0&&foes.length<(gate?23:duoActive?20:phase==='boss'?(bossPhase===3?23:48):62)){
    const n=gate?1:duoActive?1:phase==='boss'?(difficulty==='story'?1:difficulty==='impossible'?3:2):elapsed>75?3:elapsed>18?2:1;
    for(let j=0;j<n&&foes.length<65;j++)spawnBleepling();
    spawnClock=Math.max(.42,.93-elapsed*.0035)*mode().spawn*(gate?1.5:1)*(phase==='boss'?.9:1);
@@ -566,7 +604,7 @@ function update(dt){
  for(let i=shots.length-1;i>=0;i--){
    let s=shots[i];s.x+=s.vx*dt;s.y+=s.vy*dt;s.ttl-=dt;
    if(s.ttl<=0){shots.splice(i,1);continue}
-   for(const target of [...foes,...(boss?[boss]:[])]){
+   for(const target of [...foes,...(boss&&boss.hp>0?[boss]:[]),...(daan&&daan.hp>0?[daan]:[])]){
      if(target.hp>0&&!s.hitTargets.has(target)&&dist(s,target)<(target.size||41)+9){
        s.hitTargets.add(target);damage(target,s.damage,players[s.owner]);
        if(s.kind==='kong'){target.slow=Math.max(target.slow||0,2.0);emit('❄ SLOW',target.x,target.y-30,'#a9ecff')}
@@ -639,6 +677,29 @@ function update(dt){
    }
  }
  if(phase==='boss'&&boss&&boss.hp>0){
+   updateDaan(dt);
+   if(bossPhase===3){
+     mythicArcCooldown-=dt;
+     if(mythicArcWindup>0){
+       mythicArcWindup-=dt;
+       if(mythicArcWindup<=0){
+         for(const q of players.filter(p=>p.alive&&p.inv<=0&&dist(p,boss)<300)){
+           const a=Math.atan2(q.y-boss.y,q.x-boss.x);
+           const delta=Math.atan2(Math.sin(a-mythicAngle),Math.cos(a-mythicAngle));
+           if(Math.abs(delta)<.52){
+             const hit=Math.ceil((q.id==='winnifred'?17:23)*(players.length===2?1.07:1));
+             q.hp=Math.max(0,q.hp-hit);q.inv=.87;if(q.hp===0)q.alive=false;
+             emit('MYTHIC RAY -'+hit,q.x,q.y-31,'#8cf9ec');
+           }
+         }
+         mythicArcWindup=0;mythicArcCooldown=7;playSfx('laser');
+       }
+     }else if(mythicArcCooldown<=0){
+       const q=nearest(boss,players);
+       if(q){mythicAngle=Math.atan2(q.y-boss.y,q.x-boss.x);mythicArcWindup=1.35;
+       say('⚠ MYTHIC LASER SWEEP! DODGE SIDEWAYS!',2);playSfx('phase');}
+     }
+   }
    bossPulseCooldown-=dt;
     if(bossPulseWindup>0){
       bossPulseWindup-=dt;
@@ -654,7 +715,7 @@ function update(dt){
         playSfx('cone');
       }
     }else if(bossPulseCooldown<=0&&players.some(p=>p.alive&&dist(p,boss)<175)){
-      bossPulseWindup=1.05;bossPulseCooldown=bossPhase===2?2.65:3.35;
+      bossPulseWindup=1.05;bossPulseCooldown=bossPhase===3?3.75:bossPhase===2?2.65:3.35;
       say('⚠ TOLLY: NO CAMPING ON THE FRIDGE! MOVE OUT OF THE GOLD RING!',2.2);
     }
     boss.attack-=dt;
@@ -674,7 +735,7 @@ function update(dt){
          }
        }else{
          coneCooldown-=dt;
-         if(coneCooldown<=0){coneAngle=Math.atan2(p.y-boss.y,p.x-boss.x);coneWindup=1.4;coneCooldown=8.1;say('🔺 CONE OF SHAME! Dodge sideways!',1.35);playSfx('phase')}
+         if(coneCooldown<=0){coneAngle=Math.atan2(p.y-boss.y,p.x-boss.x);coneWindup=1.4;coneCooldown=bossPhase===3?10.2:8.1;say('🔺 CONE OF SHAME! Dodge sideways!',1.35);playSfx('phase')}
        }
      }
      const a=Math.atan2(p.y-boss.y,p.x-boss.x),d=dist(p,boss);
@@ -684,10 +745,10 @@ function update(dt){
       bananaWindup-=dt;
       if(bananaWindup<=0){
        bananaWindup=0;
-       boss.attack=boss.hp<boss.maxHp*.5?1.22:1.53;
-       const frenzy=boss.hp<boss.maxHp*.5;
+       boss.attack=bossPhase===3?1.55:boss.hp<boss.maxHp*.5?1.22:1.53;
+       const frenzy=bossPhase===3||boss.hp<boss.maxHp*.5;
        // Tolly sends warning-colored banana projectiles out from the fridge shrine.
-       const count=frenzy?10:7,base=Math.atan2(p.y-boss.y,p.x-boss.x);
+       const count=bossPhase===3?9:frenzy?10:7,base=Math.atan2(p.y-boss.y,p.x-boss.x);
        for(let j=0;j<count;j++){
          const dir=base+(j-(count-1)/2)*(.20);
          const speed=frenzy?198:176;
@@ -701,7 +762,7 @@ function update(dt){
            if(q.hp===0)q.alive=false; else playSfx('special');
          }
        }
-       for(let j=0;j<(frenzy?3:2);j++)spawnBleepling();
+       for(let j=0;j<(bossPhase===3?1:frenzy?3:2);j++)spawnBleepling();
        playSfx('special');
        if(frenzy&&Math.random()<.55)emit('🍌 NO MORE BANANA!',boss.x,boss.y-86,'#ffe6ae');
       }
