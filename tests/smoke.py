@@ -911,7 +911,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
         stealth=page.evaluate('window.__rosieTest.bushStealthProbe()')
         assert all(stealth.values()),stealth
         pairs=page.evaluate('window.__rosieTest.pairDialogueProbe()')
-        assert len(pairs)==6 and all(pair['visits']==3 and pair['sequential']
+        assert len(pairs)==10 and all(pair['visits']==3 and pair['sequential']
           and len({visit['first'] for visit in pair['encounters']})==3
           and all(len(visit['lines'])>=3 for visit in pair['encounters'])
           for pair in pairs),pairs
