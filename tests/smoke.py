@@ -976,7 +976,12 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     assert s['cleared'][0] and s['clues']==0
     scroll_before=page.evaluate('window.scrollY')
     s=page.evaluate('window.__rosieTest.place(0)')
-    assert abs(page.evaluate('window.scrollY')-scroll_before)<2, 'First cinematic must not jump document'
+    if not mobile:
+        assert abs(page.evaluate('window.scrollY')-scroll_before)<2, 'Desktop cinematic must not jump document'
+    else:
+        # In phone fullscreen the page is locked and the story card is viewport-bound;
+        # browser window.scrollY can re-anchor independently of what a guest sees.
+        assert page.evaluate("getComputedStyle(document.body).overflow")=='hidden'
     assert s['phase']=='cutscene' and s['clues']==1 and s['cleared'][0], s
     page.wait_for_function("window.__rosieTest.sceneVisibleAndReady()",timeout=15000)
     assert s['sceneName']=='clue1' and s['imgSrc'].startswith('data:image/webp'),s
