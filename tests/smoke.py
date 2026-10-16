@@ -706,11 +706,13 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     errors=[]
     page.on('pageerror',lambda e:errors.append(str(e)))
     page.set_content(html,wait_until='domcontentloaded',timeout=60000)
-    page.wait_for_function('window.Level32Sprites && window.Level32Sprites.loadedCharacters.length === 9', timeout=15000)
-    # Day 5C: eight approved sheets plus a provisional Daan sheet decode in Chromium.
-    assert page.evaluate("window.Level32Sprites.loadedCharacters.length")==9
+    page.wait_for_function('window.Level32Sprites && window.Level32Sprites.loadedCharacters.length === 10', timeout=15000)
+    # Nine pet/boss/enemy sheets plus provisional Daan decode in Chromium.
+    assert page.evaluate("window.Level32Sprites.loadedCharacters.length")==10
     assert page.evaluate("window.Level32Sprites.previewEnabled") is True
     assert page.evaluate("window.Level32Sprites.loadedCharacters.includes('daan')")
+    assert page.evaluate("window.Level32Sprites.loadedCharacters.includes('vanille')")
+    assert page.locator('[data-hero="vanille"]').count()==1
     assert page.evaluate("""() => {
         const source=window.Level32Sprites.approvedFiles.daan;
         return source.endsWith('daan.svg') || source.startsWith('data:image/svg+xml;base64,');
@@ -740,7 +742,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
       const fallbackRestored=engine.draw(ctx,'rosie',{state:'idle',direction:'down'},50,50,32,0)===false;
       const realSheets=await engine.loadApproved();
       engine.setPreviewEnabled(true);
-      const artRestored=realSheets.every(Boolean) && engine.loadedCharacters.length===9;
+      const artRestored=realSheets.every(Boolean) && engine.loadedCharacters.length===10;
       const visibleRestored=engine.draw(ctx,'rosie',{state:'idle',direction:'down'},50,50,32,0);
       return {exists:true,defaultFallback,invalidRejected,validAccepted,result,pix,smoothingRestored,fallbackRestored,artRestored,visibleRestored};
     }""")
