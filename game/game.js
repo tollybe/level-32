@@ -260,9 +260,16 @@ function renderSceneLines(kind){
  if(kind==='intro'){
    const ids=[...new Set(players.map(p=>p.id))];
    for(const id of ids)lines.push(['tolly',TOLLY_NICKNAMES[id]+'! You are NOT getting into this fridge!']);
-   if(ids.includes('vanille'))lines.push(['vanille','I am... the grey days that watch over you all.'],['vanille','I am... CAT CAT.']);
+   if(ids.includes('vanille'))lines.push(
+    ['vanille','Urrrgh... fine. So long as it is warm. And there is fish.'],
+    ['rosie','We are going to liberate the food!'],
+    ['vanille','Food? Fish, even? Well. The enemy of my enemy is my friend. Temporarily.'],
+    ['vanille','I am... the grey days that watch over you all.'],
+    ['vanille','I am... CAT CAT.']
+   );
  }
 
+ if(kind==='clue3'&&players.some(p=>p.id==='vanille'))lines.splice(1,0,['vanille','Oh, if only. Imagine them actually dead. The peace and quiet.']);
  if(kind==='phase3'&&difficulty==='extreme'){lines.push(['daan','I have Tolly’s back! Dodge the boulder and watch the green healing beam!']);lines.push(...EXTRA_BANTER.daan);lines.push(...ROSIE_THEME)}
  // Character-specific ending callbacks, always with the established portraits.
  if(kind==='victory'||kind==='defeat'){
@@ -526,7 +533,7 @@ function tickMusic(){
 function startMusicLoop(){if(musicTimer)return;tickMusic();musicTimer=setInterval(tickMusic,45)}
 function shout(pool,dur=2.4){ say(pick(pool),dur) }
 
-const heroLines={rosie:'🐉 Rosie heard the word banana and immediately accepted the mission.',millie:'🎾 Millie believes the answer to every question is BALL.',winnifred:'👑 Winnifred graciously grants the party permission to proceed.',ellie:'💚 Ellie is ready to lick everyone back to full health. And then zoomie.',vanille:'🌿 Urrrgh... fine. So long as it is warm. I am... CAT CAT.'};
+const heroLines={rosie:'🐉 Rosie heard the word banana and immediately accepted the mission.',millie:'🎾 Millie believes the answer to every question is BALL.',winnifred:'👑 Winnifred graciously grants the party permission to proceed.',ellie:'💚 Ellie is ready to lick everyone back to full health. And then zoomie.',vanille:'🐟 Fish and food? Urrrgh... fine. The enemy of my enemy is my friend. Temporarily.'};
 function updatePlayerTabs(){
  document.querySelectorAll('[data-slot]').forEach(b=>{
   const slot=Number(b.dataset.slot),active=slot===Number($('assign').value);
@@ -1140,22 +1147,22 @@ const PAIR_BANTER={
  ]
  ,
  'ellie|vanille':[
-  [['ellie','Would a healing lick help?'],['vanille','It would make things worse.'],['ellie','Noted.']],
+  [['ellie','Hello! I am Ellie!'],['vanille','Who are you, and why are you wasting my air?'],['ellie','Would a healing lick help?'],['vanille','Absolutely not.']],
   [['vanille','I enjoy the sound of nothing.'],['ellie','I can be quiet!'],['vanille','You are currently talking.']],
   [['ellie',"You're looking less grumpy."],['vanille',"I'm not."],['ellie','Fantastic progress!']]
  ],
  'millie|vanille':[
-  [['millie','CAT! CAN WE PLAY?'],['vanille','No.'],['millie','HOW ABOUT NOW?'],['vanille','Still no.']],
+  [['millie','CAT! CAN WE PLAY?'],['vanille','Who are you, and why are you wasting my air?'],['millie','MILLIE! BALL?'],['vanille','Still no.']],
   [['vanille','Is that ball squeaking?'],['millie','YES! LOVE IT?'],['vanille','I prefer silence.']],
   [['millie','I FOUND A PERFECT HIDEOUT!'],['vanille','Then go hide in it. Alone.'],['millie','ALRIGHT!']]
  ],
  'rosie|vanille':[
-  [['rosie','Do you like vegetables?'],['vanille','No.'],['rosie','But they are delicious!'],['vanille','Then eat them over there.']],
+  [['rosie','Do you like vegetables?'],['vanille','Who are you, and why are you wasting my air?'],['rosie','I also like fish!'],['vanille','...Fish? Carry on.']],
   [['vanille','Why are you following me?'],['rosie','I thought we were going for a walk!'],['vanille','We are not.']],
   [['rosie','It is a nice warm bush!'],['vanille','Not big enough for two.'],['rosie','Oh.']]
  ],
  'vanille|winnifred':[
-  [['winnifred','One must maintain proper distance.'],['vanille','At last. A sensible cat.'],['winnifred','Naturally.']],
+  [['winnifred','May I enquire who you are?'],['vanille','Who are you, and why are you wasting my air?'],['winnifred','A fellow practitioner of etiquette, I see.']],
   [['vanille','I am... the grey days that watch over you all.'],['winnifred','...Beg pardon?'],['vanille','I AM... CAT CAT.']],
   [['winnifred','Would you like a place by the fireplace?'],['vanille','Urrrgh... fine. So long as it is warm.'],['winnifred','A most gracious acceptance.']]
  ]
