@@ -695,6 +695,25 @@ hook='''window.__rosieTest={
  },
  getEnemyList(){return [...new Set(foes.map(e=>e.kind))]},
  state(){return {phase,clues,duoActive,duoDefeated,laserUnlocked,laserIndex:laserChallenge.index,scentStep,score,kills,coneWindup,elapsed,hp:players.map(p=>p.hp),sceneName,cutsceneNext,bossHp:boss?.hp||0,daanActive,bossRage:boss?.rage||false,bossMaxHp:boss?.maxHp||0,liteFx,guardWave:gate?.wave??null,guardians:foes.filter(e=>e.guardian&&e.hp>0).length,cleared:gateCleared.slice(),mode:difficulty,overlay:!$('overlay').classList.contains('hidden'),imgSrc:$('overlay-art').getAttribute('src').slice(0,90),dialogueImages:[...$('scene-dialogues').querySelectorAll('img')].map(im=>im.getAttribute('src').slice(0,80)),missionUnlock:$('mission-unlock').classList.contains('show'),objectText:$('objective-label').textContent}}
+,
+ vanilleProbe(){
+  const v=players[0],intruder=players[1];
+  if(!v||v.id!=='vanille'||!intruder)return {error:'Need P1 Vanille and P2 ally'};
+  const initial={hp:v.maxHp,speed:v.speed,damage:v.damage,regen:v.selfRegen};
+  const e={x:v.x+90,y:v.y,hp:240,maxHp:240,size:21,kind:'bleepling',damage:0,speed:0,attack:99,age:0,telegraph:0,slow:0};
+  foes=[e];v.hidden=false;v.ambushReady=0;fire(v);
+  const glare=240-e.hp;
+  const before={x:v.x,y:v.y,enemyX:e.x};v.dashCooldown=0;
+  tryDash(0);
+  const ploff={moved:Math.hypot(v.x-before.x,v.y-before.y),enemyMoved:e.x-before.enemyX,cooldown:v.dashCooldown};
+  v.hp=100;updateVanille(1);const healed=v.hp-100;
+  const bush=bushes[0];v.personalSpaceLock=0;v.x=bush.x;v.y=bush.y;
+  intruder.x=bush.x+210;intruder.y=bush.y;v.bushId=-1;intruder.bushId=-1;
+  updateBushes(.016);const wasHidden=v.hidden;
+  intruder.x=bush.x+3;intruder.y=bush.y+3;updateBushes(.016);
+  const personalSpace={wasHidden,ejected:!v.hidden,dist:Math.hypot(v.x-bush.x,v.y-bush.y),lock:v.personalSpaceLock,speech:worldBubbles.some(b=>b.speaker==='vanille'&&b.line.includes('PERSONAL SPACE'))};
+  return {initial,glare,ploff,healed,personalSpace};
+ }
 };'''
 pos=html.rfind('})();')
 assert pos>0
@@ -1126,4 +1145,25 @@ with sync_playwright() as p:
     browser_run(browser,screen=(1280,900),mode='extreme')
     browser_run(browser,screen=(1280,900),mode='story',solo=True)
     browser_run(browser,screen=(390,844),mobile=True,mode='extreme',solo=True)
+
+    # Fifth hero mechanics: solo controls reused in co-op; exact bush-entry trigger.
+    vanille_page=browser.new_page(viewport={'width':1280,'height':900})
+    vanille_errors=[]
+    vanille_page.on('pageerror',lambda e:vanille_errors.append(str(e)))
+    vanille_page.set_content(html,wait_until='domcontentloaded',timeout=60000)
+    vanille_page.wait_for_function("window.Level32Sprites && window.Level32Sprites.loadedCharacters.includes('vanille')",timeout=15000)
+    assert vanille_page.locator('[data-hero="vanille"] .portrait img').evaluate('(im)=>im.complete && im.naturalWidth>0')
+    vanille_page.locator('[data-hero="vanille"]').click()
+    vanille_page.locator('#coop').check()
+    vanille_page.evaluate('window.__rosieTest.start()')
+    result=vanille_page.evaluate('window.__rosieTest.vanilleProbe()')
+    assert result['initial']=={'hp':180,'speed':185,'damage':10,'regen':2.5},result
+    assert result['glare']>0,result
+    assert result['ploff']['moved']==0 and result['ploff']['enemyMoved']>0 and result['ploff']['cooldown']>3.4,result
+    assert abs(result['healed']-2.5)<.01,result
+    assert result['personalSpace']['wasHidden'] and result['personalSpace']['ejected'] and result['personalSpace']['dist']>51,result
+    assert result['personalSpace']['speech'] and result['personalSpace']['lock']>0,result
+    assert not vanille_errors,vanille_errors
+    print('Vanille stats, glare, stationary Ploff, regen and private bush: PASS')
+    vanille_page.close()
     browser.close()
