@@ -269,7 +269,10 @@ function renderSceneLines(kind){
    );
  }
 
- if(kind==='clue3'&&players.some(p=>p.id==='vanille'))lines.splice(1,0,['vanille','Oh, if only. Imagine them actually dead. The peace and quiet.']);
+ if(kind==='clue3'&&players.some(p=>p.id==='vanille')){
+  const pewIndex=lines.findIndex(([id,words])=>id==='winnifred'&&words==='Pew. Pew. Pew.');
+  if(pewIndex>=0)lines.splice(pewIndex+1,0,['vanille','Oh, if only. Imagine them actually dead. The peace and quiet.']);
+ }
  if(kind==='phase3'&&difficulty==='extreme'){lines.push(['daan','I have Tolly’s back! Dodge the boulder and watch the green healing beam!']);lines.push(...EXTRA_BANTER.daan);lines.push(...ROSIE_THEME)}
  // Character-specific ending callbacks, always with the established portraits.
  if(kind==='victory'||kind==='defeat'){
