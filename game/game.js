@@ -1167,14 +1167,25 @@ function updatePairBanter(dt){
  pairConversation={lines,index:1,timer:2.75};
  pairBanterClock=14;
 }
+
+function vanilleBushExit(v){
+ for(const ally of players)if(ally.alive&&ally!==v&&dist(v,ally)<175)
+  ally.speedBuff=Math.max(ally.speedBuff||0,2.5);
+}
 function updateBushes(dt){
  const reveal=winstonForcedReveal>0;winstonForcedReveal=Math.max(0,winstonForcedReveal-dt);
  for(const p of players){
   if(!p.alive){p.hidden=false;p.bushTime=0;p.bushId=-1;continue}
   const wasHidden=p.hidden,oldDuration=p.bushTime;
+  p.prevBushId=p.bushId;
   p.bushId=bushes.findIndex(b=>dist(p,b)<51);
-  p.hidden=p.bushId>=0&&!reveal;
+  p.hidden=p.bushId>=0&&!reveal&&!(p.id==='vanille'&&p.personalSpaceLock>0);
   p.bushTime=p.hidden?p.bushTime+dt:0;
+  
+  if(p.id==='vanille'&&p.hidden&&!wasHidden)
+   for(const ally of players)if(ally!==p&&ally.alive&&dist(ally,p)<145)
+    ally.inv=Math.max(ally.inv,.32);
+  if(p.id==='vanille'&&wasHidden&&!p.hidden)vanilleBushExit(p);
   if(p.hidden)p.ambushReady=0;
   else if(wasHidden&&!reveal&&oldDuration>=.3){
    p.ambushReady=2.1;
@@ -1188,6 +1199,26 @@ function updateBushes(dt){
    return;
   }
  }
+
+ // She erupts only when an ally ENTERS a bush that Vanille was already hiding in.
+ for(const v of players.filter(p=>p.id==='vanille'&&p.alive&&p.hidden&&p.prevBushId===p.bushId&&p.personalSpaceLock<=0)){
+  const intruder=players.find(q=>q!==v&&q.alive&&q.hidden&&q.bushId===v.bushId&&q.prevBushId!==q.bushId);
+  if(!intruder)continue;
+  const bush=bushes[v.bushId];if(!bush)continue;
+  const a=dist(v,intruder)>.01?Math.atan2(v.y-intruder.y,v.x-intruder.x):0;
+  v.x=clamp(bush.x+Math.cos(a)*90,24,WIDTH-24);
+  v.y=clamp(bush.y+Math.sin(a)*90,24,HEIGHT-24);
+  v.hidden=false;v.bushId=-1;v.bushTime=0;v.personalSpaceLock=1.25;
+  v.ambushReady=2.1;v.spriteAttackAt=elapsed;
+  vanilleBushExit(v);
+  bubble('vanille','HAVE YOU NOT HEARD OF A THING CALLED PERSONAL SPACE?!',3.6);
+  say('VANILLE: HAVE YOU NOT HEARD OF A THING CALLED PERSONAL SPACE?!',3.7);
+  emit('PERSONAL SPACE!',v.x,v.y-50,'#eed4fc');playSfx('boink');
+ }
+ // Nearby allies benefit from faster dash recovery without sharing the bush.
+ for(const v of players.filter(p=>p.id==='vanille'&&p.hidden&&p.alive))
+  for(const ally of players)if(ally!==v&&ally.alive&&dist(ally,v)<150)
+   ally.dashCooldown=Math.max(0,ally.dashCooldown-.25*dt);
  if(phase!=='boss'||!boss||boss.hp<=0)return;
  const inside=players.some(p=>p.hidden);
  if(inside&&!bossBushOccupied&&!winston?.complete){
