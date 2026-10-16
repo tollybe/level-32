@@ -812,8 +812,8 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     assert page.locator('#ending-invite').is_hidden()
     if not mobile and mode=='challenge' and not solo:
         matrix=page.evaluate('window.__rosieTest.combatMatrix()')
-        assert len(matrix)==12,matrix
-        for hero in ['rosie','millie','winnifred','ellie']:
+        assert len(matrix)==15,matrix
+        for hero in ['rosie','millie','winnifred','ellie','vanille']:
             tiers=[next(row for row in matrix if row['hero']==hero and row['mode']==m)
               for m in ('story','challenge','extreme')]
             story,adventure,extreme=tiers
