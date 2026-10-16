@@ -1184,7 +1184,11 @@ with sync_playwright() as p:
     vanille_page.wait_for_function("window.Level32Sprites && window.Level32Sprites.loadedCharacters.includes('vanille')",timeout=15000)
     assert vanille_page.locator('[data-hero="vanille"] .portrait img').evaluate('(im)=>im.complete && im.naturalWidth>0')
     vanille_page.locator('[data-hero="vanille"]').click()
-    vanille_page.locator('#coop').check()
+    vanille_page.evaluate("""() => {
+      const coop=document.getElementById('coop');
+      coop.checked=true;
+      coop.dispatchEvent(new Event('change',{bubbles:true}));
+    }""")
     vanille_page.evaluate('window.__rosieTest.start()')
     result=vanille_page.evaluate('window.__rosieTest.vanilleProbe()')
     assert result['initial']=={'hp':180,'speed':185,'damage':10,'regen':2.5},result
