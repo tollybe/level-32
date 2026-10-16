@@ -830,7 +830,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
                 vx,vy=abs(shot['vx']),abs(shot['vy'])
                 if shot['source']=='boink': assert min(vx,vy)<1e-6,shot
                 else: assert abs(vx-vy)<1e-6,shot
-        print('12-character-mode balance matrix and Extreme-only +/X bananas: PASS')
+        print('15-character-mode balance matrix and Extreme-only +/X bananas: PASS')
     soundtrack=page.evaluate('window.__rosieTest.soundtrackConfig()')
     assert set(['duo','boss1','boss2','boss3']).issubset(soundtrack['modes']),soundtrack
     assert soundtrack['legendaryBpm']>=170,soundtrack
@@ -898,7 +898,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
         assert all(ambush.values()),ambush
         nick=page.evaluate('window.__rosieTest.nicknameProbe()')
         assert set(nick['names'])=={'Rosie the Dog','Silly Millie','Ellie Bellie',
-          'Princess Winnifred, floof of her name'},nick
+          'Princess Winnifred, floof of her name','Vanille, Keeper of Personal Space'},nick
         assert all(any(lyric[1] in line for line in nick['lines']) for lyric in nick['theme']),nick
         print('Ambush crit, bush-hit ejection and new Rosie/Daan lyrics: PASS')
         garden=page.evaluate('window.__rosieTest.gardenProbe()')
