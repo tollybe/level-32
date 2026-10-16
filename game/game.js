@@ -5,11 +5,11 @@ const WIDTH=2600,HEIGHT=1900, VIEWW=960,VIEWH=600, TAU=Math.PI*2, keys=new Set()
 // THE GREAT SNACK RIFT: original, friendly-looking blob enemies with readable combat tells.
 // No server or shared scores required; all audio is original WebAudio synthesis.
 const petImages=Object.fromEntries(Array.from(document.querySelectorAll('#heroes .hero'),el=>[el.dataset.hero,el.querySelector('.portrait img')]));
-const roster={rosie:{name:'Rosie',emoji:'🐕‍🦺',color:'#222a36',hp:130,speed:220,range:225,rate:.56,damage:17,weapon:'dragon'},millie:{name:'Millie',emoji:'🐕',color:'#31323d',hp:135,speed:205,range:220,rate:.56,damage:18,weapon:'ball'},winnifred:{name:'Winnifred',emoji:'🐈',color:'#e4d4bc',hp:128,speed:240,range:96,rate:.34,damage:30,weapon:'sausage'},ellie:{name:'Ellie',emoji:'🐶',color:'#121823',hp:150,speed:250,range:175,rate:.92,damage:8,weapon:'kong',auraRadius:135,healPulse:2.7,selfRegen:1.4}};
+const roster={rosie:{name:'Rosie',emoji:'🐕‍🦺',color:'#222a36',hp:130,speed:220,range:225,rate:.56,damage:17,weapon:'dragon'},millie:{name:'Millie',emoji:'🐕',color:'#31323d',hp:135,speed:205,range:220,rate:.56,damage:18,weapon:'ball'},winnifred:{name:'Winnifred',emoji:'🐈',color:'#e4d4bc',hp:128,speed:240,range:96,rate:.34,damage:30,weapon:'sausage'},ellie:{name:'Ellie',emoji:'🐶',color:'#121823',hp:150,speed:250,range:175,rate:.92,damage:8,weapon:'kong',auraRadius:135,healPulse:2.7,selfRegen:1.4},vanille:{name:'Vanille',emoji:'🐈',color:'#afa0af',hp:180,speed:185,range:315,rate:1.12,damage:10,weapon:'death-glare',selfRegen:2.5}};
 let selected=['rosie','winnifred'],players=[],foes=[],shots=[],drops=[],fx=[],hazards=[],boss=null,phase='idle',paused=false,score=0,kills=0,level=1,xp=0,goal=35,spawnClock=0,surgeClock=33,elapsed=0,clues=0,fridgeVisible=false,fridge={x:2180,y:1440},cam={x:0,y:0},lastTime=0,raf=0,messageClock=0,attackClock=0,heldTouch={},joystickAxes=[{x:0,y:0},{x:0,y:0}],audioCtx=null,audioEnabled=true,musicTimer=null,musicStep=0,musicMode='idle',musicBar=0,musicNextBarAt=0,sloganClock=8,bossPhase=1,coneWarned=false;
 let cutsceneNext=null,sceneName=null,reviveSeconds=1.85,hudClock=0,sceneOpenedAt=0,perkOffer=null,perkReturnPhase='explore',scenePresentationToken=0,perksAwarded=0;
 let liteFx=typeof matchMedia==='function'&&matchMedia('(pointer:coarse)').matches;
-let duoActive=false,duoDefeated=false,laserUnlocked=false,beams=[],bushEggSeen=false,bossBushVisits=0,bossBushOccupied=false,winston=null,winstonForcedReveal=0,pairBanterClock=12,worldBubbles=[],coneCooldown=6.8,coneWindup=0,coneAngle=0,bossPulseCooldown=4,bossPulseWindup=0,bananaWindup=0;
+let duoActive=false,duoDefeated=false,laserUnlocked=false,beams=[],vanilleBeams=[],bushEggSeen=false,bossBushVisits=0,bossBushOccupied=false,winston=null,winstonForcedReveal=0,pairBanterClock=12,worldBubbles=[],coneCooldown=6.8,coneWindup=0,coneAngle=0,bossPulseCooldown=4,bossPulseWindup=0,bananaWindup=0;
 let bossNicknameClock=13,bossNicknameIndex=0,gate=null,gateCleared=[false,false,false],difficulty='challenge',daanActive=false,daanPulse=0,daanActionTimer=0,daanHealCooldown=0,daanHealWindup=0,daanHealsRemaining=0,daanHealFlash=0;
 const GATE_WAVES={challenge:[[3,3,2],[3,3,3],[4,3,3]],story:[[2,2,2],[2,2,2],[2,2,3]],extreme:[[5,5,5],[6,5,6],[6,7,7]]};
 const daanPortrait=new Image();daanPortrait.src='assets/daan.svg';
@@ -227,7 +227,7 @@ function presentSceneArt(kind,token){
 // Tolly's names are character-specific, not generic labels.
 const TOLLY_NICKNAMES={
  rosie:'Rosie the Dog',millie:'Silly Millie',
- ellie:'Ellie Bellie',winnifred:'Princess Winnifred, floof of her name'
+ ellie:'Ellie Bellie',winnifred:'Princess Winnifred, floof of her name',vanille:'Vanille, Keeper of Personal Space'
 };
 const ROSIE_THEME=[
  ['rosie',"She's the rosiest of rosies, the tosiest of tosies..."],
@@ -260,15 +260,26 @@ function renderSceneLines(kind){
  if(kind==='intro'){
    const ids=[...new Set(players.map(p=>p.id))];
    for(const id of ids)lines.push(['tolly',TOLLY_NICKNAMES[id]+'! You are NOT getting into this fridge!']);
+   if(ids.includes('vanille'))lines.push(
+    ['vanille','Urrrgh... fine. So long as it is warm. And there is fish.'],
+    ['rosie','We are going to liberate the food!'],
+    ['vanille','Food? Fish, even? Well. The enemy of my enemy is my friend. Temporarily.'],
+    ['vanille','I am... the grey days that watch over you all.'],
+    ['vanille','I am... CAT CAT.']
+   );
  }
 
+ if(kind==='clue3'&&players.some(p=>p.id==='vanille')){
+  const pewIndex=lines.findIndex(([id,words])=>id==='winnifred'&&words==='Pew. Pew. Pew.');
+  if(pewIndex>=0)lines.splice(pewIndex+1,0,['vanille','Oh, if only. Imagine them actually dead. The peace and quiet.']);
+ }
  if(kind==='phase3'&&difficulty==='extreme'){lines.push(['daan','I have Tolly’s back! Dodge the boulder and watch the green healing beam!']);lines.push(...EXTRA_BANTER.daan);lines.push(...ROSIE_THEME)}
  // Character-specific ending callbacks, always with the established portraits.
  if(kind==='victory'||kind==='defeat'){
   const lead=players[0],replies={rosie:'Can we discuss the banana situation on the way to the party?',
    millie:'WAIT. THERE WILL BE BALLS AT THIS PARTY, YES?',
    winnifred:'Attendance is obligatory for distinguished floofs.',
-   ellie:'I am bringing zoomies. And emotional support.'};
+   ellie:'I am bringing zoomies. And emotional support.',vanille:'Urrrgh... fine. At least this party might be warm.'};
   if(lead)lines.push([lead.id,replies[lead.id]]);
  }host.hidden=lines.length===0;
  lines.forEach(([id,words],index)=>{
@@ -525,7 +536,7 @@ function tickMusic(){
 function startMusicLoop(){if(musicTimer)return;tickMusic();musicTimer=setInterval(tickMusic,45)}
 function shout(pool,dur=2.4){ say(pick(pool),dur) }
 
-const heroLines={rosie:'🐉 Rosie heard the word banana and immediately accepted the mission.',millie:'🎾 Millie believes the answer to every question is BALL.',winnifred:'👑 Winnifred graciously grants the party permission to proceed.',ellie:'💚 Ellie is ready to lick everyone back to full health. And then zoomie.'};
+const heroLines={rosie:'🐉 Rosie heard the word banana and immediately accepted the mission.',millie:'🎾 Millie believes the answer to every question is BALL.',winnifred:'👑 Winnifred graciously grants the party permission to proceed.',ellie:'💚 Ellie is ready to lick everyone back to full health. And then zoomie.',vanille:'🐟 Fish and food? Urrrgh... fine. The enemy of my enemy is my friend. Temporarily.'};
 function updatePlayerTabs(){
  document.querySelectorAll('[data-slot]').forEach(b=>{
   const slot=Number(b.dataset.slot),active=slot===Number($('assign').value);
@@ -533,7 +544,18 @@ function updatePlayerTabs(){
   b.disabled=slot===1&&!$('coop').checked;
  });
 }
-function setSelection(){document.querySelectorAll('.hero').forEach(el=>{let id=el.dataset.hero;el.classList.toggle('selected-p1',selected[0]===id);el.classList.toggle('selected-p2',$('coop').checked&&selected[1]===id);const tag=el.querySelector('.tags');tag.replaceChildren();if(selected[0]===id){const b=document.createElement('span');b.className='tag';b.textContent='P1';tag.append(b)}if($('coop').checked&&selected[1]===id){const b=document.createElement('span');b.className='tag p2';b.textContent='P2';tag.append(b)}});$('selection-status').textContent='P1: '+roster[selected[0]].name+' (WASD)'+($('coop').checked?'   •   P2: '+roster[selected[1]].name+' (arrows)':'  •  SOLO MODE'); updatePlayerTabs();}
+
+function refreshActionLabels(){
+ document.querySelectorAll('[data-dash]').forEach(btn=>{
+  const slot=Number(btn.dataset.dash),ploff=selected[slot]==='vanille';
+  btn.textContent='P'+(slot+1)+' '+(ploff?'PLOFF':'DASH')+(ploff?' 💨':' ⚡');
+  btn.setAttribute('aria-label',(ploff?'Ploff':'Dash')+' Player '+(slot+1));
+ });
+ document.querySelectorAll('#dash-status .dash-pill').forEach((pill,i)=>{
+  pill.textContent='P'+(i+1)+' '+(i===0?'⇧ SHIFT':'↵ ENTER')+' = '+(selected[i]==='vanille'?'PLOFF':'DASH');
+ });
+}
+function setSelection(){document.querySelectorAll('.hero').forEach(el=>{let id=el.dataset.hero;el.classList.toggle('selected-p1',selected[0]===id);el.classList.toggle('selected-p2',$('coop').checked&&selected[1]===id);const tag=el.querySelector('.tags');tag.replaceChildren();if(selected[0]===id){const b=document.createElement('span');b.className='tag';b.textContent='P1';tag.append(b)}if($('coop').checked&&selected[1]===id){const b=document.createElement('span');b.className='tag p2';b.textContent='P2';tag.append(b)}});$('selection-status').textContent='P1: '+roster[selected[0]].name+' (WASD)'+($('coop').checked?'   •   P2: '+roster[selected[1]].name+' (arrows)':'  •  SOLO MODE'); updatePlayerTabs();refreshActionLabels();}
 document.querySelectorAll('.hero').forEach(el=>el.addEventListener('click',()=>{selected[Number($('assign').value)]=el.dataset.hero;$('hero-banter').textContent=heroLines[el.dataset.hero];setSelection()}));
 document.querySelectorAll('[data-slot]').forEach(b=>b.addEventListener('click',()=>{if(b.disabled)return;$('assign').value=b.dataset.slot;updatePlayerTabs()}));
 function syncTouchPlayers(){
@@ -729,7 +751,7 @@ function updateSnackMagnet(dt){
   }
  }
 }
-function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,dashCharges:id==='millie'?2:1,dashRecharge:[],healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5,spriteFacing:'down',spriteMoving:false,spriteAttackAt:-1,perkGlow:0,perkRarity:'',hidden:false,bushTime:0,bushId:-1,ambushReady:0,snackCharge:0,snackNextHitAt:0,magnetTime:0,recoveryClock:0}}
+function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,dashCharges:id==='millie'?2:1,dashRecharge:[],healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5,spriteFacing:'down',spriteMoving:false,spriteAttackAt:-1,perkGlow:0,perkRarity:'',hidden:false,bushTime:0,bushId:-1,ambushReady:0,snackCharge:0,snackNextHitAt:0,magnetTime:0,recoveryClock:0,ploffFlash:0,personalSpaceLock:0,prevBushId:-1,speedBuff:0}}
 function start(){
  if(paused){
   paused=false;
@@ -747,7 +769,7 @@ function start(){
  syncTouchPlayers();
  const startHealth=DIFFICULTY_BALANCE[$('difficulty').value].startingHealth;
  players.forEach(p=>{p.maxHp=Math.round(p.maxHp*startHealth);p.hp=p.maxHp;});
- foes=[];shots=[];drops=[];fx=[];hazards=[];beams=[];difficulty=$('difficulty').value;gate=null;gateCleared=[false,false,false];scentStep=0;duoActive=false;duoDefeated=false;laserUnlocked=false;coneCooldown=6.8;coneWindup=0;bossPulseCooldown=4;bossPulseWindup=0;bananaWindup=0;daanActive=false;daanPulse=0;daanActionTimer=0;daanHealCooldown=0;daanHealWindup=0;daanHealsRemaining=0;daanHealFlash=0;laserChallenge={index:0,timer:0,zapCooldown:0};phase='explore';paused=false;boss=null;cutsceneNext=null;sceneName=null;musicStep=0;musicMode='idle';musicBar=0;musicNextBarAt=0;
+ foes=[];shots=[];drops=[];fx=[];hazards=[];beams=[];vanilleBeams=[];difficulty=$('difficulty').value;gate=null;gateCleared=[false,false,false];scentStep=0;duoActive=false;duoDefeated=false;laserUnlocked=false;coneCooldown=6.8;coneWindup=0;bossPulseCooldown=4;bossPulseWindup=0;bananaWindup=0;daanActive=false;daanPulse=0;daanActionTimer=0;daanHealCooldown=0;daanHealWindup=0;daanHealsRemaining=0;daanHealFlash=0;laserChallenge={index:0,timer:0,zapCooldown:0};phase='explore';paused=false;boss=null;cutsceneNext=null;sceneName=null;musicStep=0;musicMode='idle';musicBar=0;musicNextBarAt=0;
  elapsed=0;score=0;kills=0;level=1;xp=0;goal=35;clues=0;fridgeVisible=false;
  generateGarden();
  spawnClock=.55;surgeClock=33;attackClock=0;hudClock=0;keys.clear();ensureAudio();
@@ -775,11 +797,28 @@ function spawnBleepling(){
 }
 function emit(text,x,y,col='#ffe1aa'){if(fx.length<(liteFx?45:90))fx.push({text,x,y,col,t:1.1})}
 function nearest(origin,arr,r=Infinity){let item=null,bd=r;for(const o of arr){if(o.hp<=0||o.alive===false||o.hidden)continue;const d=dist(origin,o);if(d<bd){bd=d;item=o}}return item}
+
+function deathGlare(p,target){
+ const angle=Math.atan2(target.y-p.y,target.x-p.x),ux=Math.cos(angle),uy=Math.sin(angle);
+ vanilleBeams.push({x:p.x,y:p.y,a:angle,range:p.range,t:.26,owner:p.num});
+ const charged=useSnack(p);let hits=0;
+ for(const e of [...foes,...(boss&&boss.hp>0?[boss]:[])]){
+  if(!e||e.hp<=0)continue;
+  const forward=(e.x-p.x)*ux+(e.y-p.y)*uy;
+  const lateral=Math.abs((e.x-p.x)*uy-(e.y-p.y)*ux);
+  if(forward>0&&forward<p.range&&lateral<=10+forward*.09+(e.size||25)*.25){
+   damage(e,(p.damage+level*1.4)*(charged?1.25:1),p);hits++;
+   if(phase==='cutscene'||phase==='ended'||hits>=4)break;
+  }
+ }
+ if(hits){emit('DEATH GLARE',p.x,p.y-55,'#ffdd8a');playSfx('laser');}
+}
 function fire(p){
  if(p.hidden)return;
  const range=p.weapon==='sausage'&&p.snackCharge>=SNACK_MAX?p.range+20:p.range;
  const target=nearest(p,[...foes,...(boss?[boss]:[])],range);if(!target)return;
  p.spriteAttackAt=elapsed;
+ if(p.weapon==='death-glare'){deathGlare(p,target);return;}
  if(p.weapon==='sausage'){
   const charged=useSnack(p),hitRange=charged?p.range+20:p.range;
   for(const e of [...foes,...(boss?[boss]:[])])
@@ -918,8 +957,8 @@ function movePlayers(dt){
   // proportional instead of snapping to maximum running speed.
   let l=Math.max(1,Math.hypot(dx,dy));
   p.slowTime=Math.max(0,(p.slowTime||0)-dt);const footing=p.slowTime>0?.63:1;
-  moveAroundTrees(p,dx/l*p.speed*footing*dt*(p.dash>0?2.3:1),
-   dy/l*p.speed*footing*dt*(p.dash>0?2.3:1),18);
+  moveAroundTrees(p,dx/l*p.speed*footing*dt*(p.dash>0?2.3:1)*(p.speedBuff>0?1.15:1),
+   dy/l*p.speed*footing*dt*(p.dash>0?2.3:1)*(p.speedBuff>0?1.15:1),18);
   // Player and Tolly cannot occupy the same collision space.
   if(phase==='boss'&&boss&&boss.hp>0){
    const d=dist(p,boss),minimum=boss.size+44;
@@ -930,6 +969,7 @@ function movePlayers(dt){
    }
   }
   p.perkGlow=Math.max(0,(p.perkGlow||0)-dt);p.inv=Math.max(0,p.inv-dt);p.dash=Math.max(0,p.dash-dt);
+  p.speedBuff=Math.max(0,(p.speedBuff||0)-dt);p.personalSpaceLock=Math.max(0,(p.personalSpaceLock||0)-dt);p.ploffFlash=Math.max(0,(p.ploffFlash||0)-dt);
   p.dashCooldown=Math.max(0,p.dashCooldown-dt);
   p.magnetTime=Math.max(0,p.magnetTime-dt);
   if(p.id==='millie'){
@@ -1108,6 +1148,27 @@ const PAIR_BANTER={
   [['winnifred','Perhaps we need a treaty.'],['ellie','No surprise licking?'],['winnifred','Precisely.']],
   [['ellie','I have secured the perimeter!'],['winnifred','Good. We shall admire each other from here.'],['ellie','Marvelous! I shall guard the biscuit tin next.']]
  ]
+ ,
+ 'ellie|vanille':[
+  [['ellie','Hello! I am Ellie!'],['vanille','Who are you, and why are you wasting my air?'],['ellie','Would a healing lick help?'],['vanille','Absolutely not.']],
+  [['vanille','I enjoy the sound of nothing.'],['ellie','I can be quiet!'],['vanille','You are currently talking.']],
+  [['ellie',"You're looking less grumpy."],['vanille',"I'm not."],['ellie','Fantastic progress!']]
+ ],
+ 'millie|vanille':[
+  [['millie','CAT! CAN WE PLAY?'],['vanille','Who are you, and why are you wasting my air?'],['millie','MILLIE! BALL?'],['vanille','Still no.']],
+  [['vanille','Is that ball squeaking?'],['millie','YES! LOVE IT?'],['vanille','I prefer silence.']],
+  [['millie','I FOUND A PERFECT HIDEOUT!'],['vanille','Then go hide in it. Alone.'],['millie','ALRIGHT!']]
+ ],
+ 'rosie|vanille':[
+  [['rosie','Do you like vegetables?'],['vanille','Who are you, and why are you wasting my air?'],['rosie','I also like fish!'],['vanille','...Fish? Carry on.']],
+  [['vanille','Why are you following me?'],['rosie','I thought we were going for a walk!'],['vanille','We are not.']],
+  [['rosie','It is a nice warm bush!'],['vanille','Not big enough for two.'],['rosie','Oh.']]
+ ],
+ 'vanille|winnifred':[
+  [['winnifred','May I enquire who you are?'],['vanille','Who are you, and why are you wasting my air?'],['winnifred','A fellow practitioner of etiquette, I see.']],
+  [['vanille','I am... the grey days that watch over you all.'],['winnifred','...Beg pardon?'],['vanille','I AM... CAT CAT.']],
+  [['winnifred','Would you like a place by the fireplace?'],['vanille','Urrrgh... fine. So long as it is warm.'],['winnifred','A most gracious acceptance.']]
+ ]
 };
 let pairConversation=null,pairBanterVisits={};
 function bubble(speaker,line,ttl=3.8){
@@ -1138,14 +1199,25 @@ function updatePairBanter(dt){
  pairConversation={lines,index:1,timer:2.75};
  pairBanterClock=14;
 }
+
+function vanilleBushExit(v){
+ for(const ally of players)if(ally.alive&&ally!==v&&dist(v,ally)<175)
+  ally.speedBuff=Math.max(ally.speedBuff||0,2.5);
+}
 function updateBushes(dt){
  const reveal=winstonForcedReveal>0;winstonForcedReveal=Math.max(0,winstonForcedReveal-dt);
  for(const p of players){
   if(!p.alive){p.hidden=false;p.bushTime=0;p.bushId=-1;continue}
   const wasHidden=p.hidden,oldDuration=p.bushTime;
+  p.prevBushId=p.bushId;
   p.bushId=bushes.findIndex(b=>dist(p,b)<51);
-  p.hidden=p.bushId>=0&&!reveal;
+  p.hidden=p.bushId>=0&&!reveal&&!(p.id==='vanille'&&p.personalSpaceLock>0);
   p.bushTime=p.hidden?p.bushTime+dt:0;
+  
+  if(p.id==='vanille'&&p.hidden&&!wasHidden)
+   for(const ally of players)if(ally!==p&&ally.alive&&dist(ally,p)<145)
+    ally.inv=Math.max(ally.inv,.32);
+  if(p.id==='vanille'&&wasHidden&&!p.hidden)vanilleBushExit(p);
   if(p.hidden)p.ambushReady=0;
   else if(wasHidden&&!reveal&&oldDuration>=.3){
    p.ambushReady=2.1;
@@ -1159,6 +1231,26 @@ function updateBushes(dt){
    return;
   }
  }
+
+ // She erupts only when an ally ENTERS a bush that Vanille was already hiding in.
+ for(const v of players.filter(p=>p.id==='vanille'&&p.alive&&p.hidden&&p.prevBushId===p.bushId&&p.personalSpaceLock<=0)){
+  const intruder=players.find(q=>q!==v&&q.alive&&q.hidden&&q.bushId===v.bushId&&q.prevBushId!==q.bushId);
+  if(!intruder)continue;
+  const bush=bushes[v.bushId];if(!bush)continue;
+  const a=dist(v,intruder)>.01?Math.atan2(v.y-intruder.y,v.x-intruder.x):0;
+  v.x=clamp(bush.x+Math.cos(a)*90,24,WIDTH-24);
+  v.y=clamp(bush.y+Math.sin(a)*90,24,HEIGHT-24);
+  v.hidden=false;v.bushId=-1;v.bushTime=0;v.personalSpaceLock=1.25;
+  v.ambushReady=2.1;v.spriteAttackAt=elapsed;
+  vanilleBushExit(v);
+  bubble('vanille','HAVE YOU NOT HEARD OF A THING CALLED PERSONAL SPACE?!',3.6);
+  say('VANILLE: HAVE YOU NOT HEARD OF A THING CALLED PERSONAL SPACE?!',3.7);
+  emit('PERSONAL SPACE!',v.x,v.y-50,'#eed4fc');playSfx('boink');
+ }
+ // Nearby allies benefit from faster dash recovery without sharing the bush.
+ for(const v of players.filter(p=>p.id==='vanille'&&p.hidden&&p.alive))
+  for(const ally of players)if(ally!==v&&ally.alive&&dist(ally,v)<150)
+   ally.dashCooldown=Math.max(0,ally.dashCooldown-.25*dt);
  if(phase!=='boss'||!boss||boss.hp<=0)return;
  const inside=players.some(p=>p.hidden);
  if(inside&&!bossBushOccupied&&!winston?.complete){
@@ -1215,6 +1307,12 @@ function drawWorldBubbles(){
   cx.lineWidth=3;cx.strokeRect(x-w/2,y-31,w,45);
   txt(line,x,y-4,Math.min(17,490/line.length),'center','#fff4d5');cx.restore();
  }
+}
+
+function updateVanille(dt){
+ vanilleBeams=vanilleBeams.filter(b=>(b.t-=dt)>0&&!players[b.owner]?.hidden);
+ for(const p of players)if(p.id==='vanille'&&p.alive)
+  p.hp=Math.min(p.maxHp,p.hp+p.selfRegen*dt);
 }
 function updateAutoAttacks(dt){
  for(const p of players){
@@ -1273,12 +1371,14 @@ function update(dt){
  // launched: hiding cannot be used to keep dealing off-screen damage.
  shots=shots.filter(s=>!players[s.owner]?.hidden);
  beams=beams.filter(b=>!players[b.owner]?.hidden);
+ vanilleBeams=vanilleBeams.filter(b=>!players[b.owner]?.hidden);
  updateAutoAttacks(dt);
  updatePairBanter(dt);
  updateBossNicknames(dt);
  worldBubbles.forEach(b=>b.ttl-=dt);worldBubbles=worldBubbles.filter(b=>b.ttl>0);
  updateRevives(dt);
  updateEllieAuras(dt);
+ updateVanille(dt);
  spawnClock-=dt;
  if(spawnClock<=0&&elapsed>=difficultyBalance().earlySpawnGrace&&foes.length<(gate?23:duoActive?20:phase==='boss'?48:difficultyBalance().ambientCap)){
    const n=gate?1:duoActive?1:phase==='boss'?(difficulty==='story'?1:difficulty==='extreme'?3:2):elapsed>75?3:elapsed>18?2:1;
@@ -1685,7 +1785,7 @@ function drawQuestDressing(){
  for(const a of [-1,1]){txt('🏮',f.x+a*139,f.y-52,39,'center');txt('🎀',f.x+a*112,f.y+68,24,'center')}}
 }
 function spritePose(p,moving){
- const state=!p.alive?'knockout':p.dash>0?'dash':
+ const state=!p.alive?'knockout':p.id==='vanille'&&p.ploffFlash>0?'dash':p.dash>0?'dash':
    p.healFlash>0?'special':p.inv>.05?'hurt':
    p.spriteAttackAt>=0&&elapsed-p.spriteAttackAt<.18?'attack':
    moving?'walk':'idle';
@@ -1843,6 +1943,19 @@ if(boss&&boss.hp>0){
  }
 }
 // A readable AoE circle, not just a hidden buff. Allies must be inside the ring to heal.
+
+// Vanille's golden rectangular cone and stationary purple Ploff pulse.
+for(const beam of vanilleBeams){
+ cx.save();cx.translate(beam.x,beam.y);cx.rotate(beam.a);
+ cx.globalAlpha=Math.min(.85,beam.t*3.8);cx.fillStyle='#ffbf5570';
+ cx.strokeStyle='#ffe0a8';cx.lineWidth=2;
+ cx.beginPath();cx.moveTo(10,-9);cx.lineTo(beam.range,-40);cx.lineTo(beam.range,40);cx.lineTo(10,9);cx.closePath();cx.fill();cx.stroke();
+ cx.restore();
+}
+for(const v of players.filter(p=>p.alive&&p.id==='vanille'&&p.ploffFlash>0)){
+ cx.save();cx.globalAlpha=Math.min(.8,v.ploffFlash*2.5);cx.strokeStyle='#deb2fa';cx.lineWidth=7;
+ cx.beginPath();cx.arc(v.x,v.y,112*(1-v.ploffFlash/.38),0,TAU);cx.stroke();cx.restore();
+}
 for(const p of players){
  if(!p.alive||p.id!=='ellie')continue;
  cx.save();
@@ -2023,9 +2136,25 @@ $('start').addEventListener('click',()=>{start();enterPhonePlay()});$('overlay-s
  if(phase==='cutscene'){if(performance.now()-sceneOpenedAt>350)continueScene();}
  else start();
 });$('restart').addEventListener('click',start);$('pause').addEventListener('click',togglePause);$('mute').addEventListener('click',()=>{audioEnabled=!audioEnabled; if(audioCtx){audioEnabled?audioCtx.resume():audioCtx.suspend()} $('mute').textContent=audioEnabled?'🔊 MUSIC + SFX':'🔇 SOUND OFF'; if(audioEnabled) ensureAudio();});
+
+function vanillePloff(p){
+ if(p.dashCooldown>0)return;
+ p.dashCooldown=6.8;p.ploffFlash=.38;p.inv=Math.max(p.inv,.32);
+ p.spriteAttackAt=elapsed;
+ for(const e of [...foes,...(boss&&boss.hp>0?[boss]:[])]){
+  if(!e||e.hp<=0||dist(p,e)>110+(e.size||0))continue;
+  const d=dist(p,e),a=d>.01?Math.atan2(e.y-p.y,e.x-p.x):0;
+  const distance=e===boss?20:85;
+  e.x=clamp(e.x+Math.cos(a)*distance,24,WIDTH-24);
+  e.y=clamp(e.y+Math.sin(a)*distance,24,HEIGHT-24);
+ }
+ emit('PLOFF!',p.x,p.y-59,'#e2b9ff');playSfx('boink');
+}
 function tryDash(id){
  if(!['boss','explore'].includes(phase)||paused)return;
- const p=players[id];if(!p||!p.alive||p.hidden||bushes.some(b=>dist(p,b)<51))return;
+ const p=players[id];if(!p||!p.alive)return;
+ if(p.id==='vanille'){vanillePloff(p);return;}
+ if(p.hidden||bushes.some(b=>dist(p,b)<51))return;
  if(p.id==='millie'?p.dashCharges<1:p.dashCooldown>0)return;
  if(p.id==='millie'){
   p.dashCharges--;

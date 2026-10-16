@@ -695,6 +695,55 @@ hook='''window.__rosieTest={
  },
  getEnemyList(){return [...new Set(foes.map(e=>e.kind))]},
  state(){return {phase,clues,duoActive,duoDefeated,laserUnlocked,laserIndex:laserChallenge.index,scentStep,score,kills,coneWindup,elapsed,hp:players.map(p=>p.hp),sceneName,cutsceneNext,bossHp:boss?.hp||0,daanActive,bossRage:boss?.rage||false,bossMaxHp:boss?.maxHp||0,liteFx,guardWave:gate?.wave??null,guardians:foes.filter(e=>e.guardian&&e.hp>0).length,cleared:gateCleared.slice(),mode:difficulty,overlay:!$('overlay').classList.contains('hidden'),imgSrc:$('overlay-art').getAttribute('src').slice(0,90),dialogueImages:[...$('scene-dialogues').querySelectorAll('img')].map(im=>im.getAttribute('src').slice(0,80)),missionUnlock:$('mission-unlock').classList.contains('show'),objectText:$('objective-label').textContent}}
+,
+ vanilleProbe(){
+  const v=players[0],intruder=players[1];
+  if(!v||v.id!=='vanille'||!intruder)return {error:'Need P1 Vanille and P2 ally'};
+  const initial={hp:v.maxHp,speed:v.speed,damage:v.damage,regen:v.selfRegen};
+  const e={x:v.x+90,y:v.y,hp:240,maxHp:240,size:21,kind:'bleepling',damage:0,speed:0,attack:99,age:0,telegraph:0,slow:0};
+  foes=[e];v.hidden=false;v.ambushReady=0;fire(v);
+  const glare=240-e.hp;
+  const before={x:v.x,y:v.y,enemyX:e.x};v.dashCooldown=0;
+  tryDash(0);
+  const ploff={moved:Math.hypot(v.x-before.x,v.y-before.y),enemyMoved:e.x-before.enemyX,cooldown:v.dashCooldown};
+  v.hp=100;updateVanille(1);const healed=v.hp-100;
+  const bush=bushes[0];v.personalSpaceLock=0;v.x=bush.x;v.y=bush.y;
+  intruder.x=bush.x+210;intruder.y=bush.y;v.bushId=-1;intruder.bushId=-1;
+  updateBushes(.016);const wasHidden=v.hidden;
+  intruder.x=bush.x+3;intruder.y=bush.y+3;updateBushes(.016);
+  const personalSpace={wasHidden,ejected:!v.hidden,dist:Math.hypot(v.x-bush.x,v.y-bush.y),lock:v.personalSpaceLock,speech:worldBubbles.some(b=>b.speaker==='vanille'&&b.line.includes('PERSONAL SPACE'))};
+  return {initial,glare,ploff,healed,personalSpace};
+ }
+,
+ vanilleBossBalance(){
+  const report=[];
+  for(const mode of ['challenge','extreme']){
+   difficulty=mode;phase='boss';bossPhase=1;coneWarned=false;daanActive=mode==='extreme';
+   players=[player('vanille',0)];foes=[];shots=[];hazards=[];beams=[];vanilleBeams=[];
+   const v=players[0];v.x=1000;v.y=1000;v.hidden=false;v.inv=0;
+   const expectedHp=1450*(mode==='extreme'?EXTREME.bossHp:1);
+   boss={x:1190,y:1000,hp:expectedHp,maxHp:expectedHp,size:49,speed:mode==='extreme'?137*EXTREME.bossSpeed:145,attack:1.1,hitFlash:0,rage:false};
+   for(let shot=0;shot<8;shot++)fire(v);
+   const beamDamage=expectedHp-boss.hp;
+   const healthBefore=80;v.hp=healthBefore;updateVanille(1);
+   const healed=v.hp-healthBefore;
+   boss.x=1090;boss.y=1000;const beforeX=boss.x;v.dashCooldown=0;tryDash(0);
+   report.push({mode,bossHp:expectedHp,bossSpeed:boss.speed,beamDamage,beamPercent:100*beamDamage/expectedHp,
+    ploffMove:boss.x-beforeX,vanilleX:v.x,healed,ploffCooldown:v.dashCooldown,daanThreat:daanActive});
+  }
+  return report;
+ },
+ vanilleDialogueProbe(){
+  const oldPlayers=players;players=[player('vanille',0),player('millie',1)];
+  renderSceneLines('clue3');
+  const clue=[...$('scene-dialogues').querySelectorAll('.scene-line')].map(e=>({
+   speaker:e.dataset.speaker,text:e.querySelector('.scene-speech span').textContent}));
+  renderSceneLines('intro');
+  const intro=[...$('scene-dialogues').querySelectorAll('.scene-line')].map(e=>e.querySelector('.scene-speech span').textContent);
+  players=oldPlayers;
+  return {clue,intro,pairKeys:Object.keys(PAIR_BANTER).filter(key=>key.includes('vanille')),
+   firstLines:Object.values(PAIR_BANTER).flatMap(v=>v[0]).filter(line=>line[0]==='vanille')};
+ }
 };'''
 pos=html.rfind('})();')
 assert pos>0
@@ -706,11 +755,13 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     errors=[]
     page.on('pageerror',lambda e:errors.append(str(e)))
     page.set_content(html,wait_until='domcontentloaded',timeout=60000)
-    page.wait_for_function('window.Level32Sprites && window.Level32Sprites.loadedCharacters.length === 9', timeout=15000)
-    # Day 5C: eight approved sheets plus a provisional Daan sheet decode in Chromium.
-    assert page.evaluate("window.Level32Sprites.loadedCharacters.length")==9
+    page.wait_for_function('window.Level32Sprites && window.Level32Sprites.loadedCharacters.length === 10', timeout=15000)
+    # Nine pet/boss/enemy sheets plus provisional Daan decode in Chromium.
+    assert page.evaluate("window.Level32Sprites.loadedCharacters.length")==10
     assert page.evaluate("window.Level32Sprites.previewEnabled") is True
     assert page.evaluate("window.Level32Sprites.loadedCharacters.includes('daan')")
+    assert page.evaluate("window.Level32Sprites.loadedCharacters.includes('vanille')")
+    assert page.locator('[data-hero="vanille"]').count()==1
     assert page.evaluate("""() => {
         const source=window.Level32Sprites.approvedFiles.daan;
         return source.endsWith('daan.svg') || source.startsWith('data:image/svg+xml;base64,');
@@ -740,7 +791,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
       const fallbackRestored=engine.draw(ctx,'rosie',{state:'idle',direction:'down'},50,50,32,0)===false;
       const realSheets=await engine.loadApproved();
       engine.setPreviewEnabled(true);
-      const artRestored=realSheets.every(Boolean) && engine.loadedCharacters.length===9;
+      const artRestored=realSheets.every(Boolean) && engine.loadedCharacters.length===10;
       const visibleRestored=engine.draw(ctx,'rosie',{state:'idle',direction:'down'},50,50,32,0);
       return {exists:true,defaultFallback,invalidRejected,validAccepted,result,pix,smoothingRestored,fallbackRestored,artRestored,visibleRestored};
     }""")
@@ -791,8 +842,8 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
     assert page.locator('#ending-invite').is_hidden()
     if not mobile and mode=='challenge' and not solo:
         matrix=page.evaluate('window.__rosieTest.combatMatrix()')
-        assert len(matrix)==12,matrix
-        for hero in ['rosie','millie','winnifred','ellie']:
+        assert len(matrix)==15,matrix
+        for hero in ['rosie','millie','winnifred','ellie','vanille']:
             tiers=[next(row for row in matrix if row['hero']==hero and row['mode']==m)
               for m in ('story','challenge','extreme')]
             story,adventure,extreme=tiers
@@ -809,7 +860,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
                 vx,vy=abs(shot['vx']),abs(shot['vy'])
                 if shot['source']=='boink': assert min(vx,vy)<1e-6,shot
                 else: assert abs(vx-vy)<1e-6,shot
-        print('12-character-mode balance matrix and Extreme-only +/X bananas: PASS')
+        print('15-character-mode balance matrix and Extreme-only +/X bananas: PASS')
     soundtrack=page.evaluate('window.__rosieTest.soundtrackConfig()')
     assert set(['duo','boss1','boss2','boss3']).issubset(soundtrack['modes']),soundtrack
     assert soundtrack['legendaryBpm']>=170,soundtrack
@@ -877,7 +928,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
         assert all(ambush.values()),ambush
         nick=page.evaluate('window.__rosieTest.nicknameProbe()')
         assert set(nick['names'])=={'Rosie the Dog','Silly Millie','Ellie Bellie',
-          'Princess Winnifred, floof of her name'},nick
+          'Princess Winnifred, floof of her name','Vanille, Keeper of Personal Space'},nick
         assert all(any(lyric[1] in line for line in nick['lines']) for lyric in nick['theme']),nick
         print('Ambush crit, bush-hit ejection and new Rosie/Daan lyrics: PASS')
         garden=page.evaluate('window.__rosieTest.gardenProbe()')
@@ -890,7 +941,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
         stealth=page.evaluate('window.__rosieTest.bushStealthProbe()')
         assert all(stealth.values()),stealth
         pairs=page.evaluate('window.__rosieTest.pairDialogueProbe()')
-        assert len(pairs)==6 and all(pair['visits']==3 and pair['sequential']
+        assert len(pairs)==10 and all(pair['visits']==3 and pair['sequential']
           and len({visit['first'] for visit in pair['encounters']})==3
           and all(len(visit['lines'])>=3 for visit in pair['encounters'])
           for pair in pairs),pairs
@@ -912,7 +963,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
         progressVisible:progress.width>30&&progress.height>=5};
     }""")
     assert all(xp_layout.values()),xp_layout
-    assert page.locator('.hero-stats').count()==4
+    assert page.locator('.hero-stats').count()==5
     for card in page.locator('.hero').all():
         assert card.locator('.hero-stats').is_visible(), 'Stats must be displayed without hover'
         assert card.locator('.stat-line').count()==3
@@ -1124,4 +1175,49 @@ with sync_playwright() as p:
     browser_run(browser,screen=(1280,900),mode='extreme')
     browser_run(browser,screen=(1280,900),mode='story',solo=True)
     browser_run(browser,screen=(390,844),mobile=True,mode='extreme',solo=True)
+
+    # Fifth hero mechanics: solo controls reused in co-op; exact bush-entry trigger.
+    vanille_page=browser.new_page(viewport={'width':1280,'height':900})
+    vanille_errors=[]
+    vanille_page.on('pageerror',lambda e:vanille_errors.append(str(e)))
+    vanille_page.set_content(html,wait_until='domcontentloaded',timeout=60000)
+    vanille_page.wait_for_function("window.Level32Sprites && window.Level32Sprites.loadedCharacters.includes('vanille')",timeout=15000)
+    assert vanille_page.locator('[data-hero="vanille"] .portrait img').evaluate('(im)=>im.complete && im.naturalWidth>0')
+    vanille_page.locator('[data-hero="vanille"]').click()
+    vanille_page.evaluate("""() => {
+      const coop=document.getElementById('coop');
+      coop.checked=true;
+      coop.dispatchEvent(new Event('change',{bubbles:true}));
+    }""")
+    vanille_page.evaluate('window.__rosieTest.start()')
+    result=vanille_page.evaluate('window.__rosieTest.vanilleProbe()')
+    assert result['initial']=={'hp':180,'speed':185,'damage':10,'regen':2.5},result
+    assert result['glare']>0,result
+    assert result['ploff']['moved']==0 and result['ploff']['enemyMoved']>0 and result['ploff']['cooldown']>3.4,result
+    assert abs(result['healed']-2.5)<.01,result
+    assert result['personalSpace']['wasHidden'] and result['personalSpace']['ejected'] and result['personalSpace']['dist']>51,result
+    assert result['personalSpace']['speech'] and result['personalSpace']['lock']>0,result
+    assert not vanille_errors,vanille_errors
+
+    balance=vanille_page.evaluate('window.__rosieTest.vanilleBossBalance()')
+    assert len(balance)==2,balance
+    adventure,extreme=balance
+    assert adventure['mode']=='challenge' and extreme['mode']=='extreme',balance
+    assert adventure['bossHp']==1450 and extreme['bossHp']>adventure['bossHp'],balance
+    assert extreme['bossSpeed']>adventure['bossSpeed'],balance
+    assert 0<adventure['beamPercent']<10 and 0<extreme['beamPercent']<7,balance
+    assert 0<adventure['ploffMove']<=20.01 and 0<extreme['ploffMove']<=20.01,balance
+    assert all(v['ploffCooldown']>3.4 and abs(v['healed']-2.5)<.01 for v in balance),balance
+    assert not adventure['daanThreat'] and extreme['daanThreat'],balance
+    dialogue=vanille_page.evaluate('window.__rosieTest.vanilleDialogueProbe()')
+    pew=next(i for i,line in enumerate(dialogue['clue']) if 'Pew. Pew. Pew.' in line['text'])
+    assert dialogue['clue'][pew+1]['speaker']=='vanille',dialogue
+    assert 'dead' in dialogue['clue'][pew+1]['text'] and 'peace and quiet' in dialogue['clue'][pew+1]['text'],dialogue
+    assert any('enemy of my enemy' in line for line in dialogue['intro']),dialogue
+    assert any('fish' in line.lower() for line in dialogue['intro']),dialogue
+    assert len(dialogue['pairKeys'])==4,dialogue
+    assert any('wasting my air' in line[1] for line in dialogue['firstLines']),dialogue
+    print('Vanille 7/10 vs 10/10 Tolly balance, Ploff boss resistance and dialogue: PASS')
+    print('Vanille stats, glare, stationary Ploff, regen and private bush: PASS')
+    vanille_page.close()
     browser.close()
