@@ -6,10 +6,10 @@
 (function () {
   'use strict';
 
-  const FRAME_SIZE = Object.freeze({rosie:64, millie:64, winnifred:64, ellie:64, tolly:96, daan:96, bleepling:64, boink:64, bocht:64});
+  const FRAME_SIZE = Object.freeze({rosie:64, millie:64, winnifred:64, ellie:64, vanille:64, tolly:96, daan:96, bleepling:64, boink:64, bocht:64});
   const APPROVED = Object.freeze({
     rosie:'assets/sprites/rosie.webp', millie:'assets/sprites/millie.webp',
-    winnifred:'assets/sprites/winnifred.webp', ellie:'assets/sprites/ellie.webp',
+    winnifred:'assets/sprites/winnifred.webp', ellie:'assets/sprites/ellie.webp',vanille:'assets/sprites/vanille.svg',
     tolly:'assets/sprites/tolly.webp', daan:'assets/sprites/daan.svg', bleepling:'assets/sprites/bleepling.webp',
     boink:'assets/sprites/boink.webp', bocht:'assets/sprites/bocht.webp'
   });
