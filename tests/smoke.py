@@ -729,7 +729,7 @@ hook='''window.__rosieTest={
    const healed=v.hp-healthBefore;
    boss.x=1090;boss.y=1000;const beforeX=boss.x;v.dashCooldown=0;tryDash(0);
    report.push({mode,bossHp:expectedHp,bossSpeed:boss.speed,beamDamage,beamPercent:100*beamDamage/expectedHp,
-    ploffMove:boss.x-beforeX,vanilleX:v.x,healed,ploffCooldown:v.dashCooldown,daanThreat:daanActive});
+    ploffMove:boss.x-beforeX,vanilleX:v.x,healed,ploffCooldown:v.dashCooldown,spiteTime:v.spiteTime,daanThreat:daanActive});
   }
   return report;
  },
@@ -1193,7 +1193,7 @@ with sync_playwright() as p:
     result=vanille_page.evaluate('window.__rosieTest.vanilleProbe()')
     assert result['initial']=={'hp':180,'speed':185,'damage':10,'regen':2.5},result
     assert result['glare']>0,result
-    assert result['ploff']['moved']==0 and result['ploff']['enemyMoved']>0 and result['ploff']['cooldown']>3.4,result
+    assert result['ploff']['moved']==0 and result['ploff']['enemyMoved']>=100 and result['ploff']['cooldown']>3.4,result
     assert abs(result['healed']-2.5)<.01,result
     assert result['personalSpace']['wasHidden'] and result['personalSpace']['ejected'] and result['personalSpace']['dist']>51,result
     assert result['personalSpace']['speech'] and result['personalSpace']['lock']>0,result
@@ -1206,8 +1206,8 @@ with sync_playwright() as p:
     assert adventure['bossHp']==1450 and extreme['bossHp']>adventure['bossHp'],balance
     assert extreme['bossSpeed']>adventure['bossSpeed'],balance
     assert 0<adventure['beamPercent']<10 and 0<extreme['beamPercent']<7,balance
-    assert 0<adventure['ploffMove']<=20.01 and 0<extreme['ploffMove']<=20.01,balance
-    assert all(v['ploffCooldown']>3.4 and abs(v['healed']-2.5)<.01 for v in balance),balance
+    assert 0<adventure['ploffMove']<=26.01 and 0<extreme['ploffMove']<=26.01,balance
+    assert all(v['ploffCooldown']>3.4 and v['spiteTime']==2.6 and abs(v['healed']-2.5)<.01 for v in balance),balance
     assert not adventure['daanThreat'] and extreme['daanThreat'],balance
     dialogue=vanille_page.evaluate('window.__rosieTest.vanilleDialogueProbe()')
     pew=next(i for i,line in enumerate(dialogue['clue']) if 'Pew. Pew. Pew.' in line['text'])

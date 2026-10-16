@@ -751,7 +751,7 @@ function updateSnackMagnet(dt){
   }
  }
 }
-function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,dashCharges:id==='millie'?2:1,dashRecharge:[],healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5,spriteFacing:'down',spriteMoving:false,spriteAttackAt:-1,perkGlow:0,perkRarity:'',hidden:false,bushTime:0,bushId:-1,ambushReady:0,snackCharge:0,snackNextHitAt:0,magnetTime:0,recoveryClock:0,ploffFlash:0,personalSpaceLock:0,prevBushId:-1,speedBuff:0}}
+function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,dashCharges:id==='millie'?2:1,dashRecharge:[],healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5,spriteFacing:'down',spriteMoving:false,spriteAttackAt:-1,perkGlow:0,perkRarity:'',hidden:false,bushTime:0,bushId:-1,ambushReady:0,snackCharge:0,snackNextHitAt:0,magnetTime:0,recoveryClock:0,ploffFlash:0,personalSpaceLock:0,prevBushId:-1,speedBuff:0,spiteTime:0}}
 function start(){
  if(paused){
   paused=false;
@@ -969,7 +969,7 @@ function movePlayers(dt){
    }
   }
   p.perkGlow=Math.max(0,(p.perkGlow||0)-dt);p.inv=Math.max(0,p.inv-dt);p.dash=Math.max(0,p.dash-dt);
-  p.speedBuff=Math.max(0,(p.speedBuff||0)-dt);p.personalSpaceLock=Math.max(0,(p.personalSpaceLock||0)-dt);p.ploffFlash=Math.max(0,(p.ploffFlash||0)-dt);
+  p.speedBuff=Math.max(0,(p.speedBuff||0)-dt);p.personalSpaceLock=Math.max(0,(p.personalSpaceLock||0)-dt);p.ploffFlash=Math.max(0,(p.ploffFlash||0)-dt);p.spiteTime=Math.max(0,(p.spiteTime||0)-dt);
   p.dashCooldown=Math.max(0,p.dashCooldown-dt);
   p.magnetTime=Math.max(0,p.magnetTime-dt);
   if(p.id==='millie'){
@@ -1317,7 +1317,7 @@ function updateVanille(dt){
 function updateAutoAttacks(dt){
  for(const p of players){
   if(!p.alive||p.hidden)continue;
-  p.cool-=dt;if(p.cool<=0){fire(p);p.cool=p.rate}
+  p.cool-=dt;if(p.cool<=0){fire(p);p.cool=p.rate*(p.id==='vanille'&&p.spiteTime>0?.64:1)}
   p.laserCooldown-=dt;
   if(laserUnlocked&&p.laserCooldown<=0){laserAttack(p);p.laserCooldown=5.3}
  }
@@ -2140,15 +2140,17 @@ $('start').addEventListener('click',()=>{start();enterPhonePlay()});$('overlay-s
 function vanillePloff(p){
  if(p.dashCooldown>0)return;
  p.dashCooldown=6.8;p.ploffFlash=.38;p.inv=Math.max(p.inv,.32);
+ // Being interrupted gives her a brief burst of indignation: faster glare, unchanged damage.
+ p.spiteTime=2.6;p.cool=Math.min(p.cool,.16);
  p.spriteAttackAt=elapsed;
  for(const e of [...foes,...(boss&&boss.hp>0?[boss]:[])]){
   if(!e||e.hp<=0||dist(p,e)>110+(e.size||0))continue;
   const d=dist(p,e),a=d>.01?Math.atan2(e.y-p.y,e.x-p.x):0;
-  const distance=e===boss?20:85;
+  const distance=e===boss?26:140;
   e.x=clamp(e.x+Math.cos(a)*distance,24,WIDTH-24);
   e.y=clamp(e.y+Math.sin(a)*distance,24,HEIGHT-24);
  }
- emit('PLOFF!',p.x,p.y-59,'#e2b9ff');playSfx('boink');
+ emit('PLOFF! · SPITE!',p.x,p.y-59,'#e2b9ff');playSfx('boink');
 }
 function tryDash(id){
  if(!['boss','explore'].includes(phase)||paused)return;
