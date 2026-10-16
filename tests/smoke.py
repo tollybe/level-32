@@ -714,6 +714,36 @@ hook='''window.__rosieTest={
   const personalSpace={wasHidden,ejected:!v.hidden,dist:Math.hypot(v.x-bush.x,v.y-bush.y),lock:v.personalSpaceLock,speech:worldBubbles.some(b=>b.speaker==='vanille'&&b.line.includes('PERSONAL SPACE'))};
   return {initial,glare,ploff,healed,personalSpace};
  }
+,
+ vanilleBossBalance(){
+  const report=[];
+  for(const mode of ['challenge','extreme']){
+   difficulty=mode;phase='boss';bossPhase=1;coneWarned=false;daanActive=mode==='extreme';
+   players=[player('vanille',0)];foes=[];shots=[];hazards=[];beams=[];vanilleBeams=[];
+   const v=players[0];v.x=1000;v.y=1000;v.hidden=false;v.inv=0;
+   const expectedHp=1450*(mode==='extreme'?EXTREME.bossHp:1);
+   boss={x:1190,y:1000,hp:expectedHp,maxHp:expectedHp,size:49,speed:mode==='extreme'?137*EXTREME.bossSpeed:145,attack:1.1,hitFlash:0,rage:false};
+   for(let shot=0;shot<8;shot++)fire(v);
+   const beamDamage=expectedHp-boss.hp;
+   const healthBefore=80;v.hp=healthBefore;updateVanille(1);
+   const healed=v.hp-healthBefore;
+   boss.x=1090;boss.y=1000;const beforeX=boss.x;v.dashCooldown=0;tryDash(0);
+   report.push({mode,bossHp:expectedHp,bossSpeed:boss.speed,beamDamage,beamPercent:100*beamDamage/expectedHp,
+    ploffMove:boss.x-beforeX,vanilleX:v.x,healed,ploffCooldown:v.dashCooldown,daanThreat:daanActive});
+  }
+  return report;
+ },
+ vanilleDialogueProbe(){
+  const oldPlayers=players;players=[player('vanille',0),player('millie',1)];
+  renderSceneLines('clue3');
+  const clue=[...$('scene-dialogues').querySelectorAll('.scene-line')].map(e=>({
+   speaker:e.dataset.speaker,text:e.querySelector('.scene-speech span').textContent}));
+  renderSceneLines('intro');
+  const intro=[...$('scene-dialogues').querySelectorAll('.scene-line')].map(e=>e.querySelector('.scene-speech span').textContent);
+  players=oldPlayers;
+  return {clue,intro,pairKeys:Object.keys(PAIR_BANTER).filter(key=>key.includes('vanille')),
+   firstLines:Object.values(PAIR_BANTER).flatMap(v=>v[0]).filter(line=>line[0]==='vanille')};
+ }
 };'''
 pos=html.rfind('})();')
 assert pos>0
@@ -1164,6 +1194,26 @@ with sync_playwright() as p:
     assert result['personalSpace']['wasHidden'] and result['personalSpace']['ejected'] and result['personalSpace']['dist']>51,result
     assert result['personalSpace']['speech'] and result['personalSpace']['lock']>0,result
     assert not vanille_errors,vanille_errors
+
+    balance=vanille_page.evaluate('window.__rosieTest.vanilleBossBalance()')
+    assert len(balance)==2,balance
+    adventure,extreme=balance
+    assert adventure['mode']=='challenge' and extreme['mode']=='extreme',balance
+    assert adventure['bossHp']==1450 and extreme['bossHp']>adventure['bossHp'],balance
+    assert extreme['bossSpeed']>adventure['bossSpeed'],balance
+    assert 0<adventure['beamPercent']<10 and 0<extreme['beamPercent']<7,balance
+    assert 0<adventure['ploffMove']<=20.01 and 0<extreme['ploffMove']<=20.01,balance
+    assert all(v['ploffCooldown']>3.4 and abs(v['healed']-2.5)<.01 for v in balance),balance
+    assert not adventure['daanThreat'] and extreme['daanThreat'],balance
+    dialogue=vanille_page.evaluate('window.__rosieTest.vanilleDialogueProbe()')
+    pew=next(i for i,line in enumerate(dialogue['clue']) if 'Pew. Pew. Pew.' in line['text'])
+    assert dialogue['clue'][pew+1]['speaker']=='vanille',dialogue
+    assert 'dead' in dialogue['clue'][pew+1]['text'] and 'peace and quiet' in dialogue['clue'][pew+1]['text'],dialogue
+    assert any('enemy of my enemy' in line for line in dialogue['intro']),dialogue
+    assert any('fish' in line.lower() for line in dialogue['intro']),dialogue
+    assert len(dialogue['pairKeys'])==4,dialogue
+    assert any('wasting my air' in line[1] for line in dialogue['firstLines']),dialogue
+    print('Vanille 7/10 vs 10/10 Tolly balance, Ploff boss resistance and dialogue: PASS')
     print('Vanille stats, glare, stationary Ploff, regen and private bush: PASS')
     vanille_page.close()
     browser.close()
