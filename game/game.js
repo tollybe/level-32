@@ -5,11 +5,11 @@ const WIDTH=2600,HEIGHT=1900, VIEWW=960,VIEWH=600, TAU=Math.PI*2, keys=new Set()
 // THE GREAT SNACK RIFT: original, friendly-looking blob enemies with readable combat tells.
 // No server or shared scores required; all audio is original WebAudio synthesis.
 const petImages=Object.fromEntries(Array.from(document.querySelectorAll('#heroes .hero'),el=>[el.dataset.hero,el.querySelector('.portrait img')]));
-const roster={rosie:{name:'Rosie',emoji:'🐕‍🦺',color:'#222a36',hp:130,speed:220,range:225,rate:.56,damage:17,weapon:'dragon'},millie:{name:'Millie',emoji:'🐕',color:'#31323d',hp:135,speed:205,range:220,rate:.56,damage:18,weapon:'ball'},winnifred:{name:'Winnifred',emoji:'🐈',color:'#e4d4bc',hp:128,speed:240,range:96,rate:.34,damage:30,weapon:'sausage'},ellie:{name:'Ellie',emoji:'🐶',color:'#121823',hp:150,speed:250,range:175,rate:.92,damage:8,weapon:'kong',auraRadius:135,healPulse:2.7,selfRegen:1.4}};
+const roster={rosie:{name:'Rosie',emoji:'🐕‍🦺',color:'#222a36',hp:130,speed:220,range:225,rate:.56,damage:17,weapon:'dragon'},millie:{name:'Millie',emoji:'🐕',color:'#31323d',hp:135,speed:205,range:220,rate:.56,damage:18,weapon:'ball'},winnifred:{name:'Winnifred',emoji:'🐈',color:'#e4d4bc',hp:128,speed:240,range:96,rate:.34,damage:30,weapon:'sausage'},ellie:{name:'Ellie',emoji:'🐶',color:'#121823',hp:150,speed:250,range:175,rate:.92,damage:8,weapon:'kong',auraRadius:135,healPulse:2.7,selfRegen:1.4},vanille:{name:'Vanille',emoji:'🐈',color:'#afa0af',hp:180,speed:185,range:315,rate:1.12,damage:10,weapon:'death-glare',selfRegen:2.5}};
 let selected=['rosie','winnifred'],players=[],foes=[],shots=[],drops=[],fx=[],hazards=[],boss=null,phase='idle',paused=false,score=0,kills=0,level=1,xp=0,goal=35,spawnClock=0,surgeClock=33,elapsed=0,clues=0,fridgeVisible=false,fridge={x:2180,y:1440},cam={x:0,y:0},lastTime=0,raf=0,messageClock=0,attackClock=0,heldTouch={},joystickAxes=[{x:0,y:0},{x:0,y:0}],audioCtx=null,audioEnabled=true,musicTimer=null,musicStep=0,musicMode='idle',musicBar=0,musicNextBarAt=0,sloganClock=8,bossPhase=1,coneWarned=false;
 let cutsceneNext=null,sceneName=null,reviveSeconds=1.85,hudClock=0,sceneOpenedAt=0,perkOffer=null,perkReturnPhase='explore',scenePresentationToken=0,perksAwarded=0;
 let liteFx=typeof matchMedia==='function'&&matchMedia('(pointer:coarse)').matches;
-let duoActive=false,duoDefeated=false,laserUnlocked=false,beams=[],bushEggSeen=false,bossBushVisits=0,bossBushOccupied=false,winston=null,winstonForcedReveal=0,pairBanterClock=12,worldBubbles=[],coneCooldown=6.8,coneWindup=0,coneAngle=0,bossPulseCooldown=4,bossPulseWindup=0,bananaWindup=0;
+let duoActive=false,duoDefeated=false,laserUnlocked=false,beams=[],vanilleBeams=[],bushEggSeen=false,bossBushVisits=0,bossBushOccupied=false,winston=null,winstonForcedReveal=0,pairBanterClock=12,worldBubbles=[],coneCooldown=6.8,coneWindup=0,coneAngle=0,bossPulseCooldown=4,bossPulseWindup=0,bananaWindup=0;
 let bossNicknameClock=13,bossNicknameIndex=0,gate=null,gateCleared=[false,false,false],difficulty='challenge',daanActive=false,daanPulse=0,daanActionTimer=0,daanHealCooldown=0,daanHealWindup=0,daanHealsRemaining=0,daanHealFlash=0;
 const GATE_WAVES={challenge:[[3,3,2],[3,3,3],[4,3,3]],story:[[2,2,2],[2,2,2],[2,2,3]],extreme:[[5,5,5],[6,5,6],[6,7,7]]};
 const daanPortrait=new Image();daanPortrait.src='assets/daan.svg';
@@ -227,7 +227,7 @@ function presentSceneArt(kind,token){
 // Tolly's names are character-specific, not generic labels.
 const TOLLY_NICKNAMES={
  rosie:'Rosie the Dog',millie:'Silly Millie',
- ellie:'Ellie Bellie',winnifred:'Princess Winnifred, floof of her name'
+ ellie:'Ellie Bellie',winnifred:'Princess Winnifred, floof of her name',vanille:'Vanille, Keeper of Personal Space'
 };
 const ROSIE_THEME=[
  ['rosie',"She's the rosiest of rosies, the tosiest of tosies..."],
@@ -525,7 +525,7 @@ function tickMusic(){
 function startMusicLoop(){if(musicTimer)return;tickMusic();musicTimer=setInterval(tickMusic,45)}
 function shout(pool,dur=2.4){ say(pick(pool),dur) }
 
-const heroLines={rosie:'🐉 Rosie heard the word banana and immediately accepted the mission.',millie:'🎾 Millie believes the answer to every question is BALL.',winnifred:'👑 Winnifred graciously grants the party permission to proceed.',ellie:'💚 Ellie is ready to lick everyone back to full health. And then zoomie.'};
+const heroLines={rosie:'🐉 Rosie heard the word banana and immediately accepted the mission.',millie:'🎾 Millie believes the answer to every question is BALL.',winnifred:'👑 Winnifred graciously grants the party permission to proceed.',ellie:'💚 Ellie is ready to lick everyone back to full health. And then zoomie.',vanille:'🌿 Urrrgh... fine. So long as it is warm. I am... CAT CAT.'};
 function updatePlayerTabs(){
  document.querySelectorAll('[data-slot]').forEach(b=>{
   const slot=Number(b.dataset.slot),active=slot===Number($('assign').value);
@@ -533,7 +533,18 @@ function updatePlayerTabs(){
   b.disabled=slot===1&&!$('coop').checked;
  });
 }
-function setSelection(){document.querySelectorAll('.hero').forEach(el=>{let id=el.dataset.hero;el.classList.toggle('selected-p1',selected[0]===id);el.classList.toggle('selected-p2',$('coop').checked&&selected[1]===id);const tag=el.querySelector('.tags');tag.replaceChildren();if(selected[0]===id){const b=document.createElement('span');b.className='tag';b.textContent='P1';tag.append(b)}if($('coop').checked&&selected[1]===id){const b=document.createElement('span');b.className='tag p2';b.textContent='P2';tag.append(b)}});$('selection-status').textContent='P1: '+roster[selected[0]].name+' (WASD)'+($('coop').checked?'   •   P2: '+roster[selected[1]].name+' (arrows)':'  •  SOLO MODE'); updatePlayerTabs();}
+
+function refreshActionLabels(){
+ document.querySelectorAll('[data-dash]').forEach(btn=>{
+  const slot=Number(btn.dataset.dash),ploff=selected[slot]==='vanille';
+  btn.textContent='P'+(slot+1)+' '+(ploff?'PLOFF':'DASH')+(ploff?' 💨':' ⚡');
+  btn.setAttribute('aria-label',(ploff?'Ploff':'Dash')+' Player '+(slot+1));
+ });
+ document.querySelectorAll('#dash-status .dash-pill').forEach((pill,i)=>{
+  pill.textContent='P'+(i+1)+' '+(i===0?'⇧ SHIFT':'↵ ENTER')+' = '+(selected[i]==='vanille'?'PLOFF':'DASH');
+ });
+}
+function setSelection(){document.querySelectorAll('.hero').forEach(el=>{let id=el.dataset.hero;el.classList.toggle('selected-p1',selected[0]===id);el.classList.toggle('selected-p2',$('coop').checked&&selected[1]===id);const tag=el.querySelector('.tags');tag.replaceChildren();if(selected[0]===id){const b=document.createElement('span');b.className='tag';b.textContent='P1';tag.append(b)}if($('coop').checked&&selected[1]===id){const b=document.createElement('span');b.className='tag p2';b.textContent='P2';tag.append(b)}});$('selection-status').textContent='P1: '+roster[selected[0]].name+' (WASD)'+($('coop').checked?'   •   P2: '+roster[selected[1]].name+' (arrows)':'  •  SOLO MODE'); updatePlayerTabs();refreshActionLabels();}
 document.querySelectorAll('.hero').forEach(el=>el.addEventListener('click',()=>{selected[Number($('assign').value)]=el.dataset.hero;$('hero-banter').textContent=heroLines[el.dataset.hero];setSelection()}));
 document.querySelectorAll('[data-slot]').forEach(b=>b.addEventListener('click',()=>{if(b.disabled)return;$('assign').value=b.dataset.slot;updatePlayerTabs()}));
 function syncTouchPlayers(){
@@ -729,7 +740,7 @@ function updateSnackMagnet(dt){
   }
  }
 }
-function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,dashCharges:id==='millie'?2:1,dashRecharge:[],healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5,spriteFacing:'down',spriteMoving:false,spriteAttackAt:-1,perkGlow:0,perkRarity:'',hidden:false,bushTime:0,bushId:-1,ambushReady:0,snackCharge:0,snackNextHitAt:0,magnetTime:0,recoveryClock:0}}
+function player(id,num){let c=roster[id];return {...c,id,num,x:320+num*50,y:400+num*55,maxHp:c.hp,cool:rnd(0,.2),inv:0,dash:0,dashCooldown:0,dashCharges:id==='millie'?2:1,dashRecharge:[],healClock:1.7,healFlash:0,alive:true,reviveProgress:0,laserCooldown:1.5,spriteFacing:'down',spriteMoving:false,spriteAttackAt:-1,perkGlow:0,perkRarity:'',hidden:false,bushTime:0,bushId:-1,ambushReady:0,snackCharge:0,snackNextHitAt:0,magnetTime:0,recoveryClock:0,ploffFlash:0,personalSpaceLock:0,prevBushId:-1,speedBuff:0}}
 function start(){
  if(paused){
   paused=false;
@@ -775,11 +786,28 @@ function spawnBleepling(){
 }
 function emit(text,x,y,col='#ffe1aa'){if(fx.length<(liteFx?45:90))fx.push({text,x,y,col,t:1.1})}
 function nearest(origin,arr,r=Infinity){let item=null,bd=r;for(const o of arr){if(o.hp<=0||o.alive===false||o.hidden)continue;const d=dist(origin,o);if(d<bd){bd=d;item=o}}return item}
+
+function deathGlare(p,target){
+ const angle=Math.atan2(target.y-p.y,target.x-p.x),ux=Math.cos(angle),uy=Math.sin(angle);
+ vanilleBeams.push({x:p.x,y:p.y,a:angle,range:p.range,t:.26,owner:p.num});
+ const charged=useSnack(p);let hits=0;
+ for(const e of [...foes,...(boss&&boss.hp>0?[boss]:[])]){
+  if(!e||e.hp<=0)continue;
+  const forward=(e.x-p.x)*ux+(e.y-p.y)*uy;
+  const lateral=Math.abs((e.x-p.x)*uy-(e.y-p.y)*ux);
+  if(forward>0&&forward<p.range&&lateral<=10+forward*.09+(e.size||25)*.25){
+   damage(e,(p.damage+level*1.4)*(charged?1.25:1),p);hits++;
+   if(phase==='cutscene'||phase==='ended'||hits>=4)break;
+  }
+ }
+ if(hits){emit('DEATH GLARE',p.x,p.y-55,'#ffdd8a');playSfx('laser');}
+}
 function fire(p){
  if(p.hidden)return;
  const range=p.weapon==='sausage'&&p.snackCharge>=SNACK_MAX?p.range+20:p.range;
  const target=nearest(p,[...foes,...(boss?[boss]:[])],range);if(!target)return;
  p.spriteAttackAt=elapsed;
+ if(p.weapon==='death-glare'){deathGlare(p,target);return;}
  if(p.weapon==='sausage'){
   const charged=useSnack(p),hitRange=charged?p.range+20:p.range;
   for(const e of [...foes,...(boss?[boss]:[])])
@@ -918,7 +946,7 @@ function movePlayers(dt){
   // proportional instead of snapping to maximum running speed.
   let l=Math.max(1,Math.hypot(dx,dy));
   p.slowTime=Math.max(0,(p.slowTime||0)-dt);const footing=p.slowTime>0?.63:1;
-  moveAroundTrees(p,dx/l*p.speed*footing*dt*(p.dash>0?2.3:1),
+  moveAroundTrees(p,dx/l*p.speed*footing*dt*(p.dash>0?2.3:1)*(p.speedBuff>0?1.15:1),
    dy/l*p.speed*footing*dt*(p.dash>0?2.3:1),18);
   // Player and Tolly cannot occupy the same collision space.
   if(phase==='boss'&&boss&&boss.hp>0){
@@ -930,6 +958,7 @@ function movePlayers(dt){
    }
   }
   p.perkGlow=Math.max(0,(p.perkGlow||0)-dt);p.inv=Math.max(0,p.inv-dt);p.dash=Math.max(0,p.dash-dt);
+  p.speedBuff=Math.max(0,(p.speedBuff||0)-dt);p.personalSpaceLock=Math.max(0,(p.personalSpaceLock||0)-dt);p.ploffFlash=Math.max(0,(p.ploffFlash||0)-dt);
   p.dashCooldown=Math.max(0,p.dashCooldown-dt);
   p.magnetTime=Math.max(0,p.magnetTime-dt);
   if(p.id==='millie'){
@@ -1216,6 +1245,12 @@ function drawWorldBubbles(){
   txt(line,x,y-4,Math.min(17,490/line.length),'center','#fff4d5');cx.restore();
  }
 }
+
+function updateVanille(dt){
+ vanilleBeams=vanilleBeams.filter(b=>(b.t-=dt)>0&&!players[b.owner]?.hidden);
+ for(const p of players)if(p.id==='vanille'&&p.alive)
+  p.hp=Math.min(p.maxHp,p.hp+p.selfRegen*dt);
+}
 function updateAutoAttacks(dt){
  for(const p of players){
   if(!p.alive||p.hidden)continue;
@@ -1273,12 +1308,14 @@ function update(dt){
  // launched: hiding cannot be used to keep dealing off-screen damage.
  shots=shots.filter(s=>!players[s.owner]?.hidden);
  beams=beams.filter(b=>!players[b.owner]?.hidden);
+ vanilleBeams=vanilleBeams.filter(b=>!players[b.owner]?.hidden);
  updateAutoAttacks(dt);
  updatePairBanter(dt);
  updateBossNicknames(dt);
  worldBubbles.forEach(b=>b.ttl-=dt);worldBubbles=worldBubbles.filter(b=>b.ttl>0);
  updateRevives(dt);
  updateEllieAuras(dt);
+ updateVanille(dt);
  spawnClock-=dt;
  if(spawnClock<=0&&elapsed>=difficultyBalance().earlySpawnGrace&&foes.length<(gate?23:duoActive?20:phase==='boss'?48:difficultyBalance().ambientCap)){
    const n=gate?1:duoActive?1:phase==='boss'?(difficulty==='story'?1:difficulty==='extreme'?3:2):elapsed>75?3:elapsed>18?2:1;
@@ -1685,7 +1722,7 @@ function drawQuestDressing(){
  for(const a of [-1,1]){txt('🏮',f.x+a*139,f.y-52,39,'center');txt('🎀',f.x+a*112,f.y+68,24,'center')}}
 }
 function spritePose(p,moving){
- const state=!p.alive?'knockout':p.dash>0?'dash':
+ const state=!p.alive?'knockout':p.id==='vanille'&&p.ploffFlash>0?'dash':p.dash>0?'dash':
    p.healFlash>0?'special':p.inv>.05?'hurt':
    p.spriteAttackAt>=0&&elapsed-p.spriteAttackAt<.18?'attack':
    moving?'walk':'idle';
@@ -1843,6 +1880,19 @@ if(boss&&boss.hp>0){
  }
 }
 // A readable AoE circle, not just a hidden buff. Allies must be inside the ring to heal.
+
+// Vanille's golden rectangular cone and stationary purple Ploff pulse.
+for(const beam of vanilleBeams){
+ cx.save();cx.translate(beam.x,beam.y);cx.rotate(beam.a);
+ cx.globalAlpha=Math.min(.85,beam.t*3.8);cx.fillStyle='#ffbf5570';
+ cx.strokeStyle='#ffe0a8';cx.lineWidth=2;
+ cx.beginPath();cx.moveTo(10,-9);cx.lineTo(beam.range,-40);cx.lineTo(beam.range,40);cx.lineTo(10,9);cx.closePath();cx.fill();cx.stroke();
+ cx.restore();
+}
+for(const v of players.filter(p=>p.alive&&p.id==='vanille'&&p.ploffFlash>0)){
+ cx.save();cx.globalAlpha=Math.min(.8,v.ploffFlash*2.5);cx.strokeStyle='#deb2fa';cx.lineWidth=7;
+ cx.beginPath();cx.arc(v.x,v.y,112*(1-v.ploffFlash/.38),0,TAU);cx.stroke();cx.restore();
+}
 for(const p of players){
  if(!p.alive||p.id!=='ellie')continue;
  cx.save();
@@ -2023,9 +2073,25 @@ $('start').addEventListener('click',()=>{start();enterPhonePlay()});$('overlay-s
  if(phase==='cutscene'){if(performance.now()-sceneOpenedAt>350)continueScene();}
  else start();
 });$('restart').addEventListener('click',start);$('pause').addEventListener('click',togglePause);$('mute').addEventListener('click',()=>{audioEnabled=!audioEnabled; if(audioCtx){audioEnabled?audioCtx.resume():audioCtx.suspend()} $('mute').textContent=audioEnabled?'🔊 MUSIC + SFX':'🔇 SOUND OFF'; if(audioEnabled) ensureAudio();});
+
+function vanillePloff(p){
+ if(p.dashCooldown>0)return;
+ p.dashCooldown=6.8;p.ploffFlash=.38;p.inv=Math.max(p.inv,.32);
+ p.spriteAttackAt=elapsed;
+ for(const e of [...foes,...(boss&&boss.hp>0?[boss]:[])]){
+  if(!e||e.hp<=0||dist(p,e)>110+(e.size||0))continue;
+  const d=dist(p,e),a=d>.01?Math.atan2(e.y-p.y,e.x-p.x):0;
+  const distance=e===boss?20:85;
+  e.x=clamp(e.x+Math.cos(a)*distance,24,WIDTH-24);
+  e.y=clamp(e.y+Math.sin(a)*distance,24,HEIGHT-24);
+ }
+ emit('PLOFF!',p.x,p.y-59,'#e2b9ff');playSfx('boink');
+}
 function tryDash(id){
  if(!['boss','explore'].includes(phase)||paused)return;
- const p=players[id];if(!p||!p.alive||p.hidden||bushes.some(b=>dist(p,b)<51))return;
+ const p=players[id];if(!p||!p.alive)return;
+ if(p.id==='vanille'){vanillePloff(p);return;}
+ if(p.hidden||bushes.some(b=>dist(p,b)<51))return;
  if(p.id==='millie'?p.dashCharges<1:p.dashCooldown>0)return;
  if(p.id==='millie'){
   p.dashCharges--;
