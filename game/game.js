@@ -260,6 +260,7 @@ function renderSceneLines(kind){
  if(kind==='intro'){
    const ids=[...new Set(players.map(p=>p.id))];
    for(const id of ids)lines.push(['tolly',TOLLY_NICKNAMES[id]+'! You are NOT getting into this fridge!']);
+   if(ids.includes('vanille'))lines.push(['vanille','I am... the grey days that watch over you all.'],['vanille','I am... CAT CAT.']);
  }
 
  if(kind==='phase3'&&difficulty==='extreme'){lines.push(['daan','I have Tolly’s back! Dodge the boulder and watch the green healing beam!']);lines.push(...EXTRA_BANTER.daan);lines.push(...ROSIE_THEME)}
@@ -268,7 +269,7 @@ function renderSceneLines(kind){
   const lead=players[0],replies={rosie:'Can we discuss the banana situation on the way to the party?',
    millie:'WAIT. THERE WILL BE BALLS AT THIS PARTY, YES?',
    winnifred:'Attendance is obligatory for distinguished floofs.',
-   ellie:'I am bringing zoomies. And emotional support.'};
+   ellie:'I am bringing zoomies. And emotional support.',vanille:'Urrrgh... fine. At least this party might be warm.'};
   if(lead)lines.push([lead.id,replies[lead.id]]);
  }host.hidden=lines.length===0;
  lines.forEach(([id,words],index)=>{
@@ -1136,6 +1137,27 @@ const PAIR_BANTER={
   [['ellie','I shall guard this area.'],['winnifred','Then I shall sensibly avoid it.'],['ellie','That means my guarding works!']],
   [['winnifred','Perhaps we need a treaty.'],['ellie','No surprise licking?'],['winnifred','Precisely.']],
   [['ellie','I have secured the perimeter!'],['winnifred','Good. We shall admire each other from here.'],['ellie','Marvelous! I shall guard the biscuit tin next.']]
+ ]
+ ,
+ 'ellie|vanille':[
+  [['ellie','Would a healing lick help?'],['vanille','It would make things worse.'],['ellie','Noted.']],
+  [['vanille','I enjoy the sound of nothing.'],['ellie','I can be quiet!'],['vanille','You are currently talking.']],
+  [['ellie',"You're looking less grumpy."],['vanille',"I'm not."],['ellie','Fantastic progress!']]
+ ],
+ 'millie|vanille':[
+  [['millie','CAT! CAN WE PLAY?'],['vanille','No.'],['millie','HOW ABOUT NOW?'],['vanille','Still no.']],
+  [['vanille','Is that ball squeaking?'],['millie','YES! LOVE IT?'],['vanille','I prefer silence.']],
+  [['millie','I FOUND A PERFECT HIDEOUT!'],['vanille','Then go hide in it. Alone.'],['millie','ALRIGHT!']]
+ ],
+ 'rosie|vanille':[
+  [['rosie','Do you like vegetables?'],['vanille','No.'],['rosie','But they are delicious!'],['vanille','Then eat them over there.']],
+  [['vanille','Why are you following me?'],['rosie','I thought we were going for a walk!'],['vanille','We are not.']],
+  [['rosie','It is a nice warm bush!'],['vanille','Not big enough for two.'],['rosie','Oh.']]
+ ],
+ 'vanille|winnifred':[
+  [['winnifred','One must maintain proper distance.'],['vanille','At last. A sensible cat.'],['winnifred','Naturally.']],
+  [['vanille','I am... the grey days that watch over you all.'],['winnifred','...Beg pardon?'],['vanille','I AM... CAT CAT.']],
+  [['winnifred','Would you like a place by the fireplace?'],['vanille','Urrrgh... fine. So long as it is warm.'],['winnifred','A most gracious acceptance.']]
  ]
 };
 let pairConversation=null,pairBanterVisits={};
