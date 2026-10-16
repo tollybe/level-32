@@ -933,7 +933,7 @@ def browser_run(browser,screen=(1280,900),mobile=False,mode='challenge',solo=Fal
         progressVisible:progress.width>30&&progress.height>=5};
     }""")
     assert all(xp_layout.values()),xp_layout
-    assert page.locator('.hero-stats').count()==4
+    assert page.locator('.hero-stats').count()==5
     for card in page.locator('.hero').all():
         assert card.locator('.hero-stats').is_visible(), 'Stats must be displayed without hover'
         assert card.locator('.stat-line').count()==3
